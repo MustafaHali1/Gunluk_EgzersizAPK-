@@ -82,7 +82,8 @@ class AyarlarKontrolcusu extends Notifier<AsyncValue<void>> {
 
       final rota = ref.read(uygulamaRotasiSaglayici);
       if (rutinId != null) {
-        rota.go('/rutin/$rutinId');
+        rota.go(UygulamaSabitleri.rotaBugun);
+        rota.push('/rutin/$rutinId');
       } else {
         rota.go(UygulamaSabitleri.rotaBugun);
       }

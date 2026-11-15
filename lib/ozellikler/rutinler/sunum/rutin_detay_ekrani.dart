@@ -2,6 +2,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import '../../../cekirdek/sabitler/uygulama_sabitleri.dart';
 import '../../../cekirdek/veritabani/uygulama_veritabani.dart';
 import '../../../cekirdek/yardimcilar/tarih_yardimcisi.dart';
 import '../../bugun/sunum/bugun_hareket_karti.dart';
@@ -127,7 +129,11 @@ class RutinDetayEkrani extends ConsumerWidget {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Rutin kayıtları kaydedildi.')),
     );
-    Navigator.of(context).pop();
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go(UygulamaSabitleri.rotaBugun);
+    }
   }
 
   @override
