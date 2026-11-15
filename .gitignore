@@ -51,5 +51,7 @@ app.*.map.json
 .widget_preview/
 .metadata
 untitled/
+*.apk
+
 
 
