@@ -52,21 +52,6 @@ class RaporKontrolcusu extends AsyncNotifier<RaporDurumu> {
     final bugun = DateTime.now();
     final temizBugun = DateTime(bugun.year, bugun.month, bugun.day);
 
-    late DateTime adayBaslangic;
-    late DateTime bitis;
-
-    if (_seciliTur == RaporAralikTuru.son7Gun) {
-      bitis = temizBugun;
-      adayBaslangic = temizBugun.subtract(const Duration(days: 6));
-    } else if (_seciliTur == RaporAralikTuru.son30Gun) {
-      bitis = temizBugun;
-      adayBaslangic = temizBugun.subtract(const Duration(days: 29));
-    } else {
-      adayBaslangic =
-          _ozelBaslangic ?? temizBugun.subtract(const Duration(days: 6));
-      bitis = _ozelBitis ?? temizBugun;
-    }
-
     final aktifRutin = await _rutinDeposu.aktifRutiniGetir();
     Set<int> planliGunler = <int>{};
     List<EgzersizlerData> rutinEgzersizleri = const [];
@@ -83,50 +68,80 @@ class RaporKontrolcusu extends AsyncNotifier<RaporDurumu> {
       rutinEgzersizleri = detaylar.map((d) => d.egzersiz).toList();
     }
 
-    var kayitlar = await _antrenmanDeposu.tarihAraligindakiAntrenmanlariGetir(
-      baslangicTarihi: TarihYardimcisi.tarihiFormatla(adayBaslangic),
-      bitisTarihi: TarihYardimcisi.tarihiFormatla(bitis),
-    );
-
-    // Kullanıcı rutini yeni başlattıysa (örn. bugün), otomatik "Son 7/30 Gün"
-    // görünümünde rutinin başlamadığı geçmiş günleri (09/11 vb.) tabloya dahil etme.
-    DateTime baslangic = adayBaslangic;
-    if (_seciliTur != RaporAralikTuru.ozel) {
-      final ilgiliKayitlar = aktifRutin != null
-          ? kayitlar
-                .where((k) => k.antrenmanKaydi.rutinId == aktifRutin.id)
-                .toList()
-          : kayitlar;
-
-      final referansListe = ilgiliKayitlar.isNotEmpty
-          ? ilgiliKayitlar
-          : kayitlar;
-
-      if (referansListe.isEmpty) {
-        baslangic = temizBugun;
-      } else {
-        final ilkKayitTarihi = TarihYardimcisi.metindenTarihe(
-          referansListe.first.antrenmanKaydi.tarih,
+    // Rutinin başladığı ilk günü tespit et (örn. 15/11'de başlatıldıysa 1. gün 15/11 olur)
+    final gecmisKayitlar = await _antrenmanDeposu
+        .tarihAraligindakiAntrenmanlariGetir(
+          baslangicTarihi: '2024-01-01',
+          bitisTarihi: TarihYardimcisi.tarihiFormatla(temizBugun),
         );
-        if (ilkKayitTarihi.isAfter(adayBaslangic)) {
-          baslangic = ilkKayitTarihi;
-          kayitlar = kayitlar
-              .where(
-                (k) => !TarihYardimcisi.metindenTarihe(
-                  k.antrenmanKaydi.tarih,
-                ).isBefore(baslangic),
-              )
-              .toList();
-        }
-      }
+
+    final rutinKayitlari = aktifRutin != null
+        ? gecmisKayitlar
+              .where((k) => k.antrenmanKaydi.rutinId == aktifRutin.id)
+              .toList()
+        : gecmisKayitlar;
+
+    final referansKayitlar = rutinKayitlari.isNotEmpty
+        ? rutinKayitlari
+        : gecmisKayitlar;
+
+    final ilkBaslangicGunu = referansKayitlar.isNotEmpty
+        ? TarihYardimcisi.metindenTarihe(
+            referansKayitlar.first.antrenmanKaydi.tarih,
+          )
+        : temizBugun;
+
+    late final DateTime baslangic;
+    late final DateTime bitis;
+
+    if (_seciliTur == RaporAralikTuru.son7Gun) {
+      // Başlangıç gününden (örn. 15/11) itibaren 7 günlük blok (15/11 - 21/11)
+      final gecenGun = temizBugun.difference(ilkBaslangicGunu).inDays;
+      final blokIndeksi = gecenGun >= 0 ? (gecenGun ~/ 7) : 0;
+      baslangic = DateTime(
+        ilkBaslangicGunu.year,
+        ilkBaslangicGunu.month,
+        ilkBaslangicGunu.day + (blokIndeksi * 7),
+      );
+      bitis = DateTime(
+        baslangic.year,
+        baslangic.month,
+        baslangic.day + 6,
+      );
+    } else if (_seciliTur == RaporAralikTuru.son30Gun) {
+      // Başlangıç gününden (örn. 15/11) itibaren 30 günlük blok (15/11 - 14/12)
+      final gecenGun = temizBugun.difference(ilkBaslangicGunu).inDays;
+      final blokIndeksi = gecenGun >= 0 ? (gecenGun ~/ 30) : 0;
+      baslangic = DateTime(
+        ilkBaslangicGunu.year,
+        ilkBaslangicGunu.month,
+        ilkBaslangicGunu.day + (blokIndeksi * 30),
+      );
+      bitis = DateTime(
+        baslangic.year,
+        baslangic.month,
+        baslangic.day + 29,
+      );
+    } else {
+      baslangic = _ozelBaslangic ?? ilkBaslangicGunu;
+      bitis =
+          _ozelBitis ??
+          DateTime(baslangic.year, baslangic.month, baslangic.day + 6);
     }
+
+    final aralikKayitlari = await _antrenmanDeposu
+        .tarihAraligindakiAntrenmanlariGetir(
+          baslangicTarihi: TarihYardimcisi.tarihiFormatla(baslangic),
+          bitisTarihi: TarihYardimcisi.tarihiFormatla(bitis),
+        );
 
     final tablo = RaporOlusturucu.olustur(
       baslangic: baslangic,
       bitis: bitis,
-      antrenmanKayitlari: kayitlar,
+      antrenmanKayitlari: aralikKayitlari,
       planliHaftaninGunleri: planliGunler,
       rutinEgzersizleri: rutinEgzersizleri,
+      bugunReferansi: temizBugun,
     );
 
     return RaporDurumu(

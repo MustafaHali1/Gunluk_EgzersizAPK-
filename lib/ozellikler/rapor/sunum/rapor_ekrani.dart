@@ -19,7 +19,7 @@ class RaporEkrani extends ConsumerWidget {
     final secilen = await showDateRangePicker(
       context: context,
       firstDate: DateTime(2024, 1, 1),
-      lastDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
       initialDateRange: DateTimeRange(
         start: mevcutDurum.baslangic,
         end: mevcutDurum.bitis,
@@ -133,11 +133,11 @@ class _AralikSeciciSatiri extends StatelessWidget {
       segments: const [
         ButtonSegment(
           value: RaporAralikTuru.son7Gun,
-          label: Text('Son 7 Gün'),
+          label: Text('7 Gün'),
         ),
         ButtonSegment(
           value: RaporAralikTuru.son30Gun,
-          label: Text('Son 30 Gün'),
+          label: Text('30 Gün'),
         ),
         ButtonSegment(
           value: RaporAralikTuru.ozel,

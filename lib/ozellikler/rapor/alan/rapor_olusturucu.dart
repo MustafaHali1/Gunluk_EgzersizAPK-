@@ -66,6 +66,7 @@ class RaporOlusturucu {
     required List<GunlukAntrenmanDetayi> antrenmanKayitlari,
     required Set<int> planliHaftaninGunleri,
     required List<EgzersizlerData> rutinEgzersizleri,
+    DateTime? bugunReferansi,
   }) {
     final temizBaslangic = DateTime(
       baslangic.year,
@@ -73,6 +74,13 @@ class RaporOlusturucu {
       baslangic.day,
     );
     final temizBitis = DateTime(bitis.year, bitis.month, bitis.day);
+    final temizBugun = bugunReferansi != null
+        ? DateTime(
+            bugunReferansi.year,
+            bugunReferansi.month,
+            bugunReferansi.day,
+          )
+        : null;
 
     final gunler = <String>[];
     var imlec = temizBaslangic;
@@ -113,6 +121,12 @@ class RaporOlusturucu {
 
       for (final gunMetni in gunler) {
         final gunTarihi = TarihYardimcisi.metindenTarihe(gunMetni);
+        // Gelecek günler henüz gelmediği için 'planliDegil' (➖) olarak gösterilir
+        if (temizBugun != null && gunTarihi.isAfter(temizBugun)) {
+          hucreler[gunMetni] = RaporHucreDurumu.planliDegil;
+          continue;
+        }
+
         final gunDetayi = gunlukKayitHaritasi[gunMetni];
         EgzersizKayitlariData? ilgiliKayit;
         if (gunDetayi != null) {
@@ -170,7 +184,7 @@ class RaporOlusturucu {
     final seri = SeriHesaplayici.hesapla(
       gunlukKayitlar: gunlukKayitHaritasi,
       planliHaftaninGunleri: planliHaftaninGunleri,
-      referansBugun: temizBitis,
+      referansBugun: temizBugun ?? temizBitis,
     );
 
     return RaporTablosu(
