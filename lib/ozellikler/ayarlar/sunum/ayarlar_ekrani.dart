@@ -13,6 +13,7 @@ class AyarlarEkrani extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final temaModu = ref.watch(temaModuKontrolcusuSaglayici);
+    final ertelemeDk = ref.watch(ertelemeSuresiKontrolcusuSaglayici);
 
     return Scaffold(
       appBar: AppBar(title: const Text(UygulamaSabitleri.sekmeAyarlar)),
@@ -25,6 +26,15 @@ class AyarlarEkrani extends ConsumerWidget {
               ref
                   .read(temaModuKontrolcusuSaglayici.notifier)
                   .temaModunuDegistir(mod);
+            },
+          ),
+          const SizedBox(height: 16),
+          _ErtelemeSuresiKarti(
+            seciliDakika: ertelemeDk,
+            degistiginde: (dk) {
+              ref
+                  .read(ertelemeSuresiKontrolcusuSaglayici.notifier)
+                  .ertelemeSuresiniDegistir(dk);
             },
           ),
           const SizedBox(height: 16),
@@ -91,6 +101,110 @@ class _TemaSecimKarti extends StatelessWidget {
                 selected: {seciliMod},
                 onSelectionChanged: (secim) => degistiginde(secim.first),
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Varsayılan alarm erteleme süresini (5 dk, 15 dk, 30 dk, 1 saat, 2 saat veya özel) ayarlayan kart.
+class _ErtelemeSuresiKarti extends StatelessWidget {
+  final int seciliDakika;
+  final ValueChanged<int> degistiginde;
+
+  const _ErtelemeSuresiKarti({
+    required this.seciliDakika,
+    required this.degistiginde,
+  });
+
+  static const _secenekler = <(int, String)>[
+    (5, '5 dk'),
+    (15, '15 dk'),
+    (30, '30 dk'),
+    (60, '1 saat'),
+    (120, '2 saat'),
+  ];
+
+  Future<void> _ozelSureSor(BuildContext context) async {
+    final kontrol = TextEditingController(text: seciliDakika.toString());
+    final sonuc = await showDialog<int>(
+      context: context,
+      builder: (baglam) => AlertDialog(
+        title: const Text('Özel Erteleme Süresi'),
+        content: TextField(
+          controller: kontrol,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(
+            labelText: 'Dakika (1 - 720)',
+            hintText: 'Örn: 45',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(baglam).pop(),
+            child: const Text('Vazgeç'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final dk = int.tryParse(kontrol.text.trim());
+              if (dk != null && dk >= 1 && dk <= 720) {
+                Navigator.of(baglam).pop(dk);
+              }
+            },
+            child: const Text('Kaydet'),
+          ),
+        ],
+      ),
+    );
+    if (sonuc != null) {
+      degistiginde(sonuc);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hazirSecenekMi = _secenekler.any((s) => s.$1 == seciliDakika);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Alarm Erteleme Ayarı',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Bildirimdeki hızlı erteleme butonunun süresini belirleyin. Alarm çaldığında açılan ekrandan gün bitene (23:59) kadar istediğiniz süreye de erteleyebilirsiniz.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                ..._secenekler.map(
+                  (secenek) => ChoiceChip(
+                    label: Text(secenek.$2),
+                    selected: seciliDakika == secenek.$1,
+                    onSelected: (_) => degistiginde(secenek.$1),
+                  ),
+                ),
+                ChoiceChip(
+                  label: Text(
+                    hazirSecenekMi ? 'Özel' : 'Özel ($seciliDakika dk)',
+                  ),
+                  selected: !hazirSecenekMi,
+                  onSelected: (_) => _ozelSureSor(context),
+                ),
+              ],
             ),
           ],
         ),

@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../bildirimler/bildirim_servisi.dart';
 
 // Tema, saat dilimi, tanıtım durumu ve alarm müziği gibi yerel tercihleri yöneten servis sınıfı.
 class UygulamaTercihleriServisi {
@@ -13,6 +14,8 @@ class UygulamaTercihleriServisi {
       'tercih_hatirlatici_istiyor_mu';
   static const String _anahtarAlarmMuzikYolu = 'tercih_alarm_muzik_yolu';
   static const String _anahtarAlarmMuzikAdi = 'tercih_alarm_muzik_adi';
+  static const String _anahtarVarsayilanErtelemeDk =
+      'tercih_varsayilan_erteleme_dakika';
 
   Future<ThemeMode> temaModunuGetir() async {
     final tercihler = await SharedPreferences.getInstance();
@@ -79,6 +82,19 @@ class UygulamaTercihleriServisi {
     await tercihler.setString(_anahtarAlarmMuzikAdi, gorunenAd);
   }
 
+  Future<int> varsayilanErtelemeDakikasiGetir() async {
+    final tercihler = await SharedPreferences.getInstance();
+    return (tercihler.getInt(_anahtarVarsayilanErtelemeDk) ?? 15).clamp(1, 720);
+  }
+
+  Future<void> varsayilanErtelemeDakikasiKaydet(int dakika) async {
+    final tercihler = await SharedPreferences.getInstance();
+    await tercihler.setInt(
+      _anahtarVarsayilanErtelemeDk,
+      dakika.clamp(1, 720),
+    );
+  }
+
   ThemeMode _metindenTemaModuna(String deger) {
     switch (deger) {
       case 'acik':
@@ -133,3 +149,37 @@ class TemaModuKontrolcusu extends Notifier<ThemeMode> {
 // TemaModuKontrolcusu sağlayıcısı.
 final temaModuKontrolcusuSaglayici =
     NotifierProvider<TemaModuKontrolcusu, ThemeMode>(TemaModuKontrolcusu.new);
+
+// Varsayılan alarm erteleme süresini (dakika) yöneten kontrolcü.
+class ErtelemeSuresiKontrolcusu extends Notifier<int> {
+  @override
+  int build() {
+    _yukle();
+    return 15;
+  }
+
+  Future<void> _yukle() async {
+    final servis = ref.read(uygulamaTercihleriServisiSaglayici);
+    final kayitli = await servis.varsayilanErtelemeDakikasiGetir();
+    state = kayitli;
+    await ref
+        .read(bildirimServisiSaglayici)
+        .varsayilanErtelemeDakikasiKaydet(kayitli);
+  }
+
+  Future<void> ertelemeSuresiniDegistir(int yeniDakika) async {
+    final guvenli = yeniDakika.clamp(1, 720);
+    state = guvenli;
+    final servis = ref.read(uygulamaTercihleriServisiSaglayici);
+    await servis.varsayilanErtelemeDakikasiKaydet(guvenli);
+    await ref
+        .read(bildirimServisiSaglayici)
+        .varsayilanErtelemeDakikasiKaydet(guvenli);
+  }
+}
+
+// ErtelemeSuresiKontrolcusu sağlayıcısı.
+final ertelemeSuresiKontrolcusuSaglayici =
+    NotifierProvider<ErtelemeSuresiKontrolcusu, int>(
+      ErtelemeSuresiKontrolcusu.new,
+    );

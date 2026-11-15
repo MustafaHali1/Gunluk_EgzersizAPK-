@@ -2,6 +2,7 @@
 
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -51,6 +52,9 @@ class BildirimServisi {
   static const String iosKategoriId = 'rutin_hatirlatici_kategori';
   static const String sistemAlarmSesiUri =
       'content://settings/system/alarm_alert';
+  static const MethodChannel _alarmKanali = MethodChannel(
+    'com.mustafahali.gunlukegzersiz/alarm',
+  );
 
   final FlutterLocalNotificationsPlugin _eklenti =
       FlutterLocalNotificationsPlugin();
@@ -116,6 +120,23 @@ class BildirimServisi {
         onDidReceiveBackgroundNotificationResponse:
             arkaPlanBildirimYanitiIsleyici,
       );
+
+      if (Platform.isAndroid) {
+        _alarmKanali.setMethodCallHandler((cagri) async {
+          if (cagri.method == 'rutinAc') {
+            final rutinId = (cagri.arguments as num?)?.toInt();
+            if (rutinId != null && rutinId > 0) {
+              _onTepkiVerildiginde?.call(
+                NotificationResponse(
+                  notificationResponseType:
+                      NotificationResponseType.selectedNotification,
+                  payload: '/rutin/$rutinId',
+                ),
+              );
+            }
+          }
+        });
+      }
 
       _baslatildiMi = true;
       MerkeziKaydedici.bilgiYaz('BildirimServisi başarıyla başlatıldı.');
@@ -213,6 +234,18 @@ class BildirimServisi {
   // Uygulama kapalıyken alarma/bildirime tıklanarak açıldıysa yanıtı döndürür.
   Future<NotificationResponse?> acilisBildirimYanitiniGetir() async {
     try {
+      if (Platform.isAndroid) {
+        final acilisRutinId = await _alarmKanali.invokeMethod<int?>(
+          'acilisRutinIdGetir',
+        );
+        if (acilisRutinId != null && acilisRutinId > 0) {
+          return NotificationResponse(
+            notificationResponseType:
+                NotificationResponseType.selectedNotification,
+            payload: '/rutin/$acilisRutinId',
+          );
+        }
+      }
       final detaylar = await _eklenti.getNotificationAppLaunchDetails();
       if (detaylar != null && detaylar.didNotificationLaunchApp) {
         return detaylar.notificationResponse;
@@ -232,6 +265,9 @@ class BildirimServisi {
   Future<void> tumBildirimleriIptalEt() async {
     try {
       await _eklenti.cancelAll();
+      if (Platform.isAndroid) {
+        await _alarmKanali.invokeMethod('tumAlarmlariIptalEt');
+      }
     } catch (hata, iz) {
       MerkeziKaydedici.hataYaz(
         'Alarmlar iptal edilirken hata oluştu',
@@ -248,6 +284,14 @@ class BildirimServisi {
     int? rutinId,
   }) async {
     try {
+      if (Platform.isAndroid) {
+        await _alarmKanali.invokeMethod('simdiTestAlarmiCal', {
+          'rutinId': rutinId ?? 0,
+          'rutinAdi': rutinAdi ?? 'Rutin',
+          'muzikYolu': ozelMuzikYolu,
+        });
+        return;
+      }
       await _eklenti.show(
         id: 999,
         title: '⏰ ${rutinAdi ?? 'Rutin'} Alarmı Çalıyor!',
@@ -267,11 +311,45 @@ class BildirimServisi {
     }
   }
 
+  // Varsayılan erteleme süresini (dakika) Android yerel alarm yöneticisine kaydeder.
+  Future<void> varsayilanErtelemeDakikasiKaydet(int dakika) async {
+    if (!Platform.isAndroid) return;
+    try {
+      await _alarmKanali.invokeMethod('varsayilanErtelemeKaydet', dakika);
+    } catch (hata, iz) {
+      MerkeziKaydedici.hataYaz(
+        'Varsayılan erteleme süresi kaydedilirken hata oluştu',
+        hata: hata,
+        yiginIzi: iz,
+      );
+    }
+  }
+
   // Her rutinin kendi alarm saati ve müziğine göre tüm alarmları yeniden kurar.
   Future<void> rutinAlarmlariniYenidenKur(List<RutinlerData> rutinler) async {
     try {
       await _saatDiliminiYapilandir();
       await _eklenti.cancelAll();
+
+      if (Platform.isAndroid) {
+        final alarmlar = rutinler
+            .map(
+              (r) => <String, dynamic>{
+                'rutinId': r.id,
+                'rutinAdi': r.ad,
+                'saat': r.alarmSaati,
+                'dakika': r.alarmDakikasi,
+                'alarmAcikMi': r.alarmAcikMi,
+                'sadeceTarih': r.sadeceTarih,
+                'haftaninGunleri': r.haftaninGunleri,
+                'muzikYolu': r.alarmMuzikYolu,
+              },
+            )
+            .toList();
+        await _alarmKanali.invokeMethod('tumAlarmlariKur', alarmlar);
+        MerkeziKaydedici.bilgiYaz('Yerel Android rutin alarmları kuruldu.');
+        return;
+      }
 
       for (final rutin in rutinler) {
         if (!rutin.alarmAcikMi) continue;
