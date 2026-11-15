@@ -19,7 +19,9 @@ void main() {
         overrides: [
           veritabaniSaglayici.overrideWithValue(testVeritabani),
         ],
-        child: const GunlukEgzersizUygulamasi(),
+        child: const GunlukEgzersizUygulamasi(
+          bildirimEsitlemesiniCalistir: false,
+        ),
       ),
     );
     await testci.pump();

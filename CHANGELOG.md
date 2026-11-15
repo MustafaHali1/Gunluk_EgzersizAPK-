@@ -2,6 +2,13 @@
 
 Tüm önemli değişiklikler bu dosyada belgelenir.
 
+## [0.3.0] - 2026-11-15
+### Eklendi
+- Egzersizler ekranı (`EgzersizlerEkrani`), egzersiz ekleme/düzenleme/arşivleme ve hazır örnek listeden tek dokunuşla hareket ekleme özelliği eklendi.
+- Rutinler ekranı (`RutinlerEkrani`, `RutinFormEkrani`), sürükle-bırak hareket sıralama (`ReorderableListView`), gün seçimi ve aktif rutin belirleme eklendi.
+- Bugün ekranı (`BugunEkrani`, `BugunKontrolcusu`), günlük ilerleme yüzdesi, geri alınabilir "Yaptım / Atladım" işaretlemesi, hareket başına not ekleme, `+ Hızlı Ekle` (`HizliEkleAltSayfasi`) ve gece yarısı otomatik gün geçişi eklendi.
+- Ayarlar ekranı (`AyarlarEkrani`, `AyarlarKontrolcusu`, `UygulamaTercihleriServisi`), sabah/akşam hatırlatıcı saat ve gün seçimi, saat dilimi/yaz saati değişiminde otomatik yeniden kurulum, tema seçimi (Sistem/Açık/Koyu), pil optimizasyonu rehberi, gizlilik ve tıbbi uyarı notları eklendi.
+
 ## [0.2.0] - 2026-11-15
 ### Eklendi
 - Veritabanı katmanı (`UygulamaVeritabani`), 6 tablo, 4 DAO ve 4 Depo (Repository) sınıfı ile bellek içi birim testleri eklendi.
