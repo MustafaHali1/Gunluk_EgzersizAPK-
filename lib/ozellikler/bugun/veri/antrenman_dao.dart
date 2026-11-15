@@ -60,16 +60,13 @@ class AntrenmanDao extends DatabaseAccessor<UygulamaVeritabani>
     );
   }
 
-  // Belirli bir tarih için antrenman kaydı yoksa oluşturur, varsa mevcut olanı döndürür.
+  // Belirli bir tarih için antrenman kaydı yoksa oluşturur, aktif rutin değiştiyse eşitler.
   Future<GunlukAntrenmanDetayi> gunlukAntrenmanOlusturVeyaGetir({
     required String tarih,
     required int haftaninGunu,
   }) async {
     return transaction(() async {
       final mevcut = await gunlukAntrenmanDetayiGetir(tarih);
-      if (mevcut != null && mevcut.egzersizKayitlari.isNotEmpty) {
-        return mevcut;
-      }
 
       final aktifRutin = await (select(rutinler)
             ..where((t) => t.aktifMi.equals(true))
@@ -104,11 +101,13 @@ class AntrenmanDao extends DatabaseAccessor<UygulamaVeritabani>
         }
       }
 
-      final int antrenmanId;
       if (mevcut != null) {
-        antrenmanId = mevcut.antrenmanKaydi.id;
-        if (kullanilacakRutinId != null &&
-            mevcut.antrenmanKaydi.rutinId != kullanilacakRutinId) {
+        final antrenmanId = mevcut.antrenmanKaydi.id;
+        final rutinDegistiMi =
+            kullanilacakRutinId != null &&
+            mevcut.antrenmanKaydi.rutinId != kullanilacakRutinId;
+
+        if (rutinDegistiMi) {
           await (update(antrenmanKayitlari)
                 ..where((t) => t.id.equals(antrenmanId)))
               .write(
@@ -116,15 +115,48 @@ class AntrenmanDao extends DatabaseAccessor<UygulamaVeritabani>
                   rutinId: Value(kullanilacakRutinId),
                 ),
               );
+          // Eski rutinden kalan ve henüz işaretlenmemiş ('bekliyor') kayıtları temizle
+          await (delete(egzersizKayitlari)
+                ..where(
+                  (t) =>
+                      t.antrenmanKaydiId.equals(antrenmanId) &
+                      t.durum.equals('bekliyor'),
+                ))
+              .go();
         }
-      } else {
-        antrenmanId = await into(antrenmanKayitlari).insert(
-          AntrenmanKayitlariCompanion.insert(
-            tarih: tarih,
-            rutinId: Value(kullanilacakRutinId),
-          ),
-        );
+
+        if (kullanilacakRutinId != null) {
+          final guncelKayitlar = await antrenmanEgzersizKayitlariniGetir(
+            antrenmanId,
+          );
+          final mevcutEgzersizIdleri = guncelKayitlar
+              .map((k) => k.egzersizId)
+              .toSet();
+
+          for (final hareket in rutinHareketleri) {
+            if (!mevcutEgzersizIdleri.contains(hareket.id)) {
+              await into(egzersizKayitlari).insert(
+                EgzersizKayitlariCompanion.insert(
+                  antrenmanKaydiId: antrenmanId,
+                  egzersizId: hareket.id,
+                  egzersizAdiKopyasi: hareket.ad,
+                  durum: const Value('bekliyor'),
+                ),
+              );
+            }
+          }
+        }
+
+        final guncelDetay = await gunlukAntrenmanDetayiGetir(tarih);
+        return guncelDetay!;
       }
+
+      final antrenmanId = await into(antrenmanKayitlari).insert(
+        AntrenmanKayitlariCompanion.insert(
+          tarih: tarih,
+          rutinId: Value(kullanilacakRutinId),
+        ),
+      );
 
       for (final hareket in rutinHareketleri) {
         await into(egzersizKayitlari).insert(
