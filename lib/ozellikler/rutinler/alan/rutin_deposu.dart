@@ -7,6 +7,7 @@ import '../veri/rutin_dao.dart';
 abstract class RutinDeposu {
   Stream<List<RutinlerData>> tumRutinleriIzle();
   Future<List<RutinlerData>> tumRutinleriGetir();
+  Future<RutinlerData?> idIleRutinGetir(int id);
   Future<RutinlerData?> aktifRutiniGetir();
   Stream<RutinlerData?> aktifRutiniIzle();
   Future<int> rutinOlustur({
@@ -14,6 +15,12 @@ abstract class RutinDeposu {
     required String haftaninGunleri,
     required bool aktifMi,
     required List<int> egzersizIdListesi,
+    String? sadeceTarih,
+    bool alarmAcikMi = false,
+    int alarmSaati = 9,
+    int alarmDakikasi = 0,
+    String? alarmMuzikYolu,
+    String? alarmMuzikAdi,
   });
   Future<void> rutinGuncelle({
     required int rutinId,
@@ -21,6 +28,12 @@ abstract class RutinDeposu {
     required String haftaninGunleri,
     required bool aktifMi,
     required List<int> egzersizIdListesi,
+    String? sadeceTarih,
+    bool alarmAcikMi = false,
+    int alarmSaati = 9,
+    int alarmDakikasi = 0,
+    String? alarmMuzikYolu,
+    String? alarmMuzikAdi,
   });
   Future<void> aktifRutiniBelirle(int rutinId);
   Future<void> rutinSil(int rutinId);

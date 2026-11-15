@@ -20,11 +20,11 @@ class AntrenmanDeposuUygulamasi implements AntrenmanDeposu {
       return await _dao.gunlukAntrenmanDetayiGetir(tarih);
     } catch (hata, iz) {
       MerkeziKaydedici.hataYaz(
-        'Günlük antrenman detayı getirilirken hata oluştu ($tarih)',
+        'Günlük takip detayı getirilirken hata oluştu ($tarih)',
         hata: hata,
         yiginIzi: iz,
       );
-      throw const UygulamaHatasi('Günlük antrenman bilgisi alınamadı.');
+      throw const UygulamaHatasi('Günlük takip bilgisi alınamadı.');
     }
   }
 
@@ -40,11 +40,31 @@ class AntrenmanDeposuUygulamasi implements AntrenmanDeposu {
       );
     } catch (hata, iz) {
       MerkeziKaydedici.hataYaz(
-        'Günlük antrenman oluşturulurken/getirilirken hata oluştu ($tarih)',
+        'Günlük takip oluşturulurken/getirilirken hata oluştu ($tarih)',
         hata: hata,
         yiginIzi: iz,
       );
-      throw const UygulamaHatasi('Bugünün egzersiz listesi hazırlanamadı.');
+      throw const UygulamaHatasi('Bugünün görev listesi hazırlanamadı.');
+    }
+  }
+
+  @override
+  Future<List<EgzersizKayitlariData>> rutinIcinGunlukKayitlariGetirVeyaOlustur({
+    required int rutinId,
+    required String tarih,
+  }) async {
+    try {
+      return await _dao.rutinIcinGunlukKayitlariGetirVeyaOlustur(
+        rutinId: rutinId,
+        tarih: tarih,
+      );
+    } catch (hata, iz) {
+      MerkeziKaydedici.hataYaz(
+        'Rutin günlük kayıtları hazırlanırken hata oluştu (rutin: $rutinId)',
+        hata: hata,
+        yiginIzi: iz,
+      );
+      throw const UygulamaHatasi('Rutin görevleri hazırlanamadı.');
     }
   }
 
@@ -62,11 +82,11 @@ class AntrenmanDeposuUygulamasi implements AntrenmanDeposu {
       );
     } catch (hata, iz) {
       MerkeziKaydedici.hataYaz(
-        'Egzersiz durumu güncellenirken hata oluştu (id: $egzersizKaydiId)',
+        'Görev durumu güncellenirken hata oluştu (id: $egzersizKaydiId)',
         hata: hata,
         yiginIzi: iz,
       );
-      throw const UygulamaHatasi('Hareket durumu güncellenemedi.');
+      throw const UygulamaHatasi('Görev durumu güncellenemedi.');
     }
   }
 
@@ -86,11 +106,11 @@ class AntrenmanDeposuUygulamasi implements AntrenmanDeposu {
       );
     } catch (hata, iz) {
       MerkeziKaydedici.hataYaz(
-        'Hızlı egzersiz eklenirken hata oluştu',
+        'Hızlı görev eklenirken hata oluştu',
         hata: hata,
         yiginIzi: iz,
       );
-      throw const UygulamaHatasi('Hızlı egzersiz bugüne eklenemedi.');
+      throw const UygulamaHatasi('Görev bugüne eklenemedi.');
     }
   }
 
@@ -98,19 +118,21 @@ class AntrenmanDeposuUygulamasi implements AntrenmanDeposu {
   Future<void> gununTumHareketleriniYapildiIsaretle({
     required String tarih,
     required int haftaninGunu,
+    int? rutinId,
   }) async {
     try {
       await _dao.gununTumHareketleriniYapildiIsaretle(
         tarih: tarih,
         haftaninGunu: haftaninGunu,
+        rutinId: rutinId,
       );
     } catch (hata, iz) {
       MerkeziKaydedici.hataYaz(
-        'Günün tüm hareketleri yapıldı işaretlenirken hata oluştu ($tarih)',
+        'Günün tüm görevleri yapıldı işaretlenirken hata oluştu ($tarih)',
         hata: hata,
         yiginIzi: iz,
       );
-      throw const UygulamaHatasi('Hareketler tamamlandı olarak işaretlenemedi.');
+      throw const UygulamaHatasi('Görevler tamamlandı olarak işaretlenemedi.');
     }
   }
 
@@ -126,11 +148,11 @@ class AntrenmanDeposuUygulamasi implements AntrenmanDeposu {
       );
     } catch (hata, iz) {
       MerkeziKaydedici.hataYaz(
-        'Tarih aralığındaki antrenmanlar getirilirken hata oluştu',
+        'Tarih aralığındaki kayıtlar getirilirken hata oluştu',
         hata: hata,
         yiginIzi: iz,
       );
-      throw const UygulamaHatasi('Geçmiş antrenman kayıtları alınamadı.');
+      throw const UygulamaHatasi('Geçmiş kayıtlar alınamadı.');
     }
   }
 }

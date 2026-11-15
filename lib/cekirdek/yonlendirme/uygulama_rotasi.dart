@@ -7,6 +7,7 @@ import '../../ozellikler/bugun/sunum/bugun_ekrani.dart';
 import '../../ozellikler/egzersizler/sunum/egzersizler_ekrani.dart';
 import '../../ozellikler/gecmis/sunum/gecmis_ekrani.dart';
 import '../../ozellikler/rapor/sunum/rapor_ekrani.dart';
+import '../../ozellikler/rutinler/sunum/rutin_detay_ekrani.dart';
 import '../../ozellikler/rutinler/sunum/rutinler_ekrani.dart';
 import '../../ozellikler/tanitim/sunum/tanitim_ekrani.dart';
 import '../../ozellikler/tanitim/sunum/tanitim_kontrolcusu.dart';
@@ -42,6 +43,13 @@ final uygulamaRotasiSaglayici = Provider<GoRouter>((ref) {
       GoRoute(
         path: UygulamaSabitleri.rotaGecmis,
         builder: (context, durum) => const GecmisEkrani(),
+      ),
+      GoRoute(
+        path: '/rutin/:id',
+        builder: (context, durum) {
+          final id = int.tryParse(durum.pathParameters['id'] ?? '') ?? 0;
+          return RutinDetayEkrani(rutinId: id);
+        },
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, durum, navigasyonKabugu) {

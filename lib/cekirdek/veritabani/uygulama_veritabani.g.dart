@@ -625,8 +625,91 @@ class $RutinlerTable extends Rutinler
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _sadeceTarihMeta = const VerificationMeta(
+    'sadeceTarih',
+  );
   @override
-  List<GeneratedColumn> get $columns => [id, ad, haftaninGunleri, aktifMi];
+  late final GeneratedColumn<String> sadeceTarih = GeneratedColumn<String>(
+    'sadece_tarih',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _alarmAcikMiMeta = const VerificationMeta(
+    'alarmAcikMi',
+  );
+  @override
+  late final GeneratedColumn<bool> alarmAcikMi = GeneratedColumn<bool>(
+    'alarm_acik_mi',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("alarm_acik_mi" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _alarmSaatiMeta = const VerificationMeta(
+    'alarmSaati',
+  );
+  @override
+  late final GeneratedColumn<int> alarmSaati = GeneratedColumn<int>(
+    'alarm_saati',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(9),
+  );
+  static const VerificationMeta _alarmDakikasiMeta = const VerificationMeta(
+    'alarmDakikasi',
+  );
+  @override
+  late final GeneratedColumn<int> alarmDakikasi = GeneratedColumn<int>(
+    'alarm_dakikasi',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _alarmMuzikYoluMeta = const VerificationMeta(
+    'alarmMuzikYolu',
+  );
+  @override
+  late final GeneratedColumn<String> alarmMuzikYolu = GeneratedColumn<String>(
+    'alarm_muzik_yolu',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _alarmMuzikAdiMeta = const VerificationMeta(
+    'alarmMuzikAdi',
+  );
+  @override
+  late final GeneratedColumn<String> alarmMuzikAdi = GeneratedColumn<String>(
+    'alarm_muzik_adi',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    ad,
+    haftaninGunleri,
+    aktifMi,
+    sadeceTarih,
+    alarmAcikMi,
+    alarmSaati,
+    alarmDakikasi,
+    alarmMuzikYolu,
+    alarmMuzikAdi,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -662,6 +745,57 @@ class $RutinlerTable extends Rutinler
         aktifMi.isAcceptableOrUnknown(data['aktif_mi']!, _aktifMiMeta),
       );
     }
+    if (data.containsKey('sadece_tarih')) {
+      context.handle(
+        _sadeceTarihMeta,
+        sadeceTarih.isAcceptableOrUnknown(
+          data['sadece_tarih']!,
+          _sadeceTarihMeta,
+        ),
+      );
+    }
+    if (data.containsKey('alarm_acik_mi')) {
+      context.handle(
+        _alarmAcikMiMeta,
+        alarmAcikMi.isAcceptableOrUnknown(
+          data['alarm_acik_mi']!,
+          _alarmAcikMiMeta,
+        ),
+      );
+    }
+    if (data.containsKey('alarm_saati')) {
+      context.handle(
+        _alarmSaatiMeta,
+        alarmSaati.isAcceptableOrUnknown(data['alarm_saati']!, _alarmSaatiMeta),
+      );
+    }
+    if (data.containsKey('alarm_dakikasi')) {
+      context.handle(
+        _alarmDakikasiMeta,
+        alarmDakikasi.isAcceptableOrUnknown(
+          data['alarm_dakikasi']!,
+          _alarmDakikasiMeta,
+        ),
+      );
+    }
+    if (data.containsKey('alarm_muzik_yolu')) {
+      context.handle(
+        _alarmMuzikYoluMeta,
+        alarmMuzikYolu.isAcceptableOrUnknown(
+          data['alarm_muzik_yolu']!,
+          _alarmMuzikYoluMeta,
+        ),
+      );
+    }
+    if (data.containsKey('alarm_muzik_adi')) {
+      context.handle(
+        _alarmMuzikAdiMeta,
+        alarmMuzikAdi.isAcceptableOrUnknown(
+          data['alarm_muzik_adi']!,
+          _alarmMuzikAdiMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -687,6 +821,30 @@ class $RutinlerTable extends Rutinler
         DriftSqlType.bool,
         data['${effectivePrefix}aktif_mi'],
       )!,
+      sadeceTarih: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sadece_tarih'],
+      ),
+      alarmAcikMi: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}alarm_acik_mi'],
+      )!,
+      alarmSaati: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}alarm_saati'],
+      )!,
+      alarmDakikasi: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}alarm_dakikasi'],
+      )!,
+      alarmMuzikYolu: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}alarm_muzik_yolu'],
+      ),
+      alarmMuzikAdi: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}alarm_muzik_adi'],
+      ),
     );
   }
 
@@ -701,11 +859,23 @@ class RutinlerData extends DataClass implements Insertable<RutinlerData> {
   final String ad;
   final String haftaninGunleri;
   final bool aktifMi;
+  final String? sadeceTarih;
+  final bool alarmAcikMi;
+  final int alarmSaati;
+  final int alarmDakikasi;
+  final String? alarmMuzikYolu;
+  final String? alarmMuzikAdi;
   const RutinlerData({
     required this.id,
     required this.ad,
     required this.haftaninGunleri,
     required this.aktifMi,
+    this.sadeceTarih,
+    required this.alarmAcikMi,
+    required this.alarmSaati,
+    required this.alarmDakikasi,
+    this.alarmMuzikYolu,
+    this.alarmMuzikAdi,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -714,6 +884,18 @@ class RutinlerData extends DataClass implements Insertable<RutinlerData> {
     map['ad'] = Variable<String>(ad);
     map['haftanin_gunleri'] = Variable<String>(haftaninGunleri);
     map['aktif_mi'] = Variable<bool>(aktifMi);
+    if (!nullToAbsent || sadeceTarih != null) {
+      map['sadece_tarih'] = Variable<String>(sadeceTarih);
+    }
+    map['alarm_acik_mi'] = Variable<bool>(alarmAcikMi);
+    map['alarm_saati'] = Variable<int>(alarmSaati);
+    map['alarm_dakikasi'] = Variable<int>(alarmDakikasi);
+    if (!nullToAbsent || alarmMuzikYolu != null) {
+      map['alarm_muzik_yolu'] = Variable<String>(alarmMuzikYolu);
+    }
+    if (!nullToAbsent || alarmMuzikAdi != null) {
+      map['alarm_muzik_adi'] = Variable<String>(alarmMuzikAdi);
+    }
     return map;
   }
 
@@ -723,6 +905,18 @@ class RutinlerData extends DataClass implements Insertable<RutinlerData> {
       ad: Value(ad),
       haftaninGunleri: Value(haftaninGunleri),
       aktifMi: Value(aktifMi),
+      sadeceTarih: sadeceTarih == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sadeceTarih),
+      alarmAcikMi: Value(alarmAcikMi),
+      alarmSaati: Value(alarmSaati),
+      alarmDakikasi: Value(alarmDakikasi),
+      alarmMuzikYolu: alarmMuzikYolu == null && nullToAbsent
+          ? const Value.absent()
+          : Value(alarmMuzikYolu),
+      alarmMuzikAdi: alarmMuzikAdi == null && nullToAbsent
+          ? const Value.absent()
+          : Value(alarmMuzikAdi),
     );
   }
 
@@ -736,6 +930,12 @@ class RutinlerData extends DataClass implements Insertable<RutinlerData> {
       ad: serializer.fromJson<String>(json['ad']),
       haftaninGunleri: serializer.fromJson<String>(json['haftaninGunleri']),
       aktifMi: serializer.fromJson<bool>(json['aktifMi']),
+      sadeceTarih: serializer.fromJson<String?>(json['sadeceTarih']),
+      alarmAcikMi: serializer.fromJson<bool>(json['alarmAcikMi']),
+      alarmSaati: serializer.fromJson<int>(json['alarmSaati']),
+      alarmDakikasi: serializer.fromJson<int>(json['alarmDakikasi']),
+      alarmMuzikYolu: serializer.fromJson<String?>(json['alarmMuzikYolu']),
+      alarmMuzikAdi: serializer.fromJson<String?>(json['alarmMuzikAdi']),
     );
   }
   @override
@@ -746,6 +946,12 @@ class RutinlerData extends DataClass implements Insertable<RutinlerData> {
       'ad': serializer.toJson<String>(ad),
       'haftaninGunleri': serializer.toJson<String>(haftaninGunleri),
       'aktifMi': serializer.toJson<bool>(aktifMi),
+      'sadeceTarih': serializer.toJson<String?>(sadeceTarih),
+      'alarmAcikMi': serializer.toJson<bool>(alarmAcikMi),
+      'alarmSaati': serializer.toJson<int>(alarmSaati),
+      'alarmDakikasi': serializer.toJson<int>(alarmDakikasi),
+      'alarmMuzikYolu': serializer.toJson<String?>(alarmMuzikYolu),
+      'alarmMuzikAdi': serializer.toJson<String?>(alarmMuzikAdi),
     };
   }
 
@@ -754,11 +960,27 @@ class RutinlerData extends DataClass implements Insertable<RutinlerData> {
     String? ad,
     String? haftaninGunleri,
     bool? aktifMi,
+    Value<String?> sadeceTarih = const Value.absent(),
+    bool? alarmAcikMi,
+    int? alarmSaati,
+    int? alarmDakikasi,
+    Value<String?> alarmMuzikYolu = const Value.absent(),
+    Value<String?> alarmMuzikAdi = const Value.absent(),
   }) => RutinlerData(
     id: id ?? this.id,
     ad: ad ?? this.ad,
     haftaninGunleri: haftaninGunleri ?? this.haftaninGunleri,
     aktifMi: aktifMi ?? this.aktifMi,
+    sadeceTarih: sadeceTarih.present ? sadeceTarih.value : this.sadeceTarih,
+    alarmAcikMi: alarmAcikMi ?? this.alarmAcikMi,
+    alarmSaati: alarmSaati ?? this.alarmSaati,
+    alarmDakikasi: alarmDakikasi ?? this.alarmDakikasi,
+    alarmMuzikYolu: alarmMuzikYolu.present
+        ? alarmMuzikYolu.value
+        : this.alarmMuzikYolu,
+    alarmMuzikAdi: alarmMuzikAdi.present
+        ? alarmMuzikAdi.value
+        : this.alarmMuzikAdi,
   );
   RutinlerData copyWithCompanion(RutinlerCompanion data) {
     return RutinlerData(
@@ -768,6 +990,24 @@ class RutinlerData extends DataClass implements Insertable<RutinlerData> {
           ? data.haftaninGunleri.value
           : this.haftaninGunleri,
       aktifMi: data.aktifMi.present ? data.aktifMi.value : this.aktifMi,
+      sadeceTarih: data.sadeceTarih.present
+          ? data.sadeceTarih.value
+          : this.sadeceTarih,
+      alarmAcikMi: data.alarmAcikMi.present
+          ? data.alarmAcikMi.value
+          : this.alarmAcikMi,
+      alarmSaati: data.alarmSaati.present
+          ? data.alarmSaati.value
+          : this.alarmSaati,
+      alarmDakikasi: data.alarmDakikasi.present
+          ? data.alarmDakikasi.value
+          : this.alarmDakikasi,
+      alarmMuzikYolu: data.alarmMuzikYolu.present
+          ? data.alarmMuzikYolu.value
+          : this.alarmMuzikYolu,
+      alarmMuzikAdi: data.alarmMuzikAdi.present
+          ? data.alarmMuzikAdi.value
+          : this.alarmMuzikAdi,
     );
   }
 
@@ -777,13 +1017,30 @@ class RutinlerData extends DataClass implements Insertable<RutinlerData> {
           ..write('id: $id, ')
           ..write('ad: $ad, ')
           ..write('haftaninGunleri: $haftaninGunleri, ')
-          ..write('aktifMi: $aktifMi')
+          ..write('aktifMi: $aktifMi, ')
+          ..write('sadeceTarih: $sadeceTarih, ')
+          ..write('alarmAcikMi: $alarmAcikMi, ')
+          ..write('alarmSaati: $alarmSaati, ')
+          ..write('alarmDakikasi: $alarmDakikasi, ')
+          ..write('alarmMuzikYolu: $alarmMuzikYolu, ')
+          ..write('alarmMuzikAdi: $alarmMuzikAdi')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, ad, haftaninGunleri, aktifMi);
+  int get hashCode => Object.hash(
+    id,
+    ad,
+    haftaninGunleri,
+    aktifMi,
+    sadeceTarih,
+    alarmAcikMi,
+    alarmSaati,
+    alarmDakikasi,
+    alarmMuzikYolu,
+    alarmMuzikAdi,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -791,7 +1048,13 @@ class RutinlerData extends DataClass implements Insertable<RutinlerData> {
           other.id == this.id &&
           other.ad == this.ad &&
           other.haftaninGunleri == this.haftaninGunleri &&
-          other.aktifMi == this.aktifMi);
+          other.aktifMi == this.aktifMi &&
+          other.sadeceTarih == this.sadeceTarih &&
+          other.alarmAcikMi == this.alarmAcikMi &&
+          other.alarmSaati == this.alarmSaati &&
+          other.alarmDakikasi == this.alarmDakikasi &&
+          other.alarmMuzikYolu == this.alarmMuzikYolu &&
+          other.alarmMuzikAdi == this.alarmMuzikAdi);
 }
 
 class RutinlerCompanion extends UpdateCompanion<RutinlerData> {
@@ -799,29 +1062,59 @@ class RutinlerCompanion extends UpdateCompanion<RutinlerData> {
   final Value<String> ad;
   final Value<String> haftaninGunleri;
   final Value<bool> aktifMi;
+  final Value<String?> sadeceTarih;
+  final Value<bool> alarmAcikMi;
+  final Value<int> alarmSaati;
+  final Value<int> alarmDakikasi;
+  final Value<String?> alarmMuzikYolu;
+  final Value<String?> alarmMuzikAdi;
   const RutinlerCompanion({
     this.id = const Value.absent(),
     this.ad = const Value.absent(),
     this.haftaninGunleri = const Value.absent(),
     this.aktifMi = const Value.absent(),
+    this.sadeceTarih = const Value.absent(),
+    this.alarmAcikMi = const Value.absent(),
+    this.alarmSaati = const Value.absent(),
+    this.alarmDakikasi = const Value.absent(),
+    this.alarmMuzikYolu = const Value.absent(),
+    this.alarmMuzikAdi = const Value.absent(),
   });
   RutinlerCompanion.insert({
     this.id = const Value.absent(),
     required String ad,
     this.haftaninGunleri = const Value.absent(),
     this.aktifMi = const Value.absent(),
+    this.sadeceTarih = const Value.absent(),
+    this.alarmAcikMi = const Value.absent(),
+    this.alarmSaati = const Value.absent(),
+    this.alarmDakikasi = const Value.absent(),
+    this.alarmMuzikYolu = const Value.absent(),
+    this.alarmMuzikAdi = const Value.absent(),
   }) : ad = Value(ad);
   static Insertable<RutinlerData> custom({
     Expression<int>? id,
     Expression<String>? ad,
     Expression<String>? haftaninGunleri,
     Expression<bool>? aktifMi,
+    Expression<String>? sadeceTarih,
+    Expression<bool>? alarmAcikMi,
+    Expression<int>? alarmSaati,
+    Expression<int>? alarmDakikasi,
+    Expression<String>? alarmMuzikYolu,
+    Expression<String>? alarmMuzikAdi,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (ad != null) 'ad': ad,
       if (haftaninGunleri != null) 'haftanin_gunleri': haftaninGunleri,
       if (aktifMi != null) 'aktif_mi': aktifMi,
+      if (sadeceTarih != null) 'sadece_tarih': sadeceTarih,
+      if (alarmAcikMi != null) 'alarm_acik_mi': alarmAcikMi,
+      if (alarmSaati != null) 'alarm_saati': alarmSaati,
+      if (alarmDakikasi != null) 'alarm_dakikasi': alarmDakikasi,
+      if (alarmMuzikYolu != null) 'alarm_muzik_yolu': alarmMuzikYolu,
+      if (alarmMuzikAdi != null) 'alarm_muzik_adi': alarmMuzikAdi,
     });
   }
 
@@ -830,12 +1123,24 @@ class RutinlerCompanion extends UpdateCompanion<RutinlerData> {
     Value<String>? ad,
     Value<String>? haftaninGunleri,
     Value<bool>? aktifMi,
+    Value<String?>? sadeceTarih,
+    Value<bool>? alarmAcikMi,
+    Value<int>? alarmSaati,
+    Value<int>? alarmDakikasi,
+    Value<String?>? alarmMuzikYolu,
+    Value<String?>? alarmMuzikAdi,
   }) {
     return RutinlerCompanion(
       id: id ?? this.id,
       ad: ad ?? this.ad,
       haftaninGunleri: haftaninGunleri ?? this.haftaninGunleri,
       aktifMi: aktifMi ?? this.aktifMi,
+      sadeceTarih: sadeceTarih ?? this.sadeceTarih,
+      alarmAcikMi: alarmAcikMi ?? this.alarmAcikMi,
+      alarmSaati: alarmSaati ?? this.alarmSaati,
+      alarmDakikasi: alarmDakikasi ?? this.alarmDakikasi,
+      alarmMuzikYolu: alarmMuzikYolu ?? this.alarmMuzikYolu,
+      alarmMuzikAdi: alarmMuzikAdi ?? this.alarmMuzikAdi,
     );
   }
 
@@ -854,6 +1159,24 @@ class RutinlerCompanion extends UpdateCompanion<RutinlerData> {
     if (aktifMi.present) {
       map['aktif_mi'] = Variable<bool>(aktifMi.value);
     }
+    if (sadeceTarih.present) {
+      map['sadece_tarih'] = Variable<String>(sadeceTarih.value);
+    }
+    if (alarmAcikMi.present) {
+      map['alarm_acik_mi'] = Variable<bool>(alarmAcikMi.value);
+    }
+    if (alarmSaati.present) {
+      map['alarm_saati'] = Variable<int>(alarmSaati.value);
+    }
+    if (alarmDakikasi.present) {
+      map['alarm_dakikasi'] = Variable<int>(alarmDakikasi.value);
+    }
+    if (alarmMuzikYolu.present) {
+      map['alarm_muzik_yolu'] = Variable<String>(alarmMuzikYolu.value);
+    }
+    if (alarmMuzikAdi.present) {
+      map['alarm_muzik_adi'] = Variable<String>(alarmMuzikAdi.value);
+    }
     return map;
   }
 
@@ -863,7 +1186,13 @@ class RutinlerCompanion extends UpdateCompanion<RutinlerData> {
           ..write('id: $id, ')
           ..write('ad: $ad, ')
           ..write('haftaninGunleri: $haftaninGunleri, ')
-          ..write('aktifMi: $aktifMi')
+          ..write('aktifMi: $aktifMi, ')
+          ..write('sadeceTarih: $sadeceTarih, ')
+          ..write('alarmAcikMi: $alarmAcikMi, ')
+          ..write('alarmSaati: $alarmSaati, ')
+          ..write('alarmDakikasi: $alarmDakikasi, ')
+          ..write('alarmMuzikYolu: $alarmMuzikYolu, ')
+          ..write('alarmMuzikAdi: $alarmMuzikAdi')
           ..write(')'))
         .toString();
   }
@@ -1490,6 +1819,20 @@ class $EgzersizKayitlariTable extends EgzersizKayitlari
       'REFERENCES egzersizler (id) ON DELETE RESTRICT',
     ),
   );
+  static const VerificationMeta _rutinIdMeta = const VerificationMeta(
+    'rutinId',
+  );
+  @override
+  late final GeneratedColumn<int> rutinId = GeneratedColumn<int>(
+    'rutin_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES rutinler (id) ON DELETE SET NULL',
+    ),
+  );
   static const VerificationMeta _egzersizAdiKopyasiMeta =
       const VerificationMeta('egzersizAdiKopyasi');
   @override
@@ -1527,6 +1870,7 @@ class $EgzersizKayitlariTable extends EgzersizKayitlari
     id,
     antrenmanKaydiId,
     egzersizId,
+    rutinId,
     egzersizAdiKopyasi,
     durum,
     notMetni,
@@ -1564,6 +1908,12 @@ class $EgzersizKayitlariTable extends EgzersizKayitlari
       );
     } else if (isInserting) {
       context.missing(_egzersizIdMeta);
+    }
+    if (data.containsKey('rutin_id')) {
+      context.handle(
+        _rutinIdMeta,
+        rutinId.isAcceptableOrUnknown(data['rutin_id']!, _rutinIdMeta),
+      );
     }
     if (data.containsKey('egzersiz_adi_kopyasi')) {
       context.handle(
@@ -1609,6 +1959,10 @@ class $EgzersizKayitlariTable extends EgzersizKayitlari
         DriftSqlType.int,
         data['${effectivePrefix}egzersiz_id'],
       )!,
+      rutinId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}rutin_id'],
+      ),
       egzersizAdiKopyasi: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}egzersiz_adi_kopyasi'],
@@ -1635,6 +1989,7 @@ class EgzersizKayitlariData extends DataClass
   final int id;
   final int antrenmanKaydiId;
   final int egzersizId;
+  final int? rutinId;
   final String egzersizAdiKopyasi;
   final String durum;
   final String? notMetni;
@@ -1642,6 +1997,7 @@ class EgzersizKayitlariData extends DataClass
     required this.id,
     required this.antrenmanKaydiId,
     required this.egzersizId,
+    this.rutinId,
     required this.egzersizAdiKopyasi,
     required this.durum,
     this.notMetni,
@@ -1652,6 +2008,9 @@ class EgzersizKayitlariData extends DataClass
     map['id'] = Variable<int>(id);
     map['antrenman_kaydi_id'] = Variable<int>(antrenmanKaydiId);
     map['egzersiz_id'] = Variable<int>(egzersizId);
+    if (!nullToAbsent || rutinId != null) {
+      map['rutin_id'] = Variable<int>(rutinId);
+    }
     map['egzersiz_adi_kopyasi'] = Variable<String>(egzersizAdiKopyasi);
     map['durum'] = Variable<String>(durum);
     if (!nullToAbsent || notMetni != null) {
@@ -1665,6 +2024,9 @@ class EgzersizKayitlariData extends DataClass
       id: Value(id),
       antrenmanKaydiId: Value(antrenmanKaydiId),
       egzersizId: Value(egzersizId),
+      rutinId: rutinId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(rutinId),
       egzersizAdiKopyasi: Value(egzersizAdiKopyasi),
       durum: Value(durum),
       notMetni: notMetni == null && nullToAbsent
@@ -1682,6 +2044,7 @@ class EgzersizKayitlariData extends DataClass
       id: serializer.fromJson<int>(json['id']),
       antrenmanKaydiId: serializer.fromJson<int>(json['antrenmanKaydiId']),
       egzersizId: serializer.fromJson<int>(json['egzersizId']),
+      rutinId: serializer.fromJson<int?>(json['rutinId']),
       egzersizAdiKopyasi: serializer.fromJson<String>(
         json['egzersizAdiKopyasi'],
       ),
@@ -1696,6 +2059,7 @@ class EgzersizKayitlariData extends DataClass
       'id': serializer.toJson<int>(id),
       'antrenmanKaydiId': serializer.toJson<int>(antrenmanKaydiId),
       'egzersizId': serializer.toJson<int>(egzersizId),
+      'rutinId': serializer.toJson<int?>(rutinId),
       'egzersizAdiKopyasi': serializer.toJson<String>(egzersizAdiKopyasi),
       'durum': serializer.toJson<String>(durum),
       'notMetni': serializer.toJson<String?>(notMetni),
@@ -1706,6 +2070,7 @@ class EgzersizKayitlariData extends DataClass
     int? id,
     int? antrenmanKaydiId,
     int? egzersizId,
+    Value<int?> rutinId = const Value.absent(),
     String? egzersizAdiKopyasi,
     String? durum,
     Value<String?> notMetni = const Value.absent(),
@@ -1713,6 +2078,7 @@ class EgzersizKayitlariData extends DataClass
     id: id ?? this.id,
     antrenmanKaydiId: antrenmanKaydiId ?? this.antrenmanKaydiId,
     egzersizId: egzersizId ?? this.egzersizId,
+    rutinId: rutinId.present ? rutinId.value : this.rutinId,
     egzersizAdiKopyasi: egzersizAdiKopyasi ?? this.egzersizAdiKopyasi,
     durum: durum ?? this.durum,
     notMetni: notMetni.present ? notMetni.value : this.notMetni,
@@ -1726,6 +2092,7 @@ class EgzersizKayitlariData extends DataClass
       egzersizId: data.egzersizId.present
           ? data.egzersizId.value
           : this.egzersizId,
+      rutinId: data.rutinId.present ? data.rutinId.value : this.rutinId,
       egzersizAdiKopyasi: data.egzersizAdiKopyasi.present
           ? data.egzersizAdiKopyasi.value
           : this.egzersizAdiKopyasi,
@@ -1740,6 +2107,7 @@ class EgzersizKayitlariData extends DataClass
           ..write('id: $id, ')
           ..write('antrenmanKaydiId: $antrenmanKaydiId, ')
           ..write('egzersizId: $egzersizId, ')
+          ..write('rutinId: $rutinId, ')
           ..write('egzersizAdiKopyasi: $egzersizAdiKopyasi, ')
           ..write('durum: $durum, ')
           ..write('notMetni: $notMetni')
@@ -1752,6 +2120,7 @@ class EgzersizKayitlariData extends DataClass
     id,
     antrenmanKaydiId,
     egzersizId,
+    rutinId,
     egzersizAdiKopyasi,
     durum,
     notMetni,
@@ -1763,6 +2132,7 @@ class EgzersizKayitlariData extends DataClass
           other.id == this.id &&
           other.antrenmanKaydiId == this.antrenmanKaydiId &&
           other.egzersizId == this.egzersizId &&
+          other.rutinId == this.rutinId &&
           other.egzersizAdiKopyasi == this.egzersizAdiKopyasi &&
           other.durum == this.durum &&
           other.notMetni == this.notMetni);
@@ -1773,6 +2143,7 @@ class EgzersizKayitlariCompanion
   final Value<int> id;
   final Value<int> antrenmanKaydiId;
   final Value<int> egzersizId;
+  final Value<int?> rutinId;
   final Value<String> egzersizAdiKopyasi;
   final Value<String> durum;
   final Value<String?> notMetni;
@@ -1780,6 +2151,7 @@ class EgzersizKayitlariCompanion
     this.id = const Value.absent(),
     this.antrenmanKaydiId = const Value.absent(),
     this.egzersizId = const Value.absent(),
+    this.rutinId = const Value.absent(),
     this.egzersizAdiKopyasi = const Value.absent(),
     this.durum = const Value.absent(),
     this.notMetni = const Value.absent(),
@@ -1788,6 +2160,7 @@ class EgzersizKayitlariCompanion
     this.id = const Value.absent(),
     required int antrenmanKaydiId,
     required int egzersizId,
+    this.rutinId = const Value.absent(),
     required String egzersizAdiKopyasi,
     this.durum = const Value.absent(),
     this.notMetni = const Value.absent(),
@@ -1798,6 +2171,7 @@ class EgzersizKayitlariCompanion
     Expression<int>? id,
     Expression<int>? antrenmanKaydiId,
     Expression<int>? egzersizId,
+    Expression<int>? rutinId,
     Expression<String>? egzersizAdiKopyasi,
     Expression<String>? durum,
     Expression<String>? notMetni,
@@ -1806,6 +2180,7 @@ class EgzersizKayitlariCompanion
       if (id != null) 'id': id,
       if (antrenmanKaydiId != null) 'antrenman_kaydi_id': antrenmanKaydiId,
       if (egzersizId != null) 'egzersiz_id': egzersizId,
+      if (rutinId != null) 'rutin_id': rutinId,
       if (egzersizAdiKopyasi != null)
         'egzersiz_adi_kopyasi': egzersizAdiKopyasi,
       if (durum != null) 'durum': durum,
@@ -1817,6 +2192,7 @@ class EgzersizKayitlariCompanion
     Value<int>? id,
     Value<int>? antrenmanKaydiId,
     Value<int>? egzersizId,
+    Value<int?>? rutinId,
     Value<String>? egzersizAdiKopyasi,
     Value<String>? durum,
     Value<String?>? notMetni,
@@ -1825,6 +2201,7 @@ class EgzersizKayitlariCompanion
       id: id ?? this.id,
       antrenmanKaydiId: antrenmanKaydiId ?? this.antrenmanKaydiId,
       egzersizId: egzersizId ?? this.egzersizId,
+      rutinId: rutinId ?? this.rutinId,
       egzersizAdiKopyasi: egzersizAdiKopyasi ?? this.egzersizAdiKopyasi,
       durum: durum ?? this.durum,
       notMetni: notMetni ?? this.notMetni,
@@ -1842,6 +2219,9 @@ class EgzersizKayitlariCompanion
     }
     if (egzersizId.present) {
       map['egzersiz_id'] = Variable<int>(egzersizId.value);
+    }
+    if (rutinId.present) {
+      map['rutin_id'] = Variable<int>(rutinId.value);
     }
     if (egzersizAdiKopyasi.present) {
       map['egzersiz_adi_kopyasi'] = Variable<String>(egzersizAdiKopyasi.value);
@@ -1861,6 +2241,7 @@ class EgzersizKayitlariCompanion
           ..write('id: $id, ')
           ..write('antrenmanKaydiId: $antrenmanKaydiId, ')
           ..write('egzersizId: $egzersizId, ')
+          ..write('rutinId: $rutinId, ')
           ..write('egzersizAdiKopyasi: $egzersizAdiKopyasi, ')
           ..write('durum: $durum, ')
           ..write('notMetni: $notMetni')
@@ -2323,6 +2704,13 @@ abstract class _$UygulamaVeritabani extends GeneratedDatabase {
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('egzersiz_kayitlari', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'rutinler',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('egzersiz_kayitlari', kind: UpdateKind.update)],
     ),
   ]);
 }
@@ -2829,12 +3217,24 @@ typedef $$RutinlerTableCreateCompanionBuilder = RutinlerCompanion Function({
   required String ad,
   Value<String> haftaninGunleri,
   Value<bool> aktifMi,
+  Value<String?> sadeceTarih,
+  Value<bool> alarmAcikMi,
+  Value<int> alarmSaati,
+  Value<int> alarmDakikasi,
+  Value<String?> alarmMuzikYolu,
+  Value<String?> alarmMuzikAdi,
 });
 typedef $$RutinlerTableUpdateCompanionBuilder = RutinlerCompanion Function({
   Value<int> id,
   Value<String> ad,
   Value<String> haftaninGunleri,
   Value<bool> aktifMi,
+  Value<String?> sadeceTarih,
+  Value<bool> alarmAcikMi,
+  Value<int> alarmSaati,
+  Value<int> alarmDakikasi,
+  Value<String?> alarmMuzikYolu,
+  Value<String?> alarmMuzikAdi,
 });
 
 final class $$RutinlerTableReferences
@@ -2888,6 +3288,30 @@ final class $$RutinlerTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<
+    $EgzersizKayitlariTable,
+    List<EgzersizKayitlariData>
+  >
+  _egzersizKayitlariRefsTable(_$UygulamaVeritabani db) =>
+      MultiTypedResultKey.fromTable(
+        db.egzersizKayitlari,
+        aliasName: 'rutinler__id__egzersiz_kayitlari__rutin_id',
+      );
+
+  $$EgzersizKayitlariTableProcessedTableManager get egzersizKayitlariRefs {
+    final manager = $$EgzersizKayitlariTableTableManager(
+      $_db,
+      $_db.egzersizKayitlari,
+    ).filter((f) => f.rutinId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _egzersizKayitlariRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$RutinlerTableFilterComposer
@@ -2916,6 +3340,36 @@ class $$RutinlerTableFilterComposer
 
   ColumnFilters<bool> get aktifMi => $composableBuilder(
     column: $table.aktifMi,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sadeceTarih => $composableBuilder(
+    column: $table.sadeceTarih,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get alarmAcikMi => $composableBuilder(
+    column: $table.alarmAcikMi,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get alarmSaati => $composableBuilder(
+    column: $table.alarmSaati,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get alarmDakikasi => $composableBuilder(
+    column: $table.alarmDakikasi,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get alarmMuzikYolu => $composableBuilder(
+    column: $table.alarmMuzikYolu,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get alarmMuzikAdi => $composableBuilder(
+    column: $table.alarmMuzikAdi,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2968,6 +3422,31 @@ class $$RutinlerTableFilterComposer
     );
     return f(composer);
   }
+
+  Expression<bool> egzersizKayitlariRefs(
+    Expression<bool> Function($$EgzersizKayitlariTableFilterComposer f) f,
+  ) {
+    final $$EgzersizKayitlariTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.egzersizKayitlari,
+      getReferencedColumn: (t) => t.rutinId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$EgzersizKayitlariTableFilterComposer(
+            $db: $db,
+            $table: $db.egzersizKayitlari,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$RutinlerTableOrderingComposer
@@ -2998,6 +3477,36 @@ class $$RutinlerTableOrderingComposer
     column: $table.aktifMi,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get sadeceTarih => $composableBuilder(
+    column: $table.sadeceTarih,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get alarmAcikMi => $composableBuilder(
+    column: $table.alarmAcikMi,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get alarmSaati => $composableBuilder(
+    column: $table.alarmSaati,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get alarmDakikasi => $composableBuilder(
+    column: $table.alarmDakikasi,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get alarmMuzikYolu => $composableBuilder(
+    column: $table.alarmMuzikYolu,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get alarmMuzikAdi => $composableBuilder(
+    column: $table.alarmMuzikAdi,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$RutinlerTableAnnotationComposer
@@ -3022,6 +3531,36 @@ class $$RutinlerTableAnnotationComposer
 
   GeneratedColumn<bool> get aktifMi =>
       $composableBuilder(column: $table.aktifMi, builder: (column) => column);
+
+  GeneratedColumn<String> get sadeceTarih => $composableBuilder(
+    column: $table.sadeceTarih,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get alarmAcikMi => $composableBuilder(
+    column: $table.alarmAcikMi,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get alarmSaati => $composableBuilder(
+    column: $table.alarmSaati,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get alarmDakikasi => $composableBuilder(
+    column: $table.alarmDakikasi,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get alarmMuzikYolu => $composableBuilder(
+    column: $table.alarmMuzikYolu,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get alarmMuzikAdi => $composableBuilder(
+    column: $table.alarmMuzikAdi,
+    builder: (column) => column,
+  );
 
   Expression<T> rutinEgzersizleriRefs<T extends Object>(
     Expression<T> Function($$RutinEgzersizleriTableAnnotationComposer a) f,
@@ -3074,6 +3613,32 @@ class $$RutinlerTableAnnotationComposer
         );
     return f(composer);
   }
+
+  Expression<T> egzersizKayitlariRefs<T extends Object>(
+    Expression<T> Function($$EgzersizKayitlariTableAnnotationComposer a) f,
+  ) {
+    final $$EgzersizKayitlariTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.egzersizKayitlari,
+          getReferencedColumn: (t) => t.rutinId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$EgzersizKayitlariTableAnnotationComposer(
+                $db: $db,
+                $table: $db.egzersizKayitlari,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$RutinlerTableTableManager
@@ -3092,6 +3657,7 @@ class $$RutinlerTableTableManager
           PrefetchHooks Function({
             bool rutinEgzersizleriRefs,
             bool antrenmanKayitlariRefs,
+            bool egzersizKayitlariRefs,
           })
         > {
   $$RutinlerTableTableManager(_$UygulamaVeritabani db, $RutinlerTable table)
@@ -3111,11 +3677,23 @@ class $$RutinlerTableTableManager
                 Value<String> ad = const Value.absent(),
                 Value<String> haftaninGunleri = const Value.absent(),
                 Value<bool> aktifMi = const Value.absent(),
+                Value<String?> sadeceTarih = const Value.absent(),
+                Value<bool> alarmAcikMi = const Value.absent(),
+                Value<int> alarmSaati = const Value.absent(),
+                Value<int> alarmDakikasi = const Value.absent(),
+                Value<String?> alarmMuzikYolu = const Value.absent(),
+                Value<String?> alarmMuzikAdi = const Value.absent(),
               }) => RutinlerCompanion(
                 id: id,
                 ad: ad,
                 haftaninGunleri: haftaninGunleri,
                 aktifMi: aktifMi,
+                sadeceTarih: sadeceTarih,
+                alarmAcikMi: alarmAcikMi,
+                alarmSaati: alarmSaati,
+                alarmDakikasi: alarmDakikasi,
+                alarmMuzikYolu: alarmMuzikYolu,
+                alarmMuzikAdi: alarmMuzikAdi,
               ),
           createCompanionCallback:
               ({
@@ -3123,11 +3701,23 @@ class $$RutinlerTableTableManager
                 required String ad,
                 Value<String> haftaninGunleri = const Value.absent(),
                 Value<bool> aktifMi = const Value.absent(),
+                Value<String?> sadeceTarih = const Value.absent(),
+                Value<bool> alarmAcikMi = const Value.absent(),
+                Value<int> alarmSaati = const Value.absent(),
+                Value<int> alarmDakikasi = const Value.absent(),
+                Value<String?> alarmMuzikYolu = const Value.absent(),
+                Value<String?> alarmMuzikAdi = const Value.absent(),
               }) => RutinlerCompanion.insert(
                 id: id,
                 ad: ad,
                 haftaninGunleri: haftaninGunleri,
                 aktifMi: aktifMi,
+                sadeceTarih: sadeceTarih,
+                alarmAcikMi: alarmAcikMi,
+                alarmSaati: alarmSaati,
+                alarmDakikasi: alarmDakikasi,
+                alarmMuzikYolu: alarmMuzikYolu,
+                alarmMuzikAdi: alarmMuzikAdi,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -3141,12 +3731,14 @@ class $$RutinlerTableTableManager
               ({
                 rutinEgzersizleriRefs = false,
                 antrenmanKayitlariRefs = false,
+                egzersizKayitlariRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [
                     if (rutinEgzersizleriRefs) db.rutinEgzersizleri,
                     if (antrenmanKayitlariRefs) db.antrenmanKayitlari,
+                    if (egzersizKayitlariRefs) db.egzersizKayitlari,
                   ],
                   addJoins: null,
                   getPrefetchedDataCallback: (items) async {
@@ -3191,6 +3783,26 @@ class $$RutinlerTableTableManager
                           referencedColumn: 'rutin_id',
                           typedResults: items,
                         ),
+                      if (egzersizKayitlariRefs)
+                        await $_getPrefetchedDataByColumns<
+                          RutinlerData,
+                          $RutinlerTable,
+                          EgzersizKayitlariData,
+                          $EgzersizKayitlariTable
+                        >(
+                          currentTable: table,
+                          referencedTable: $$RutinlerTableReferences
+                              ._egzersizKayitlariRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$RutinlerTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).egzersizKayitlariRefs,
+                          currentColumn: 'id',
+                          referencedColumn: 'rutin_id',
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -3214,6 +3826,7 @@ typedef $$RutinlerTableProcessedTableManager =
       PrefetchHooks Function({
         bool rutinEgzersizleriRefs,
         bool antrenmanKayitlariRefs,
+        bool egzersizKayitlariRefs,
       })
     >;
 typedef $$RutinEgzersizleriTableCreateCompanionBuilder =
@@ -4002,6 +4615,7 @@ typedef $$EgzersizKayitlariTableCreateCompanionBuilder =
       Value<int> id,
       required int antrenmanKaydiId,
       required int egzersizId,
+      Value<int?> rutinId,
       required String egzersizAdiKopyasi,
       Value<String> durum,
       Value<String?> notMetni,
@@ -4011,6 +4625,7 @@ typedef $$EgzersizKayitlariTableUpdateCompanionBuilder =
       Value<int> id,
       Value<int> antrenmanKaydiId,
       Value<int> egzersizId,
+      Value<int?> rutinId,
       Value<String> egzersizAdiKopyasi,
       Value<String> durum,
       Value<String?> notMetni,
@@ -4061,6 +4676,23 @@ final class $$EgzersizKayitlariTableReferences
       $_db.egzersizler,
     ).filter((f) => f.id.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_egzersizIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $RutinlerTable _rutinIdTable(_$UygulamaVeritabani db) =>
+      db.rutinler.createAlias('egzersiz_kayitlari__rutin_id__rutinler__id');
+
+  $$RutinlerTableProcessedTableManager? get rutinId {
+    final $_column = $_itemColumn<int>('rutin_id');
+    if ($_column == null) return null;
+    final manager = $$RutinlerTableTableManager(
+      $_db,
+      $_db.rutinler,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_rutinIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
@@ -4134,6 +4766,29 @@ class $$EgzersizKayitlariTableFilterComposer
           }) => $$EgzersizlerTableFilterComposer(
             $db: $db,
             $table: $db.egzersizler,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$RutinlerTableFilterComposer get rutinId {
+    final $$RutinlerTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.rutinId,
+      referencedTable: $db.rutinler,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RutinlerTableFilterComposer(
+            $db: $db,
+            $table: $db.rutinler,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -4218,6 +4873,29 @@ class $$EgzersizKayitlariTableOrderingComposer
     );
     return composer;
   }
+
+  $$RutinlerTableOrderingComposer get rutinId {
+    final $$RutinlerTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.rutinId,
+      referencedTable: $db.rutinler,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RutinlerTableOrderingComposer(
+            $db: $db,
+            $table: $db.rutinler,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$EgzersizKayitlariTableAnnotationComposer
@@ -4289,6 +4967,29 @@ class $$EgzersizKayitlariTableAnnotationComposer
     );
     return composer;
   }
+
+  $$RutinlerTableAnnotationComposer get rutinId {
+    final $$RutinlerTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.rutinId,
+      referencedTable: $db.rutinler,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RutinlerTableAnnotationComposer(
+            $db: $db,
+            $table: $db.rutinler,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$EgzersizKayitlariTableTableManager
@@ -4304,7 +5005,11 @@ class $$EgzersizKayitlariTableTableManager
           $$EgzersizKayitlariTableUpdateCompanionBuilder,
           (EgzersizKayitlariData, $$EgzersizKayitlariTableReferences),
           EgzersizKayitlariData,
-          PrefetchHooks Function({bool antrenmanKaydiId, bool egzersizId})
+          PrefetchHooks Function({
+            bool antrenmanKaydiId,
+            bool egzersizId,
+            bool rutinId,
+          })
         > {
   $$EgzersizKayitlariTableTableManager(
     _$UygulamaVeritabani db,
@@ -4327,6 +5032,7 @@ class $$EgzersizKayitlariTableTableManager
                 Value<int> id = const Value.absent(),
                 Value<int> antrenmanKaydiId = const Value.absent(),
                 Value<int> egzersizId = const Value.absent(),
+                Value<int?> rutinId = const Value.absent(),
                 Value<String> egzersizAdiKopyasi = const Value.absent(),
                 Value<String> durum = const Value.absent(),
                 Value<String?> notMetni = const Value.absent(),
@@ -4334,6 +5040,7 @@ class $$EgzersizKayitlariTableTableManager
                 id: id,
                 antrenmanKaydiId: antrenmanKaydiId,
                 egzersizId: egzersizId,
+                rutinId: rutinId,
                 egzersizAdiKopyasi: egzersizAdiKopyasi,
                 durum: durum,
                 notMetni: notMetni,
@@ -4343,6 +5050,7 @@ class $$EgzersizKayitlariTableTableManager
                 Value<int> id = const Value.absent(),
                 required int antrenmanKaydiId,
                 required int egzersizId,
+                Value<int?> rutinId = const Value.absent(),
                 required String egzersizAdiKopyasi,
                 Value<String> durum = const Value.absent(),
                 Value<String?> notMetni = const Value.absent(),
@@ -4350,6 +5058,7 @@ class $$EgzersizKayitlariTableTableManager
                 id: id,
                 antrenmanKaydiId: antrenmanKaydiId,
                 egzersizId: egzersizId,
+                rutinId: rutinId,
                 egzersizAdiKopyasi: egzersizAdiKopyasi,
                 durum: durum,
                 notMetni: notMetni,
@@ -4365,7 +5074,11 @@ class $$EgzersizKayitlariTableTableManager
               )
               .toList(),
           prefetchHooksCallback:
-              ({antrenmanKaydiId = false, egzersizId = false}) {
+              ({
+                antrenmanKaydiId = false,
+                egzersizId = false,
+                rutinId = false,
+              }) {
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [],
@@ -4407,6 +5120,17 @@ class $$EgzersizKayitlariTableTableManager
                                 .id,
                           ) as T;
                         }
+                        if (rutinId) {
+                          state = state.withJoin(
+                            currentTable: table,
+                            currentColumn: table.rutinId,
+                            referencedTable: $$EgzersizKayitlariTableReferences
+                                ._rutinIdTable(db),
+                            referencedColumn: $$EgzersizKayitlariTableReferences
+                                ._rutinIdTable(db)
+                                .id,
+                          ) as T;
+                        }
 
                         return state;
                       },
@@ -4431,7 +5155,11 @@ typedef $$EgzersizKayitlariTableProcessedTableManager =
       $$EgzersizKayitlariTableUpdateCompanionBuilder,
       (EgzersizKayitlariData, $$EgzersizKayitlariTableReferences),
       EgzersizKayitlariData,
-      PrefetchHooks Function({bool antrenmanKaydiId, bool egzersizId})
+      PrefetchHooks Function({
+        bool antrenmanKaydiId,
+        bool egzersizId,
+        bool rutinId,
+      })
     >;
 typedef $$HatirlaticilarTableCreateCompanionBuilder =
     HatirlaticilarCompanion Function({

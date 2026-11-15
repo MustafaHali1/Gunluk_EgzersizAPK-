@@ -4,12 +4,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../cekirdek/veritabani/uygulama_veritabani.dart';
 import '../../../cekirdek/yardimcilar/tarih_yardimcisi.dart';
+import 'rutin_detay_ekrani.dart';
 import 'rutin_form_ekrani.dart';
 import 'rutin_kontrolcusu.dart';
 
-// Kullanıcının rutinlerini listelediği, aktif rutini seçtiği ve düzenlediği ekran.
+// Kullanıcının rutinlerini listelediği, tıklayınca içine girdiği ve (⋮) ile düzenlediği ekran.
 class RutinlerEkrani extends ConsumerWidget {
   const RutinlerEkrani({super.key});
+
+  Future<void> _rutinDetayAc(BuildContext context, int rutinId) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => RutinDetayEkrani(rutinId: rutinId),
+      ),
+    );
+  }
 
   Future<void> _rutinFormAc(
     BuildContext context, {
@@ -20,6 +29,16 @@ class RutinlerEkrani extends ConsumerWidget {
         builder: (_) => RutinFormEkrani(duzenlenecekRutin: rutin),
       ),
     );
+  }
+
+  String _altBilgiOlustur(RutinlerData r) {
+    final gunBilgisi = r.sadeceTarih != null
+        ? 'Sadece ${r.sadeceTarih}'
+        : _gunleriFormatla(r.haftaninGunleri);
+    if (!r.alarmAcikMi) return gunBilgisi;
+    final s = r.alarmSaati.toString().padLeft(2, '0');
+    final d = r.alarmDakikasi.toString().padLeft(2, '0');
+    return '$gunBilgisi • ⏰ $s:$d';
   }
 
   String _gunleriFormatla(String haftaninGunleri) {
@@ -37,7 +56,7 @@ class RutinlerEkrani extends ConsumerWidget {
     final rutinlerDurumu = ref.watch(tumRutinlerAkisSaglayici);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Rutinim')),
+      appBar: AppBar(title: const Text('Rutinlerim')),
       body: rutinlerDurumu.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (hata, _) => Center(child: Text(hata.toString())),
@@ -50,7 +69,7 @@ class RutinlerEkrani extends ConsumerWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      Icons.repeat_outlined,
+                      Icons.checklist_rtl,
                       size: 64,
                       color: Theme.of(context).colorScheme.primary,
                     ),
@@ -61,14 +80,14 @@ class RutinlerEkrani extends ConsumerWidget {
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      'Egzersizlerinizi seçip haftanın hangi günleri yapacağınızı belirlemek için yeni bir rutin oluşturun.',
+                      'Kendi görevlerinizi yazıp gün ve alarm saati belirlemek için yeni bir rutin oluşturun.',
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 20),
                     FilledButton.icon(
                       onPressed: () => _rutinFormAc(context),
                       icon: const Icon(Icons.add),
-                      label: const Text('Rutin Oluştur'),
+                      label: const Text('Yeni Rutin Oluştur'),
                     ),
                   ],
                 ),
@@ -84,36 +103,21 @@ class RutinlerEkrani extends ConsumerWidget {
               return Card(
                 margin: const EdgeInsets.only(bottom: 12),
                 child: ListTile(
-                  leading: Icon(
-                    r.aktifMi
-                        ? Icons.check_circle
-                        : Icons.radio_button_unchecked,
-                    color: r.aktifMi
-                        ? Theme.of(context).colorScheme.primary
-                        : null,
+                  leading: CircleAvatar(
+                    child: Icon(
+                      r.alarmAcikMi ? Icons.alarm_on : Icons.playlist_add_check,
+                    ),
                   ),
-                  title: Row(
-                    children: [
-                      Expanded(child: Text(r.ad)),
-                      if (r.aktifMi)
-                        Chip(
-                          label: const Text('Aktif'),
-                          visualDensity: VisualDensity.compact,
-                          backgroundColor: Theme.of(
-                            context,
-                          ).colorScheme.primaryContainer,
-                        ),
-                    ],
+                  title: Text(
+                    r.ad,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  subtitle: Text('Günler: ${_gunleriFormatla(r.haftaninGunleri)}'),
-                  onTap: () => _rutinFormAc(context, rutin: r),
+                  subtitle: Text(_altBilgiOlustur(r)),
+                  onTap: () => _rutinDetayAc(context, r.id),
                   trailing: PopupMenuButton<String>(
+                    tooltip: 'Rutin Ayarları',
                     onSelected: (secim) async {
-                      if (secim == 'aktif_yap') {
-                        await ref
-                            .read(rutinKontrolcusuSaglayici.notifier)
-                            .aktifRutiniBelirle(r.id);
-                      } else if (secim == 'duzenle') {
+                      if (secim == 'duzenle') {
                         await _rutinFormAc(context, rutin: r);
                       } else if (secim == 'sil') {
                         await ref
@@ -121,17 +125,12 @@ class RutinlerEkrani extends ConsumerWidget {
                             .rutinSil(r.id);
                       }
                     },
-                    itemBuilder: (_) => [
-                      if (!r.aktifMi)
-                        const PopupMenuItem(
-                          value: 'aktif_yap',
-                          child: Text('Aktif Rutin Yap'),
-                        ),
-                      const PopupMenuItem(
+                    itemBuilder: (_) => const [
+                      PopupMenuItem(
                         value: 'duzenle',
-                        child: Text('Düzenle ve Sırala'),
+                        child: Text('Düzenle (Görevler / Alarm / Günler)'),
                       ),
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'sil',
                         child: Text('Sil'),
                       ),

@@ -2,14 +2,13 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../cekirdek/bildirimler/bildirim_servisi.dart';
-import '../../ayarlar/alan/hatirlatici_deposu.dart';
-import '../../ayarlar/sunum/ayarlar_kontrolcusu.dart';
-import '../../ayarlar/veri/hatirlatici_deposu_uygulamasi.dart';
 import '../../bugun/sunum/bugun_kontrolcusu.dart';
 import '../../egzersizler/sunum/egzersiz_kontrolcusu.dart';
 import '../../gecmis/sunum/gecmis_kontrolcusu.dart';
 import '../../rapor/sunum/rapor_kontrolcusu.dart';
+import '../../rutinler/alan/rutin_deposu.dart';
 import '../../rutinler/sunum/rutin_kontrolcusu.dart';
+import '../../rutinler/veri/rutin_deposu_uygulamasi.dart';
 import '../veri/yedekleme_servisi.dart';
 
 // Yedekleme, geri yükleme ve tüm verileri silme işlemlerini yöneten kontrolcü.
@@ -18,8 +17,7 @@ class YedeklemeKontrolcusu extends Notifier<AsyncValue<void>> {
   AsyncValue<void> build() => const AsyncData(null);
 
   YedeklemeServisi get _yedeklemeServisi => ref.read(yedeklemeServisiSaglayici);
-  HatirlaticiDeposu get _hatirlaticiDeposu =>
-      ref.read(hatirlaticiDeposuSaglayici);
+  RutinDeposu get _rutinDeposu => ref.read(rutinDeposuSaglayici);
   BildirimServisi get _bildirimServisi => ref.read(bildirimServisiSaglayici);
 
   void _tumSaglayicilariYenile() {
@@ -29,7 +27,6 @@ class YedeklemeKontrolcusu extends Notifier<AsyncValue<void>> {
     ref.invalidate(bugunKontrolcusuSaglayici);
     ref.invalidate(gecmisKontrolcusuSaglayici);
     ref.invalidate(raporKontrolcusuSaglayici);
-    ref.invalidate(hatirlaticilarAkisSaglayici);
   }
 
   // Tüm veritabanını JSON olarak dışa aktarır ve paylaşır.
@@ -50,14 +47,14 @@ class YedeklemeKontrolcusu extends Notifier<AsyncValue<void>> {
     return _yedeklemeServisi.yedekDosyasiSecVeOku();
   }
 
-  // Onaylanan JSON metnini veritabanına yükler ve bildirimleri günceller.
+  // Onaylanan JSON metnini veritabanına yükler ve rutin alarmlarını günceller.
   Future<String?> yedektenGeriYukle(String jsonMetni) async {
     state = const AsyncLoading();
     try {
       await _yedeklemeServisi.jsonMetnindenGeriYukle(jsonMetni);
       _tumSaglayicilariYenile();
-      final hatirlaticilar = await _hatirlaticiDeposu.hatirlaticilariGetir();
-      await _bildirimServisi.hatirlaticilariYenidenKur(hatirlaticilar);
+      final rutinler = await _rutinDeposu.tumRutinleriGetir();
+      await _bildirimServisi.rutinAlarmlariniYenidenKur(rutinler);
       state = const AsyncData(null);
       return null;
     } catch (hata, iz) {
@@ -66,14 +63,13 @@ class YedeklemeKontrolcusu extends Notifier<AsyncValue<void>> {
     }
   }
 
-  // Çift onay sonrası tüm verileri siler ve hatırlatıcıları sıfırlar.
+  // Çift onay sonrası tüm verileri siler ve alarmları sıfırlar.
   Future<String?> tumVerileriSil() async {
     state = const AsyncLoading();
     try {
       await _yedeklemeServisi.tumVerileriSil();
       _tumSaglayicilariYenile();
-      final hatirlaticilar = await _hatirlaticiDeposu.hatirlaticilariGetir();
-      await _bildirimServisi.hatirlaticilariYenidenKur(hatirlaticilar);
+      await _bildirimServisi.tumBildirimleriIptalEt();
       state = const AsyncData(null);
       return null;
     } catch (hata, iz) {

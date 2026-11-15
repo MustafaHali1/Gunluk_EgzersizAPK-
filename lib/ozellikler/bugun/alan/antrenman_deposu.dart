@@ -1,13 +1,18 @@
 // lib/ozellikler/bugun/alan/antrenman_deposu.dart
 
+import '../../../cekirdek/veritabani/uygulama_veritabani.dart';
 import '../veri/antrenman_dao.dart';
 
-// Günlük antrenman ve hareket işaretleme işlemlerini tanımlayan soyut depo arayüzü.
+// Günlük takip ve görev işaretleme işlemlerini tanımlayan soyut depo arayüzü.
 abstract class AntrenmanDeposu {
   Future<GunlukAntrenmanDetayi?> gunlukAntrenmanDetayiGetir(String tarih);
   Future<GunlukAntrenmanDetayi> gunlukAntrenmanOlusturVeyaGetir({
     required String tarih,
     required int haftaninGunu,
+  });
+  Future<List<EgzersizKayitlariData>> rutinIcinGunlukKayitlariGetirVeyaOlustur({
+    required int rutinId,
+    required String tarih,
   });
   Future<void> egzersizDurumunuGuncelle({
     required int egzersizKaydiId,
@@ -23,6 +28,7 @@ abstract class AntrenmanDeposu {
   Future<void> gununTumHareketleriniYapildiIsaretle({
     required String tarih,
     required int haftaninGunu,
+    int? rutinId,
   });
   Future<List<GunlukAntrenmanDetayi>> tarihAraligindakiAntrenmanlariGetir({
     required String baslangicTarihi,

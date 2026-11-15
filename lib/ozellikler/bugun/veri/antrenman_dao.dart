@@ -6,7 +6,7 @@ import '../../../cekirdek/veritabani/uygulama_veritabani.dart';
 
 part 'antrenman_dao.g.dart';
 
-// Günlük antrenman ve içindeki hareket kayıtlarını bir arada tutan veri sınıfı.
+// Günlük takip ve içindeki görev kayıtlarını bir arada tutan veri sınıfı.
 class GunlukAntrenmanDetayi {
   final AntrenmanKayitlariData antrenmanKaydi;
   final List<EgzersizKayitlariData> egzersizKayitlari;
@@ -37,7 +37,7 @@ class AntrenmanDao extends DatabaseAccessor<UygulamaVeritabani>
         .getSingleOrNull();
   }
 
-  // Belirli bir antrenman kaydına ait tüm egzersiz kayıtlarını getirir.
+  // Belirli bir antrenman kaydına ait tüm görev kayıtlarını getirir.
   Future<List<EgzersizKayitlariData>> antrenmanEgzersizKayitlariniGetir(
     int antrenmanKaydiId,
   ) {
@@ -47,125 +47,136 @@ class AntrenmanDao extends DatabaseAccessor<UygulamaVeritabani>
         .get();
   }
 
-  // Belirli bir tarihin antrenman ve hareket kayıtlarını bir arada getirir.
+  // Belirli bir tarihin antrenman ve görev kayıtlarını bir arada getirir.
   Future<GunlukAntrenmanDetayi?> gunlukAntrenmanDetayiGetir(
     String tarih,
   ) async {
     final antrenman = await tariheGoreAntrenmanGetir(tarih);
     if (antrenman == null) return null;
-    final hareketler = await antrenmanEgzersizKayitlariniGetir(antrenman.id);
+    final gorevler = await antrenmanEgzersizKayitlariniGetir(antrenman.id);
     return GunlukAntrenmanDetayi(
       antrenmanKaydi: antrenman,
-      egzersizKayitlari: hareketler,
+      egzersizKayitlari: gorevler,
     );
   }
 
-  // Belirli bir tarih için antrenman kaydı yoksa oluşturur, aktif rutin değiştiyse eşitler.
+  // Belirli bir rutin ve tarih için günlük görev kayıtlarını oluşturur veya eşitler.
+  Future<List<EgzersizKayitlariData>> rutinIcinGunlukKayitlariGetirVeyaOlustur({
+    required int rutinId,
+    required String tarih,
+  }) async {
+    return transaction(() async {
+      var antrenman = await tariheGoreAntrenmanGetir(tarih);
+      antrenman ??= await into(antrenmanKayitlari).insertReturning(
+        AntrenmanKayitlariCompanion.insert(
+          tarih: tarih,
+          rutinId: Value(rutinId),
+        ),
+      );
+
+      final birlesikSorgu = select(rutinEgzersizleri).join([
+        innerJoin(
+          egzersizler,
+          egzersizler.id.equalsExp(rutinEgzersizleri.egzersizId),
+        ),
+      ])
+        ..where(rutinEgzersizleri.rutinId.equals(rutinId))
+        ..where(egzersizler.arsivlendiMi.equals(false))
+        ..orderBy([OrderingTerm.asc(rutinEgzersizleri.siraIndeksi)]);
+
+      final rutinGorevSatirlari = await birlesikSorgu.get();
+      final rutinGorevleri =
+          rutinGorevSatirlari.map((s) => s.readTable(egzersizler)).toList();
+      final aktifGorevIdleri = rutinGorevleri.map((g) => g.id).toSet();
+
+      final mevcutKayitlar = await (select(egzersizKayitlari)
+            ..where(
+              (t) =>
+                  t.antrenmanKaydiId.equals(antrenman!.id) &
+                  t.rutinId.equals(rutinId),
+            )
+            ..orderBy([(t) => OrderingTerm.asc(t.id)]))
+          .get();
+
+      // Rutinden çıkarılmış ve hâlâ 'bekliyor' durumunda olan görevleri temizle
+      for (final kayit in mevcutKayitlar) {
+        if (kayit.durum == 'bekliyor' &&
+            !aktifGorevIdleri.contains(kayit.egzersizId)) {
+          await (delete(egzersizKayitlari)
+                ..where((t) => t.id.equals(kayit.id)))
+              .go();
+        }
+      }
+
+      final kalanKayitlar = await (select(egzersizKayitlari)
+            ..where(
+              (t) =>
+                  t.antrenmanKaydiId.equals(antrenman!.id) &
+                  t.rutinId.equals(rutinId),
+            ))
+          .get();
+      final mevcutGorevIdleri = kalanKayitlar.map((k) => k.egzersizId).toSet();
+
+      for (final gorev in rutinGorevleri) {
+        if (!mevcutGorevIdleri.contains(gorev.id)) {
+          await into(egzersizKayitlari).insert(
+            EgzersizKayitlariCompanion.insert(
+              antrenmanKaydiId: antrenman.id,
+              egzersizId: gorev.id,
+              rutinId: Value(rutinId),
+              egzersizAdiKopyasi: gorev.ad,
+              durum: const Value('bekliyor'),
+            ),
+          );
+        }
+      }
+
+      final guncelKayitlar = await (select(egzersizKayitlari)
+            ..where(
+              (t) =>
+                  t.antrenmanKaydiId.equals(antrenman!.id) &
+                  t.rutinId.equals(rutinId),
+            )
+            ..orderBy([(t) => OrderingTerm.asc(t.id)]))
+          .get();
+      return guncelKayitlar;
+    });
+  }
+
+  // Belirli bir tarih için bugüne ait tüm planlı rutinlerin görev kayıtlarını hazırlar.
   Future<GunlukAntrenmanDetayi> gunlukAntrenmanOlusturVeyaGetir({
     required String tarih,
     required int haftaninGunu,
   }) async {
     return transaction(() async {
-      final mevcut = await gunlukAntrenmanDetayiGetir(tarih);
+      var antrenman = await tariheGoreAntrenmanGetir(tarih);
+      final tumRutinler = await select(rutinler).get();
 
-      final aktifRutin = await (select(rutinler)
-            ..where((t) => t.aktifMi.equals(true))
-            ..limit(1))
-          .getSingleOrNull();
-
-      int? kullanilacakRutinId;
-      List<EgzersizlerData> rutinHareketleri = [];
-
-      if (aktifRutin != null) {
-        final gunler = aktifRutin.haftaninGunleri
+      final bugununRutinleri = tumRutinler.where((r) {
+        if (r.sadeceTarih != null) {
+          return r.sadeceTarih == tarih;
+        }
+        final gunler = r.haftaninGunleri
             .split(',')
             .map((e) => int.tryParse(e.trim()))
             .whereType<int>()
             .toSet();
+        return gunler.contains(haftaninGunu);
+      }).toList();
 
-        if (gunler.contains(haftaninGunu)) {
-          kullanilacakRutinId = aktifRutin.id;
-          final birlesikSorgu = select(rutinEgzersizleri).join([
-            innerJoin(
-              egzersizler,
-              egzersizler.id.equalsExp(rutinEgzersizleri.egzersizId),
-            ),
-          ])
-            ..where(rutinEgzersizleri.rutinId.equals(aktifRutin.id))
-            ..where(egzersizler.arsivlendiMi.equals(false))
-            ..orderBy([OrderingTerm.asc(rutinEgzersizleri.siraIndeksi)]);
-
-          final satirlar = await birlesikSorgu.get();
-          rutinHareketleri =
-              satirlar.map((s) => s.readTable(egzersizler)).toList();
-        }
-      }
-
-      if (mevcut != null) {
-        final antrenmanId = mevcut.antrenmanKaydi.id;
-        final rutinDegistiMi =
-            kullanilacakRutinId != null &&
-            mevcut.antrenmanKaydi.rutinId != kullanilacakRutinId;
-
-        if (rutinDegistiMi) {
-          await (update(antrenmanKayitlari)
-                ..where((t) => t.id.equals(antrenmanId)))
-              .write(
-                AntrenmanKayitlariCompanion(
-                  rutinId: Value(kullanilacakRutinId),
-                ),
-              );
-          // Eski rutinden kalan ve henüz işaretlenmemiş ('bekliyor') kayıtları temizle
-          await (delete(egzersizKayitlari)
-                ..where(
-                  (t) =>
-                      t.antrenmanKaydiId.equals(antrenmanId) &
-                      t.durum.equals('bekliyor'),
-                ))
-              .go();
-        }
-
-        if (kullanilacakRutinId != null) {
-          final guncelKayitlar = await antrenmanEgzersizKayitlariniGetir(
-            antrenmanId,
-          );
-          final mevcutEgzersizIdleri = guncelKayitlar
-              .map((k) => k.egzersizId)
-              .toSet();
-
-          for (final hareket in rutinHareketleri) {
-            if (!mevcutEgzersizIdleri.contains(hareket.id)) {
-              await into(egzersizKayitlari).insert(
-                EgzersizKayitlariCompanion.insert(
-                  antrenmanKaydiId: antrenmanId,
-                  egzersizId: hareket.id,
-                  egzersizAdiKopyasi: hareket.ad,
-                  durum: const Value('bekliyor'),
-                ),
-              );
-            }
-          }
-        }
-
-        final guncelDetay = await gunlukAntrenmanDetayiGetir(tarih);
-        return guncelDetay!;
-      }
-
-      final antrenmanId = await into(antrenmanKayitlari).insert(
+      antrenman ??= await into(antrenmanKayitlari).insertReturning(
         AntrenmanKayitlariCompanion.insert(
           tarih: tarih,
-          rutinId: Value(kullanilacakRutinId),
+          rutinId: Value(
+            bugununRutinleri.isNotEmpty ? bugununRutinleri.first.id : null,
+          ),
         ),
       );
 
-      for (final hareket in rutinHareketleri) {
-        await into(egzersizKayitlari).insert(
-          EgzersizKayitlariCompanion.insert(
-            antrenmanKaydiId: antrenmanId,
-            egzersizId: hareket.id,
-            egzersizAdiKopyasi: hareket.ad,
-            durum: const Value('bekliyor'),
-          ),
+      for (final rutin in bugununRutinleri) {
+        await rutinIcinGunlukKayitlariGetirVeyaOlustur(
+          rutinId: rutin.id,
+          tarih: tarih,
         );
       }
 
@@ -174,7 +185,7 @@ class AntrenmanDao extends DatabaseAccessor<UygulamaVeritabani>
     });
   }
 
-  // Tek bir egzersiz kaydının durumunu ('yapildi', 'atlandi', 'bekliyor') ve notunu günceller.
+  // Tek bir görev kaydının durumunu ('yapildi', 'atlandi', 'bekliyor') ve notunu günceller.
   Future<int> egzersizKaydiDurumunuGuncelle({
     required int egzersizKaydiId,
     required String durum,
@@ -190,7 +201,7 @@ class AntrenmanDao extends DatabaseAccessor<UygulamaVeritabani>
         );
   }
 
-  // O güne tek seferlik hızlı egzersiz kaydı ekler.
+  // O güne tek seferlik hızlı görev kaydı ekler.
   Future<int> gunlukHizliEgzersizEkle({
     required int antrenmanKaydiId,
     required int egzersizId,
@@ -208,18 +219,22 @@ class AntrenmanDao extends DatabaseAccessor<UygulamaVeritabani>
     );
   }
 
-  // Belirli bir günün tüm bekleyen hareketlerini 'yapildi' olarak işaretler (bildirim aksiyonu için).
+  // Belirli bir günün (veya belirli bir rutinin) tüm görevlerini 'yapildi' olarak işaretler.
   Future<void> gununTumHareketleriniYapildiIsaretle({
     required String tarih,
     required int haftaninGunu,
+    int? rutinId,
   }) async {
     final detay = await gunlukAntrenmanOlusturVeyaGetir(
       tarih: tarih,
       haftaninGunu: haftaninGunu,
     );
-    await (update(egzersizKayitlari)
-          ..where((t) => t.antrenmanKaydiId.equals(detay.antrenmanKaydi.id)))
-        .write(const EgzersizKayitlariCompanion(durum: Value('yapildi')));
+    final sorgu = update(egzersizKayitlari)
+      ..where((t) => t.antrenmanKaydiId.equals(detay.antrenmanKaydi.id));
+    if (rutinId != null) {
+      sorgu.where((t) => t.rutinId.equals(rutinId));
+    }
+    await sorgu.write(const EgzersizKayitlariCompanion(durum: Value('yapildi')));
   }
 
   // Tarih aralığındaki tüm antrenman detaylarını getirir (Rapor ve Geçmiş için).

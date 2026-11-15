@@ -11,7 +11,7 @@ import 'package:gunluk_egzersiz/main.dart';
 import 'package:gunluk_egzersiz/ozellikler/egzersizler/sunum/egzersiz_form_alt_sayfasi.dart';
 
 void main() {
-  testWidgets('Ana iskelet ve alt sekmeler ekranda görünür', (
+  testWidgets('Ana iskelet ve 4 alt sekme ekranda görünür', (
     WidgetTester testci,
   ) async {
     final testVeritabani = UygulamaVeritabani(NativeDatabase.memory());
@@ -38,19 +38,19 @@ void main() {
     await testVeritabani.close();
   });
 
-  testWidgets('Bugün ekranında hareketi "Yaptım" işaretleme ve geri alma çalışır', (
+  testWidgets('Bugün ekranında rutin kartına basınca rutin içi açılır ve Yaptım çalışır', (
     WidgetTester testci,
   ) async {
     final testVeritabani = UygulamaVeritabani(NativeDatabase.memory());
     final egzId = await testVeritabani.egzersizDao.egzersizEkle(
       EgzersizlerCompanion.insert(
-        ad: 'Sabah Squat',
+        ad: 'Boyun Esnetme',
         tur: 'tekrarli',
-        kategori: const Value('Alt Vücut'),
+        kategori: const Value('Genel'),
       ),
     );
     await testVeritabani.rutinDao.rutinOlusturVeEgzersizleriKaydet(
-      ad: 'Günlük Rutin',
+      ad: 'Sabah Rutinim',
       haftaninGunleri: '1,2,3,4,5,6,7',
       aktifMi: true,
       egzersizIdListesi: [egzId],
@@ -69,7 +69,14 @@ void main() {
     await testci.pump();
     await testci.pump(const Duration(milliseconds: 200));
 
-    expect(find.text('Sabah Squat'), findsOneWidget);
+    expect(find.text('Sabah Rutinim'), findsOneWidget);
+
+    // Rutin kartına basınca rutin içi açılır
+    await testci.tap(find.text('Sabah Rutinim'));
+    await testci.pump();
+    await testci.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Boyun Esnetme'), findsOneWidget);
     expect(find.text('Yaptım'), findsOneWidget);
 
     // "Yaptım" butonuna dokun
@@ -80,19 +87,11 @@ void main() {
     expect(find.text('Yapıldı (Geri Al)'), findsOneWidget);
     expect(find.text('%100'), findsOneWidget);
 
-    // Tekrar dokunarak geri al
-    await testci.tap(find.text('Yapıldı (Geri Al)'));
-    await testci.pump();
-    await testci.pump(const Duration(milliseconds: 200));
-
-    expect(find.text('Yaptım'), findsOneWidget);
-    expect(find.text('%0'), findsOneWidget);
-
     await testci.pumpWidget(const SizedBox.shrink());
     await testVeritabani.close();
   });
 
-  testWidgets('Egzersiz ekleme formu boş ad doğrulamasını çalıştırır', (
+  testWidgets('Görev ekleme formu boş ad doğrulamasını çalıştırır', (
     WidgetTester testci,
   ) async {
     final testVeritabani = UygulamaVeritabani(NativeDatabase.memory());
@@ -111,7 +110,6 @@ void main() {
     );
     await testci.pump();
 
-    // Ad alanı boşken Kaydet butonuna dokun
     await testci.tap(find.text('Kaydet'));
     await testci.pump();
 

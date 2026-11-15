@@ -22,9 +22,11 @@ Future<void> arkaPlanBildirimYanitiIsleyici(
     final veritabani = UygulamaVeritabani();
     try {
       final simdi = DateTime.now();
+      final rutinId = BildirimServisi.payloaddanRutinIdCoz(yanit.payload);
       await veritabani.antrenmanDao.gununTumHareketleriniYapildiIsaretle(
         tarih: TarihYardimcisi.tarihiFormatla(simdi),
         haftaninGunu: simdi.weekday,
+        rutinId: rutinId,
       );
     } catch (hata, iz) {
       MerkeziKaydedici.hataYaz(
@@ -38,15 +40,15 @@ Future<void> arkaPlanBildirimYanitiIsleyici(
   }
 }
 
-// Android ve iOS uyandırma alarmı / hatırlatıcı bildirimlerini ve müzik seçimini yöneten servis.
+// Android ve iOS rutine bağlı uyandırma alarmı / hatırlatıcı bildirimlerini yöneten servis.
 class BildirimServisi {
-  static const String varsayilanKanalTabani = 'gunluk_egzersiz_alarm_kanali';
-  static const String kanalAdi = 'Egzersiz Uyandırma Alarmı';
+  static const String varsayilanKanalTabani = 'gunluk_rutin_alarm_kanali';
+  static const String kanalAdi = 'Rutin Uyandırma Alarmı';
   static const String kanalAciklamasi =
-      'Rutin vakti geldiğinde çalar saat / müzik ile hatırlatan alarm bildirimleri';
+      'Rutin vakti geldiğinde seçilen müzik veya alarm sesiyle hatırlatan bildirimler';
   static const String aksiyonBaslaId = 'aksiyon_rutine_basla';
   static const String aksiyonYaptimId = 'aksiyon_yaptim';
-  static const String iosKategoriId = 'egzersiz_hatirlatici_kategori';
+  static const String iosKategoriId = 'rutin_hatirlatici_kategori';
   static const String sistemAlarmSesiUri =
       'content://settings/system/alarm_alert';
 
@@ -54,6 +56,11 @@ class BildirimServisi {
       FlutterLocalNotificationsPlugin();
   bool _baslatildiMi = false;
   void Function(NotificationResponse)? _onTepkiVerildiginde;
+
+  static int? payloaddanRutinIdCoz(String? payload) {
+    if (payload == null || !payload.startsWith('/rutin/')) return null;
+    return int.tryParse(payload.replaceFirst('/rutin/', ''));
+  }
 
   // Bildirim servisini ve yerel saat dilimini başlatır.
   Future<void> baslat({
@@ -79,7 +86,7 @@ class BildirimServisi {
             actions: [
               DarwinNotificationAction.plain(
                 aksiyonBaslaId,
-                'Rutini Aç ve Başla',
+                'Rutini Aç',
                 options: <DarwinNotificationActionOption>{
                   DarwinNotificationActionOption.foreground,
                 },
@@ -235,16 +242,20 @@ class BildirimServisi {
   }
 
   // Seçili alarm müziği ile anlık uyandırma alarmı testi gönderir.
-  Future<void> testBildirimiGonder({String? ozelMuzikYolu}) async {
+  Future<void> testBildirimiGonder({
+    String? ozelMuzikYolu,
+    String? rutinAdi,
+    int? rutinId,
+  }) async {
     try {
       await _eklenti.show(
         id: 999,
-        title: '⏰ Egzersiz Alarmı Çalıyor!',
-        body: 'Rutininizi açıp hareketleri Yaptım / Yapmadım olarak işaretleyin.',
+        title: '⏰ ${rutinAdi ?? 'Rutin'} Alarmı Çalıyor!',
+        body: 'Dokunarak rutinin içini açın ve görevleri işaretleyin.',
         notificationDetails: _alarmDetaylariniOlustur(
           ozelMuzikYolu: ozelMuzikYolu,
         ),
-        payload: '/bugun',
+        payload: rutinId != null ? '/rutin/$rutinId' : '/bugun',
       );
     } catch (hata, iz) {
       MerkeziKaydedici.hataYaz(
@@ -256,47 +267,59 @@ class BildirimServisi {
     }
   }
 
-  // Sabah ve akşam hatırlatıcılarını seçilen alarm müziğiyle kurar.
-  Future<void> hatirlaticilariYenidenKur(
-    List<HatirlaticilarData> hatirlaticilar, {
-    bool kullaniciAlarmIstiyorMu = true,
-    String? ozelMuzikYolu,
-  }) async {
+  // Her rutinin kendi alarm saati ve müziğine göre tüm alarmları yeniden kurar.
+  Future<void> rutinAlarmlariniYenidenKur(List<RutinlerData> rutinler) async {
     try {
       await _saatDiliminiYapilandir();
       await _eklenti.cancelAll();
 
-      if (!kullaniciAlarmIstiyorMu) {
-        MerkeziKaydedici.bilgiYaz(
-          'Kullanıcı hatırlatıcı istemediği için tüm alarmlar kapalı tutuldu.',
+      for (final rutin in rutinler) {
+        if (!rutin.alarmAcikMi) continue;
+
+        final detaylar = _alarmDetaylariniOlustur(
+          ozelMuzikYolu: rutin.alarmMuzikYolu,
         );
-        return;
-      }
+        final tabanId = 1000 + (rutin.id * 10);
+        final baslik = '⏰ ${rutin.ad}';
+        const icerik =
+            'Rutin vakti geldi! Dokunarak görevleri Yaptım / Yapmadım işaretleyin.';
+        final payload = '/rutin/${rutin.id}';
 
-      final detaylar = _alarmDetaylariniOlustur(ozelMuzikYolu: ozelMuzikYolu);
+        if (rutin.sadeceTarih != null) {
+          final tarih = TarihYardimcisi.metindenTarihe(rutin.sadeceTarih!);
+          final hedef = tz.TZDateTime(
+            tz.local,
+            tarih.year,
+            tarih.month,
+            tarih.day,
+            rutin.alarmSaati,
+            rutin.alarmDakikasi,
+          );
+          if (hedef.isAfter(tz.TZDateTime.now(tz.local))) {
+            await _eklenti.zonedSchedule(
+              id: tabanId,
+              title: baslik,
+              body: icerik,
+              scheduledDate: hedef,
+              notificationDetails: detaylar,
+              androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+              payload: payload,
+            );
+          }
+          continue;
+        }
 
-      for (final hatirlatici in hatirlaticilar) {
-        if (!hatirlatici.etkinMi) continue;
-
-        final gunler = hatirlatici.haftaninGunleri
+        final gunler = rutin.haftaninGunleri
             .split(',')
             .map((e) => int.tryParse(e.trim()))
             .whereType<int>()
             .toSet();
 
-        final sabahMi = hatirlatici.etiket == 'sabah';
-        final tabanId = sabahMi ? 100 : 200;
-        final baslik = sabahMi
-            ? '⏰ Sabah Egzersiz Alarmı!'
-            : '⏰ Akşam Egzersiz Alarmı!';
-        final icerik =
-            'Egzersiz vakti geldi! Dokunarak rutininizi açın ve hareketleri Yaptım / Yapmadım işaretleyin.';
-
         for (final gun in gunler) {
           final planlananZaman = _sonrakiGunVeSaatHesapla(
             haftaninGunu: gun,
-            saat: hatirlatici.saat,
-            dakika: hatirlatici.dakika,
+            saat: rutin.alarmSaati,
+            dakika: rutin.alarmDakikasi,
           );
 
           await _eklenti.zonedSchedule(
@@ -307,18 +330,17 @@ class BildirimServisi {
             notificationDetails: detaylar,
             androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
             matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
-            payload: '/bugun',
+            payload: payload,
           );
         }
       }
-      MerkeziKaydedici.bilgiYaz('Egzersiz alarmları yeniden kuruldu.');
+      MerkeziKaydedici.bilgiYaz('Rutin alarmları yeniden kuruldu.');
     } catch (hata, iz) {
       MerkeziKaydedici.hataYaz(
-        'Alarmlar kurulurken hata oluştu',
+        'Rutin alarmları kurulurken hata oluştu',
         hata: hata,
         yiginIzi: iz,
       );
-      throw const UygulamaHatasi('Alarm saatleri kurulamadı.');
     }
   }
 
@@ -353,7 +375,7 @@ class BildirimServisi {
       actions: const <AndroidNotificationAction>[
         AndroidNotificationAction(
           aksiyonBaslaId,
-          'Rutini Aç ve Başla',
+          'Rutini Aç',
           showsUserInterface: true,
           cancelNotification: true,
         ),

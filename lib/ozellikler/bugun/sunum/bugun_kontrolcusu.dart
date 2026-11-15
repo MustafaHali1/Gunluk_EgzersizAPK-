@@ -14,7 +14,7 @@ import '../alan/antrenman_deposu.dart';
 import '../alan/bugun_durumu.dart';
 import '../veri/antrenman_deposu_uygulamasi.dart';
 
-// Bugün ekranının durumunu, gece yarısı geçişini ve işaretlemeleri yöneten kontrolcü sağlayıcısı.
+// Bugün ekranının durumunu, gece yarısı geçişini ve rutin özetlerini yöneten kontrolcü sağlayıcısı.
 final bugunKontrolcusuSaglayici =
     AsyncNotifierProvider<BugunKontrolcusu, BugunDurumu>(BugunKontrolcusu.new);
 
@@ -58,7 +58,7 @@ class BugunKontrolcusu extends AsyncNotifier<BugunDurumu> {
     });
   }
 
-  // Bugünün antrenman kaydını oluşturur veya mevcut olanı ilgili egzersiz detaylarıyla yükler.
+  // Bugünün planlı rutinlerini, yaklaşan saati ve görev kayıtlarını yükler.
   Future<BugunDurumu> _gunuYukle() async {
     final simdi = DateTime.now();
     final tarih = TarihYardimcisi.tarihiFormatla(simdi);
@@ -74,14 +74,73 @@ class BugunKontrolcusu extends AsyncNotifier<BugunDurumu> {
       for (final e in tumEgzersizler) e.id: e,
     };
 
-    final aktifRutin = await _rutinDeposu.aktifRutiniGetir();
+    final tumRutinler = await _rutinDeposu.tumRutinleriGetir();
+    final buguneAitRutinler = tumRutinler.where((r) {
+      if (r.sadeceTarih != null) return r.sadeceTarih == tarih;
+      final gunler = r.haftaninGunleri
+          .split(',')
+          .map((e) => int.tryParse(e.trim()))
+          .whereType<int>()
+          .toSet();
+      return gunler.contains(haftaninGunu);
+    }).toList();
+
+    final simdiDakika = simdi.hour * 60 + simdi.minute;
+    final ozetler = <BugunRutinOzeti>[];
+
+    for (final r in buguneAitRutinler) {
+      final rutinKayitlari = detay.egzersizKayitlari
+          .where((k) => k.rutinId == r.id)
+          .toList();
+      final alarmDakika = r.alarmSaati * 60 + r.alarmDakikasi;
+      final bekliyorVar = rutinKayitlari.any((k) => k.durum == 'bekliyor');
+      final suresiGecti = r.alarmAcikMi && bekliyorVar && simdiDakika > alarmDakika;
+
+      ozetler.add(
+        BugunRutinOzeti(
+          rutin: r,
+          gorevKayitlari: rutinKayitlari,
+          suresiGectiMi: suresiGecti,
+        ),
+      );
+    }
+
+    // Yaklaşan sıradaki rutin: tamamlanmamış ve saati henüz gelmemiş en yakın alarmlı rutin;
+    // yoksa tamamlanmamış ilk rutin.
+    BugunRutinOzeti? siradaki;
+    final tamamlanmamisAlarmlilar = ozetler
+        .where((o) => !o.tamamlandiMi && o.rutin.alarmAcikMi)
+        .toList();
+    final yaklasanlar = tamamlanmamisAlarmlilar
+        .where(
+          (o) => (o.rutin.alarmSaati * 60 + o.rutin.alarmDakikasi) >= simdiDakika,
+        )
+        .toList()
+      ..sort((a, b) {
+        final da = a.rutin.alarmSaati * 60 + a.rutin.alarmDakikasi;
+        final db = b.rutin.alarmSaati * 60 + b.rutin.alarmDakikasi;
+        return da.compareTo(db);
+      });
+
+    if (yaklasanlar.isNotEmpty) {
+      siradaki = yaklasanlar.first;
+    } else {
+      final bekleyenler = ozetler.where((o) => !o.tamamlandiMi).toList();
+      if (bekleyenler.isNotEmpty) {
+        siradaki = bekleyenler.first;
+      }
+    }
 
     return BugunDurumu(
       tarih: tarih,
       haftaninGunu: haftaninGunu,
       antrenmanDetayi: detay,
       egzersizDetayHaritasi: harita,
-      aktifRutinAdi: aktifRutin?.ad,
+      bugunRutinleri: ozetler,
+      siradakiRutin: siradaki,
+      aktifRutinAdi: buguneAitRutinler.isNotEmpty
+          ? buguneAitRutinler.first.ad
+          : null,
     );
   }
 
@@ -95,7 +154,7 @@ class BugunKontrolcusu extends AsyncNotifier<BugunDurumu> {
     }
   }
 
-  // Hareket durumunu değiştirir; aynı duruma tekrar basılırsa 'bekliyor' durumuna geri alır.
+  // Görev durumunu değiştirir; aynı duruma tekrar basılırsa 'bekliyor' durumuna geri alır.
   Future<void> hareketDurumunuDegistir({
     required EgzersizKayitlariData kayit,
     required String hedefDurum,
@@ -108,12 +167,12 @@ class BugunKontrolcusu extends AsyncNotifier<BugunDurumu> {
       );
       await bugunuYenile();
     } catch (hata, iz) {
-      MerkeziKaydedici.hataYaz('Hareket durumu güncellenemedi', hata: hata, yiginIzi: iz);
+      MerkeziKaydedici.hataYaz('Görev durumu güncellenemedi', hata: hata, yiginIzi: iz);
       rethrow;
     }
   }
 
-  // Hareket için opsiyonel not kaydeder veya günceller.
+  // Görev için opsiyonel not kaydeder veya günceller.
   Future<void> hareketNotunuKaydet({
     required EgzersizKayitlariData kayit,
     required String notMetni,
@@ -126,12 +185,12 @@ class BugunKontrolcusu extends AsyncNotifier<BugunDurumu> {
       );
       await bugunuYenile();
     } catch (hata, iz) {
-      MerkeziKaydedici.hataYaz('Hareket notu kaydedilemedi', hata: hata, yiginIzi: iz);
+      MerkeziKaydedici.hataYaz('Görev notu kaydedilemedi', hata: hata, yiginIzi: iz);
       rethrow;
     }
   }
 
-  // Mevcut bir egzersizi bugüne tek seferlik hızlı hareket olarak ekler.
+  // Mevcut bir görevi bugüne tek seferlik ekler.
   Future<void> hizliMevcutEgzersizEkle({
     required EgzersizlerData egzersiz,
     String? notMetni,
@@ -148,12 +207,12 @@ class BugunKontrolcusu extends AsyncNotifier<BugunDurumu> {
       );
       await bugunuYenile();
     } catch (hata, iz) {
-      MerkeziKaydedici.hataYaz('Hızlı egzersiz eklenemedi', hata: hata, yiginIzi: iz);
+      MerkeziKaydedici.hataYaz('Hızlı görev eklenemedi', hata: hata, yiginIzi: iz);
       rethrow;
     }
   }
 
-  // Yeni bir egzersiz oluşturup aynı anda bugüne hızlı hareket olarak ekler.
+  // Yeni bir görev oluşturup aynı anda bugüne ekler.
   Future<void> hizliYeniEgzersizOlusturVeEkle({
     required String ad,
     required String tur,
@@ -186,12 +245,12 @@ class BugunKontrolcusu extends AsyncNotifier<BugunDurumu> {
       );
       await bugunuYenile();
     } catch (hata, iz) {
-      MerkeziKaydedici.hataYaz('Yeni hızlı egzersiz oluşturulamadı', hata: hata, yiginIzi: iz);
+      MerkeziKaydedici.hataYaz('Yeni görev oluşturulamadı', hata: hata, yiginIzi: iz);
       rethrow;
     }
   }
 
-  // Bugünün tüm bekleyen hareketlerini tek dokunuşla yapıldı olarak işaretler.
+  // Bugünün tüm bekleyen görevlerini tek dokunuşla yapıldı olarak işaretler.
   Future<void> tumunuYapildiIsaretle() async {
     final mevcutDurum = state.value;
     if (mevcutDurum == null) return;
@@ -202,7 +261,7 @@ class BugunKontrolcusu extends AsyncNotifier<BugunDurumu> {
       );
       await bugunuYenile();
     } catch (hata, iz) {
-      MerkeziKaydedici.hataYaz('Tüm hareketler yapıldı işaretlenemedi', hata: hata, yiginIzi: iz);
+      MerkeziKaydedici.hataYaz('Tüm görevler yapıldı işaretlenemedi', hata: hata, yiginIzi: iz);
       rethrow;
     }
   }

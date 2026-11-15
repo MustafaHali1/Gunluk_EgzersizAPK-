@@ -5,12 +5,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../cekirdek/sabitler/uygulama_sabitleri.dart';
 import '../../../cekirdek/yardimcilar/tarih_yardimcisi.dart';
+import '../../rutinler/sunum/rutin_detay_ekrani.dart';
+import '../../rutinler/sunum/rutin_form_ekrani.dart';
 import '../alan/bugun_durumu.dart';
-import 'bugun_hareket_karti.dart';
 import 'bugun_kontrolcusu.dart';
-import 'hizli_ekle_alt_sayfasi.dart';
 
-// Kullanıcının günlük egzersizlerini işaretlediği, ilerlemesini gördüğü ana ekran.
+// Bugün yapılması gereken rutinleri ve yaklaşan rutin saatini gösteren ana özet ekranı.
 class BugunEkrani extends ConsumerStatefulWidget {
   const BugunEkrani({super.key});
 
@@ -37,12 +37,19 @@ class _BugunEkraniDurumu extends ConsumerState<BugunEkrani> {
     super.dispose();
   }
 
-  void _hizliEkleAc() {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (_) => const HizliEkleAltSayfasi(),
+  void _rutinDetayAc(int rutinId) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => RutinDetayEkrani(rutinId: rutinId),
+      ),
+    );
+  }
+
+  void _yeniRutinOlusturAc() {
+    Navigator.of(context).push(
+      MaterialPageRoute<bool>(
+        builder: (_) => const RutinFormEkrani(),
+      ),
     );
   }
 
@@ -52,12 +59,12 @@ class _BugunEkraniDurumu extends ConsumerState<BugunEkrani> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(UygulamaMetinleri.sekmeBugun),
+        title: const Text(UygulamaSabitleri.sekmeBugun),
         actions: [
           TextButton.icon(
-            onPressed: () => context.go(RotaAdlari.rutinler),
+            onPressed: () => context.go(UygulamaSabitleri.rotaRutinler),
             icon: const Icon(Icons.playlist_add_check),
-            label: const Text('Rutinim'),
+            label: const Text(UygulamaSabitleri.sekmeRutinler),
           ),
         ],
       ),
@@ -69,76 +76,54 @@ class _BugunEkraniDurumu extends ConsumerState<BugunEkrani> {
             child: Text('Bugünün verileri yüklenemedi: $hata'),
           ),
         ),
-        data: (durum) => _BugunIcerigi(
-          durum: durum,
-          hizliEkleTiklandiginda: _hizliEkleAc,
+        data: (durum) => RefreshIndicator(
+          onRefresh: () =>
+              ref.read(bugunKontrolcusuSaglayici.notifier).bugunuYenile(),
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 88),
+            children: [
+              _BugunUstOzetKarti(
+                durum: durum,
+                siradakiTiklandiginda: durum.siradakiRutin == null
+                    ? null
+                    : () => _rutinDetayAc(durum.siradakiRutin!.rutin.id),
+              ),
+              const SizedBox(height: 16),
+              if (durum.bugunRutinleri.isEmpty)
+                _BugunBosDurum(
+                  yeniRutinTiklandiginda: _yeniRutinOlusturAc,
+                )
+              else ...[
+                Text(
+                  'Bugünkü Rutinler',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                const SizedBox(height: 8),
+                ...durum.bugunRutinleri.map(
+                  (ozet) => _BugunRutinKarti(
+                    ozet: ozet,
+                    tiklandiginda: () => _rutinDetayAc(ozet.rutin.id),
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _hizliEkleAc,
-        icon: const Icon(Icons.add),
-        label: const Text(UygulamaMetinleri.hizliEkle),
-      ),
     );
   }
 }
 
-// Bugün ekranının ilerleme özeti ve hareket listesini barındıran gövde bileşeni.
-class _BugunIcerigi extends ConsumerWidget {
+// Tarih, genel ilerleme ve yaklaşan / sıradaki rutini gösteren üst kart.
+class _BugunUstOzetKarti extends StatelessWidget {
   final BugunDurumu durum;
-  final VoidCallback hizliEkleTiklandiginda;
+  final VoidCallback? siradakiTiklandiginda;
 
-  const _BugunIcerigi({
+  const _BugunUstOzetKarti({
     required this.durum,
-    required this.hizliEkleTiklandiginda,
-  });
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final kontrolcu = ref.read(bugunKontrolcusuSaglayici.notifier);
-
-    return RefreshIndicator(
-      onRefresh: () => kontrolcu.bugunuYenile(),
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
-        children: [
-          _GunlukIlerlemeKarti(
-            durum: durum,
-            tumunuYapildiTiklandiginda: () => kontrolcu.tumunuYapildiIsaretle(),
-          ),
-          const SizedBox(height: 16),
-          if (durum.hareketler.isEmpty)
-            _BugunBosDurum(hizliEkleTiklandiginda: hizliEkleTiklandiginda)
-          else
-            ...durum.hareketler.map(
-              (kayit) => BugunHareketKarti(
-                kayit: kayit,
-                egzersizDetayi: durum.egzersizDetayHaritasi[kayit.egzersizId],
-                durumDegistirildiginde: (hedefDurum) =>
-                    kontrolcu.hareketDurumunuDegistir(
-                      kayit: kayit,
-                      hedefDurum: hedefDurum,
-                    ),
-                notKaydedildiginde: (notMetni) => kontrolcu.hareketNotunuKaydet(
-                  kayit: kayit,
-                  notMetni: notMetni,
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-// Tarih, aktif rutin adı ve günlük tamamlanma yüzdesini gösteren üst özet kartı.
-class _GunlukIlerlemeKarti extends StatelessWidget {
-  final BugunDurumu durum;
-  final VoidCallback tumunuYapildiTiklandiginda;
-
-  const _GunlukIlerlemeKarti({
-    required this.durum,
-    required this.tumunuYapildiTiklandiginda,
+    required this.siradakiTiklandiginda,
   });
 
   @override
@@ -147,75 +132,143 @@ class _GunlukIlerlemeKarti extends StatelessWidget {
       TarihYardimcisi.metindenTarihe(durum.tarih),
     );
     final gunAdi = TarihYardimcisi.gunAdi(durum.haftaninGunu);
+    final siradaki = durum.siradakiRutin;
+
+    String siradakiMetni;
+    if (siradaki == null) {
+      siradakiMetni = durum.bugunRutinleri.isEmpty
+          ? 'Bugün için planlı rutin yok'
+          : 'Bugünkü tüm rutinler tamamlandı!';
+    } else if (siradaki.rutin.alarmAcikMi) {
+      final s = siradaki.rutin.alarmSaati.toString().padLeft(2, '0');
+      final d = siradaki.rutin.alarmDakikasi.toString().padLeft(2, '0');
+      siradakiMetni = siradaki.suresiGectiMi
+          ? 'Süresi Geçti: ${siradaki.rutin.ad} ($s:$d)'
+          : 'Sıradaki: ${siradaki.rutin.ad} • Saat $s:$d';
+    } else {
+      siradakiMetni = 'Sıradaki: ${siradaki.rutin.ad}';
+    }
 
     return Card(
       color: Theme.of(context).colorScheme.primaryContainer,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  '$tarihMetni • $gunAdi',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-                Text(
-                  '%${durum.tamamlanmaYuzdesi}',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text(
-              durum.aktifRutinAdi != null
-                  ? 'Aktif Rutin: ${durum.aktifRutinAdi}'
-                  : 'Aktif rutin seçilmedi',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 12),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: LinearProgressIndicator(
-                value: durum.tamamlanmaOrani,
-                minHeight: 10,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  '${durum.yapilanHareketSayisi}/${durum.toplamHareketSayisi} yapıldı • ${durum.atlananHareketSayisi} yapılmadı',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                if (durum.bekleyenHareketSayisi > 0)
-                  TextButton.icon(
-                    onPressed: tumunuYapildiTiklandiginda,
-                    icon: const Icon(Icons.done_all, size: 18),
-                    label: const Text('Tümünü Yaptım'),
+      child: InkWell(
+        onTap: siradakiTiklandiginda,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '$tarihMetni • $gunAdi',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
-              ],
-            ),
-          ],
+                  Text(
+                    '%${durum.tamamlanmaYuzdesi}',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  const Icon(Icons.schedule, size: 18),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      siradakiMetni,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                  ),
+                  if (siradakiTiklandiginda != null)
+                    const Icon(Icons.chevron_right),
+                ],
+              ),
+              const SizedBox(height: 12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: LinearProgressIndicator(
+                  value: durum.tamamlanmaOrani,
+                  minHeight: 10,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-// Bugün için planlı hareket olmadığında kullanıcıyı yönlendiren boş durum bileşeni.
-class _BugunBosDurum extends StatelessWidget {
-  final VoidCallback hizliEkleTiklandiginda;
+// Bugün ekranındaki her bir rutinin kartı; dokunulunca doğrudan rutin içi açılır.
+class _BugunRutinKarti extends StatelessWidget {
+  final BugunRutinOzeti ozet;
+  final VoidCallback tiklandiginda;
 
-  const _BugunBosDurum({required this.hizliEkleTiklandiginda});
+  const _BugunRutinKarti({
+    required this.ozet,
+    required this.tiklandiginda,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final r = ozet.rutin;
+    final saatBilgisi = r.alarmAcikMi
+        ? '⏰ ${r.alarmSaati.toString().padLeft(2, '0')}:${r.alarmDakikasi.toString().padLeft(2, '0')}'
+        : 'Alarmsız';
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      child: ListTile(
+        onTap: tiklandiginda,
+        leading: CircleAvatar(
+          backgroundColor: ozet.tamamlandiMi
+              ? UygulamaRenkleri.basariYesili.withValues(alpha: 0.15)
+              : ozet.suresiGectiMi
+                  ? UygulamaRenkleri.hataKirmizisi.withValues(alpha: 0.15)
+                  : Theme.of(context).colorScheme.surfaceContainerHighest,
+          child: Icon(
+            ozet.tamamlandiMi
+                ? Icons.check_circle
+                : ozet.suresiGectiMi
+                    ? Icons.warning_amber_rounded
+                    : Icons.playlist_play,
+            color: ozet.tamamlandiMi
+                ? UygulamaRenkleri.basariYesili
+                : ozet.suresiGectiMi
+                    ? UygulamaRenkleri.hataKirmizisi
+                    : Theme.of(context).colorScheme.primary,
+          ),
+        ),
+        title: Text(
+          r.ad,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Text(
+          '$saatBilgisi • ${ozet.yapilanSayisi}/${ozet.toplamSayisi} yapıldı'
+          '${ozet.suresiGectiMi ? ' • Süresi geçti' : ''}',
+        ),
+        trailing: const Icon(Icons.chevron_right),
+      ),
+    );
+  }
+}
+
+// Bugün için planlı rutin olmadığında kullanıcıyı yönlendiren boş durum bileşeni.
+class _BugunBosDurum extends StatelessWidget {
+  final VoidCallback yeniRutinTiklandiginda;
+
+  const _BugunBosDurum({required this.yeniRutinTiklandiginda});
 
   @override
   Widget build(BuildContext context) {
@@ -225,41 +278,28 @@ class _BugunBosDurum extends StatelessWidget {
         child: Column(
           children: [
             Icon(
-              Icons.self_improvement,
+              Icons.event_available,
               size: 64,
               color: Theme.of(context).colorScheme.primary,
             ),
             const SizedBox(height: 16),
             Text(
-              UygulamaMetinleri.bosBugunBaslik,
+              'Bugün için planlı rutin yok',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
-            Text(
-              UygulamaMetinleri.bosBugunAciklama,
-              style: Theme.of(context).textTheme.bodyMedium,
+            const Text(
+              'Rutinlerim sekmesinden yeni bir rutin oluşturup görevlerinizi ekleyebilirsiniz.',
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 20),
-            Wrap(
-              spacing: 12,
-              runSpacing: 8,
-              alignment: WrapAlignment.center,
-              children: [
-                FilledButton.icon(
-                  onPressed: () => context.go(RotaAdlari.rutinler),
-                  icon: const Icon(Icons.calendar_today),
-                  label: const Text('Rutin Oluştur / Seç'),
-                ),
-                OutlinedButton.icon(
-                  onPressed: hizliEkleTiklandiginda,
-                  icon: const Icon(Icons.add),
-                  label: const Text('Bugüne Hızlı Ekle'),
-                ),
-              ],
+            FilledButton.icon(
+              onPressed: yeniRutinTiklandiginda,
+              icon: const Icon(Icons.add),
+              label: const Text('Yeni Rutin Oluştur'),
             ),
           ],
         ),

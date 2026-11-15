@@ -39,6 +39,20 @@ class RutinDeposuUygulamasi implements RutinDeposu {
   }
 
   @override
+  Future<RutinlerData?> idIleRutinGetir(int id) async {
+    try {
+      return await _dao.idIleRutinGetir(id);
+    } catch (hata, iz) {
+      MerkeziKaydedici.hataYaz(
+        'Rutin getirilirken hata oluştu (id: $id)',
+        hata: hata,
+        yiginIzi: iz,
+      );
+      throw const UygulamaHatasi('Rutin bilgisi alınamadı.');
+    }
+  }
+
+  @override
   Future<RutinlerData?> aktifRutiniGetir() async {
     try {
       return await _dao.aktifRutiniGetir();
@@ -70,6 +84,12 @@ class RutinDeposuUygulamasi implements RutinDeposu {
     required String haftaninGunleri,
     required bool aktifMi,
     required List<int> egzersizIdListesi,
+    String? sadeceTarih,
+    bool alarmAcikMi = false,
+    int alarmSaati = 9,
+    int alarmDakikasi = 0,
+    String? alarmMuzikYolu,
+    String? alarmMuzikAdi,
   }) async {
     try {
       return await _dao.rutinOlusturVeEgzersizleriKaydet(
@@ -77,6 +97,12 @@ class RutinDeposuUygulamasi implements RutinDeposu {
         haftaninGunleri: haftaninGunleri,
         aktifMi: aktifMi,
         egzersizIdListesi: egzersizIdListesi,
+        sadeceTarih: sadeceTarih,
+        alarmAcikMi: alarmAcikMi,
+        alarmSaati: alarmSaati,
+        alarmDakikasi: alarmDakikasi,
+        alarmMuzikYolu: alarmMuzikYolu,
+        alarmMuzikAdi: alarmMuzikAdi,
       );
     } catch (hata, iz) {
       MerkeziKaydedici.hataYaz(
@@ -95,6 +121,12 @@ class RutinDeposuUygulamasi implements RutinDeposu {
     required String haftaninGunleri,
     required bool aktifMi,
     required List<int> egzersizIdListesi,
+    String? sadeceTarih,
+    bool alarmAcikMi = false,
+    int alarmSaati = 9,
+    int alarmDakikasi = 0,
+    String? alarmMuzikYolu,
+    String? alarmMuzikAdi,
   }) async {
     try {
       await _dao.rutinVeEgzersizleriGuncelle(
@@ -103,6 +135,12 @@ class RutinDeposuUygulamasi implements RutinDeposu {
         haftaninGunleri: haftaninGunleri,
         aktifMi: aktifMi,
         egzersizIdListesi: egzersizIdListesi,
+        sadeceTarih: sadeceTarih,
+        alarmAcikMi: alarmAcikMi,
+        alarmSaati: alarmSaati,
+        alarmDakikasi: alarmDakikasi,
+        alarmMuzikYolu: alarmMuzikYolu,
+        alarmMuzikAdi: alarmMuzikAdi,
       );
     } catch (hata, iz) {
       MerkeziKaydedici.hataYaz(
@@ -158,7 +196,7 @@ class RutinDeposuUygulamasi implements RutinDeposu {
         hata: hata,
         yiginIzi: iz,
       );
-      throw const UygulamaHatasi('Rutin hareketleri yüklenemedi.');
+      throw const UygulamaHatasi('Rutin görevleri yüklenemedi.');
     }
   }
 }

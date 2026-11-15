@@ -3,12 +3,42 @@
 import '../../../cekirdek/veritabani/uygulama_veritabani.dart';
 import '../veri/antrenman_dao.dart';
 
-// Bugün ekranının anlık verilerini ve hesaplanan yüzdelerini tutan durum sınıfı.
+// Bugün ekranındaki her bir rutinin anlık ilerleme ve saat bilgisini tutan model.
+class BugunRutinOzeti {
+  final RutinlerData rutin;
+  final List<EgzersizKayitlariData> gorevKayitlari;
+  final bool suresiGectiMi;
+
+  const BugunRutinOzeti({
+    required this.rutin,
+    required this.gorevKayitlari,
+    required this.suresiGectiMi,
+  });
+
+  int get toplamSayisi => gorevKayitlari.length;
+
+  int get yapilanSayisi =>
+      gorevKayitlari.where((k) => k.durum == 'yapildi').length;
+
+  int get yapilmayanSayisi =>
+      gorevKayitlari.where((k) => k.durum == 'atlandi').length;
+
+  int get bekleyenSayisi =>
+      gorevKayitlari.where((k) => k.durum == 'bekliyor').length;
+
+  bool get tamamlandiMi => toplamSayisi > 0 && bekleyenSayisi == 0;
+
+  double get oran => toplamSayisi == 0 ? 0.0 : yapilanSayisi / toplamSayisi;
+}
+
+// Bugün ekranının anlık rutin özetlerini, yaklaşan rutini ve hesaplanan yüzdelerini tutan durum sınıfı.
 class BugunDurumu {
   final String tarih;
   final int haftaninGunu;
   final GunlukAntrenmanDetayi antrenmanDetayi;
   final Map<int, EgzersizlerData> egzersizDetayHaritasi;
+  final List<BugunRutinOzeti> bugunRutinleri;
+  final BugunRutinOzeti? siradakiRutin;
   final String? aktifRutinAdi;
 
   const BugunDurumu({
@@ -16,6 +46,8 @@ class BugunDurumu {
     required this.haftaninGunu,
     required this.antrenmanDetayi,
     required this.egzersizDetayHaritasi,
+    this.bugunRutinleri = const [],
+    this.siradakiRutin,
     this.aktifRutinAdi,
   });
 

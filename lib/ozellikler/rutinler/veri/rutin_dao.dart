@@ -6,7 +6,7 @@ import '../../../cekirdek/veritabani/uygulama_veritabani.dart';
 
 part 'rutin_dao.g.dart';
 
-// Bir rutinin içindeki egzersiz ve sıra bilgisini birleştiren yardımcı veri sınıfı.
+// Bir rutinin içindeki görev ve sıra bilgisini birleştiren yardımcı veri sınıfı.
 class RutinEgzersizDetayi {
   final RutinEgzersizleriData rutinBaglantisi;
   final EgzersizlerData egzersiz;
@@ -25,34 +25,59 @@ class RutinDao extends DatabaseAccessor<UygulamaVeritabani>
 
   // Tüm rutinleri izler.
   Stream<List<RutinlerData>> tumRutinleriIzle() {
-    return (select(rutinler)..orderBy([(t) => OrderingTerm.desc(t.aktifMi)]))
+    return (select(rutinler)..orderBy([
+          (t) => OrderingTerm.desc(t.alarmAcikMi),
+          (t) => OrderingTerm.asc(t.alarmSaati),
+          (t) => OrderingTerm.asc(t.alarmDakikasi),
+          (t) => OrderingTerm.asc(t.id),
+        ]))
         .watch();
   }
 
   // Tüm rutinleri getirir.
   Future<List<RutinlerData>> tumRutinleriGetir() {
-    return (select(rutinler)..orderBy([(t) => OrderingTerm.desc(t.aktifMi)]))
+    return (select(rutinler)..orderBy([
+          (t) => OrderingTerm.desc(t.alarmAcikMi),
+          (t) => OrderingTerm.asc(t.alarmSaati),
+          (t) => OrderingTerm.asc(t.alarmDakikasi),
+          (t) => OrderingTerm.asc(t.id),
+        ]))
         .get();
+  }
+
+  // Kimliğine göre tek bir rutini getirir.
+  Future<RutinlerData?> idIleRutinGetir(int id) {
+    return (select(rutinler)..where((t) => t.id.equals(id))).getSingleOrNull();
   }
 
   // Aktif olan rutini getirir.
   Future<RutinlerData?> aktifRutiniGetir() {
-    return (select(rutinler)..where((t) => t.aktifMi.equals(true))..limit(1))
+    return (select(rutinler)
+          ..where((t) => t.aktifMi.equals(true))
+          ..limit(1))
         .getSingleOrNull();
   }
 
   // Aktif olan rutini akış (Stream) olarak izler.
   Stream<RutinlerData?> aktifRutiniIzle() {
-    return (select(rutinler)..where((t) => t.aktifMi.equals(true))..limit(1))
+    return (select(rutinler)
+          ..where((t) => t.aktifMi.equals(true))
+          ..limit(1))
         .watchSingleOrNull();
   }
 
-  // Yeni rutin oluşturur ve seçili egzersizlerini sırasıyla kaydeder.
+  // Yeni rutin oluşturur ve seçili görevlerini sırasıyla kaydeder.
   Future<int> rutinOlusturVeEgzersizleriKaydet({
     required String ad,
     required String haftaninGunleri,
     required bool aktifMi,
     required List<int> egzersizIdListesi,
+    String? sadeceTarih,
+    bool alarmAcikMi = false,
+    int alarmSaati = 9,
+    int alarmDakikasi = 0,
+    String? alarmMuzikYolu,
+    String? alarmMuzikAdi,
   }) async {
     return transaction(() async {
       if (aktifMi) {
@@ -66,6 +91,12 @@ class RutinDao extends DatabaseAccessor<UygulamaVeritabani>
           ad: ad,
           haftaninGunleri: Value(haftaninGunleri),
           aktifMi: Value(aktifMi),
+          sadeceTarih: Value(sadeceTarih),
+          alarmAcikMi: Value(alarmAcikMi),
+          alarmSaati: Value(alarmSaati),
+          alarmDakikasi: Value(alarmDakikasi),
+          alarmMuzikYolu: Value(alarmMuzikYolu),
+          alarmMuzikAdi: Value(alarmMuzikAdi),
         ),
       );
 
@@ -82,13 +113,19 @@ class RutinDao extends DatabaseAccessor<UygulamaVeritabani>
     });
   }
 
-  // Mevcut rutini ve egzersiz sıralamasını günceller.
+  // Mevcut rutini ve görev sıralamasını günceller.
   Future<void> rutinVeEgzersizleriGuncelle({
     required int rutinId,
     required String ad,
     required String haftaninGunleri,
     required bool aktifMi,
     required List<int> egzersizIdListesi,
+    String? sadeceTarih,
+    bool alarmAcikMi = false,
+    int alarmSaati = 9,
+    int alarmDakikasi = 0,
+    String? alarmMuzikYolu,
+    String? alarmMuzikAdi,
   }) async {
     await transaction(() async {
       if (aktifMi) {
@@ -102,6 +139,12 @@ class RutinDao extends DatabaseAccessor<UygulamaVeritabani>
           ad: Value(ad),
           haftaninGunleri: Value(haftaninGunleri),
           aktifMi: Value(aktifMi),
+          sadeceTarih: Value(sadeceTarih),
+          alarmAcikMi: Value(alarmAcikMi),
+          alarmSaati: Value(alarmSaati),
+          alarmDakikasi: Value(alarmDakikasi),
+          alarmMuzikYolu: Value(alarmMuzikYolu),
+          alarmMuzikAdi: Value(alarmMuzikAdi),
         ),
       );
 
@@ -138,7 +181,7 @@ class RutinDao extends DatabaseAccessor<UygulamaVeritabani>
     return (delete(rutinler)..where((t) => t.id.equals(rutinId))).go();
   }
 
-  // Bir rutine ait egzersizleri sıralı olarak (arşivlenmemiş olanları) getirir.
+  // Bir rutine ait görevleri sıralı olarak (arşivlenmemiş olanları) getirir.
   Future<List<RutinEgzersizDetayi>> rutinEgzersizleriniGetir(
     int rutinId, {
     bool arsivlenmisleriDahilEt = false,

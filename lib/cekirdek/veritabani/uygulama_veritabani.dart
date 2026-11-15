@@ -35,20 +35,19 @@ class UygulamaVeritabani extends _$UygulamaVeritabani {
     : super(yurutucu ?? _baglantiAc());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (Migrator m) async {
       await m.createAll();
-      // Varsayılan sabah (08:30) ve akşam (20:00) hatırlatıcılarını ekle
       await into(hatirlaticilar).insert(
         HatirlaticilarCompanion.insert(
           etiket: 'sabah',
           saat: 8,
           dakika: 30,
           haftaninGunleri: const Value('1,2,3,4,5,6,7'),
-          etkinMi: const Value(true),
+          etkinMi: const Value(false),
         ),
       );
       await into(hatirlaticilar).insert(
@@ -57,12 +56,20 @@ class UygulamaVeritabani extends _$UygulamaVeritabani {
           saat: 20,
           dakika: 0,
           haftaninGunleri: const Value('1,2,3,4,5,6,7'),
-          etkinMi: const Value(true),
+          etkinMi: const Value(false),
         ),
       );
     },
     onUpgrade: (Migrator m, int eskiSurum, int yeniSurum) async {
-      // İlerideki şema yükseltmeleri burada yönetilir.
+      if (eskiSurum < 2) {
+        await m.addColumn(rutinler, rutinler.sadeceTarih);
+        await m.addColumn(rutinler, rutinler.alarmAcikMi);
+        await m.addColumn(rutinler, rutinler.alarmSaati);
+        await m.addColumn(rutinler, rutinler.alarmDakikasi);
+        await m.addColumn(rutinler, rutinler.alarmMuzikYolu);
+        await m.addColumn(rutinler, rutinler.alarmMuzikAdi);
+        await m.addColumn(egzersizKayitlari, egzersizKayitlari.rutinId);
+      }
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');

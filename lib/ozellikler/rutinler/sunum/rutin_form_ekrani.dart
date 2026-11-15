@@ -1,16 +1,17 @@
 // lib/ozellikler/rutinler/sunum/rutin_form_ekrani.dart
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../cekirdek/bildirimler/bildirim_servisi.dart';
 import '../../../cekirdek/veritabani/uygulama_veritabani.dart';
 import '../../../cekirdek/yardimcilar/tarih_yardimcisi.dart';
-import '../../egzersizler/alan/hazir_egzersiz_sablonu.dart';
 import '../../egzersizler/sunum/egzersiz_kontrolcusu.dart';
 import '../../egzersizler/veri/egzersiz_deposu_uygulamasi.dart';
 import '../veri/rutin_deposu_uygulamasi.dart';
 import 'rutin_kontrolcusu.dart';
 
-// Rutin oluşturma, gün seçme, doğrudan hareket yazma/seçme ve sıralama ekranı.
+// Rutin oluşturma, gün seçimi, rutine özel müzikli alarm ve "+ Görev Ekle" ekranı.
 class RutinFormEkrani extends ConsumerStatefulWidget {
   final RutinlerData? duzenlenecekRutin;
 
@@ -27,19 +28,25 @@ class _RutinFormEkraniState extends ConsumerState<RutinFormEkrani> {
   final _formAnahtari = GlobalKey<FormState>();
   late final TextEditingController _adDenetleyici;
   final Set<int> _seciliGunler = {1, 2, 3, 4, 5, 6, 7};
-  final List<EgzersizlerData> _seciliEgzersizler = [];
-  bool _aktifMi = true;
+  final List<EgzersizlerData> _seciliGorevler = [];
+  bool _sadeceBugunMu = false;
+  bool _alarmAcikMi = false;
+  TimeOfDay _alarmSaati = const TimeOfDay(hour: 9, minute: 0);
+  String? _alarmMuzikYolu;
+  String? _alarmMuzikAdi;
   bool _yukleniyor = false;
 
   @override
   void initState() {
     super.initState();
     final r = widget.duzenlenecekRutin;
-    _adDenetleyici = TextEditingController(
-      text: r?.ad ?? 'Günlük Fizyoterapi / Sağlık Rutinim',
-    );
+    _adDenetleyici = TextEditingController(text: r?.ad ?? '');
     if (r != null) {
-      _aktifMi = r.aktifMi;
+      _sadeceBugunMu = r.sadeceTarih != null;
+      _alarmAcikMi = r.alarmAcikMi;
+      _alarmSaati = TimeOfDay(hour: r.alarmSaati, minute: r.alarmDakikasi);
+      _alarmMuzikYolu = r.alarmMuzikYolu;
+      _alarmMuzikAdi = r.alarmMuzikAdi;
       _seciliGunler
         ..clear()
         ..addAll(
@@ -48,11 +55,11 @@ class _RutinFormEkraniState extends ConsumerState<RutinFormEkrani> {
               .map((e) => int.tryParse(e.trim()))
               .whereType<int>(),
         );
-      _mevcutRutinEgzersizleriniYukle(r.id);
+      _mevcutRutinGorevleriniYukle(r.id);
     }
   }
 
-  Future<void> _mevcutRutinEgzersizleriniYukle(int rutinId) async {
+  Future<void> _mevcutRutinGorevleriniYukle(int rutinId) async {
     setState(() => _yukleniyor = true);
     try {
       final detaylar = await ref
@@ -60,7 +67,7 @@ class _RutinFormEkraniState extends ConsumerState<RutinFormEkrani> {
           .rutinEgzersizleriniGetir(rutinId);
       if (mounted) {
         setState(() {
-          _seciliEgzersizler
+          _seciliGorevler
             ..clear()
             ..addAll(detaylar.map((d) => d.egzersiz));
         });
@@ -78,14 +85,14 @@ class _RutinFormEkraniState extends ConsumerState<RutinFormEkrani> {
     super.dispose();
   }
 
-  Future<void> _yeniHareketYazPenceresiAc() async {
+  Future<void> _yeniGorevEklePenceresiAc() async {
     final adYazici = TextEditingController();
-    final tarifYazici = TextEditingController(text: '3 set × 10 tekrar');
+    final aciklamaYazici = TextEditingController();
 
     final eklensinMi = await showDialog<bool>(
       context: context,
       builder: (baglam) => AlertDialog(
-        title: const Text('Rutine Yeni Hareket Yaz'),
+        title: const Text('Görev Ekle'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -93,18 +100,18 @@ class _RutinFormEkraniState extends ConsumerState<RutinFormEkrani> {
               controller: adYazici,
               autofocus: true,
               decoration: const InputDecoration(
-                labelText: 'Hareket Adı *',
-                hintText: 'Örn: Havlu ile Diz Bastırma',
+                labelText: 'Görev Adı *',
+                hintText: 'Örn: Boyun esnetme, Vitamin iç, 20 sayfa kitap',
                 border: OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 12),
             TextField(
-              controller: tarifYazici,
+              controller: aciklamaYazici,
               maxLines: 2,
               decoration: const InputDecoration(
-                labelText: 'Tarif / Tekrar Bilgisi (Opsiyonel)',
-                hintText: 'Örn: 10 tekrar, her seferinde 5 sn basılı tut',
+                labelText: 'Açıklama / Tekrar (Opsiyonel)',
+                hintText: 'Örn: 10 tekrar, yemekten sonra...',
                 border: OutlineInputBorder(),
               ),
             ),
@@ -118,160 +125,105 @@ class _RutinFormEkraniState extends ConsumerState<RutinFormEkrani> {
           FilledButton.icon(
             onPressed: () => Navigator.of(baglam).pop(true),
             icon: const Icon(Icons.add),
-            label: const Text('Rutine Ekle'),
+            label: const Text('Ekle'),
           ),
         ],
       ),
     );
 
     final ad = adYazici.text.trim();
-    final tarif = tarifYazici.text.trim();
+    final aciklama = aciklamaYazici.text.trim();
     adYazici.dispose();
-    tarifYazici.dispose();
+    aciklamaYazici.dispose();
 
     if (eklensinMi != true || ad.isEmpty) return;
 
     final egzDepo = ref.read(egzersizDeposuSaglayici);
     final yeniId = await egzDepo.egzersizEkle(
       ad: ad,
-      aciklama: tarif,
+      aciklama: aciklama,
       tur: 'tekrarli',
-      setSayisi: 3,
-      tekrarSayisi: 10,
-      kategori: 'Fizyoterapi / Günlük',
+      setSayisi: 1,
+      tekrarSayisi: 1,
+      kategori: 'Genel',
     );
     final yeniKayit = await egzDepo.idIleEgzersizGetir(yeniId);
     ref.invalidate(aktifEgzersizlerAkisSaglayici);
     if (yeniKayit != null && mounted) {
       setState(() {
-        _seciliEgzersizler.add(yeniKayit);
+        _seciliGorevler.add(yeniKayit);
       });
     }
   }
 
-  Future<void> _hazirListedenSecAc() async {
-    final egzDepo = ref.read(egzersizDeposuSaglayici);
-    final kayitliListe = await egzDepo.aktifEgzersizleriGetir();
-    if (!mounted) return;
-
-    await showModalBottomSheet<void>(
+  Future<void> _alarmSaatiSec() async {
+    final secilen = await showTimePicker(
       context: context,
-      useSafeArea: true,
-      isScrollControlled: true,
-      builder: (altContext) {
-        return StatefulBuilder(
-          builder: (context, altSetState) {
-            return DraggableScrollableSheet(
-              expand: false,
-              initialChildSize: 0.75,
-              maxChildSize: 0.92,
-              builder: (context, kaydirmaDenetleyicisi) {
-                return ListView(
-                  controller: kaydirmaDenetleyicisi,
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Hazır Fizyoterapi & Sağlık Hareketleri',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                        ),
-                        TextButton(
-                          onPressed: () => Navigator.of(altContext).pop(),
-                          child: const Text('Tamam'),
-                        ),
-                      ],
-                    ),
-                    const Text(
-                      'İstediğiniz hareketlere dokunarak rutininize ekleyin:',
-                    ),
-                    const SizedBox(height: 8),
-                    ...hazirEgzersizSablonlari.map((sablon) {
-                      final zatenSecili = _seciliEgzersizler.any(
-                        (e) => e.ad.toLowerCase() == sablon.ad.toLowerCase(),
-                      );
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        child: ListTile(
-                          title: Text(sablon.ad),
-                          subtitle: Text('${sablon.kategori} • ${sablon.aciklama}'),
-                          trailing: zatenSecili
-                              ? const Chip(label: Text('Eklendi'))
-                              : FilledButton.tonalIcon(
-                                  onPressed: () async {
-                                    var mevcut = kayitliListe
-                                        .where(
-                                          (k) =>
-                                              k.ad.toLowerCase() ==
-                                              sablon.ad.toLowerCase(),
-                                        )
-                                        .firstOrNull;
-                                    if (mevcut == null) {
-                                      final id = await egzDepo.egzersizEkle(
-                                        ad: sablon.ad,
-                                        aciklama: sablon.aciklama,
-                                        tur: sablon.tur,
-                                        sureSaniye: sablon.sureSaniye,
-                                        setSayisi: sablon.setSayisi,
-                                        tekrarSayisi: sablon.tekrarSayisi,
-                                        kategori: sablon.kategori,
-                                      );
-                                      mevcut = await egzDepo.idIleEgzersizGetir(id);
-                                      if (mevcut != null) {
-                                        kayitliListe.add(mevcut);
-                                      }
-                                      ref.invalidate(aktifEgzersizlerAkisSaglayici);
-                                    }
-                                    if (mevcut != null && mounted) {
-                                      final eklenecek = mevcut;
-                                      setState(() {
-                                        _seciliEgzersizler.add(eklenecek);
-                                      });
-                                      altSetState(() {});
-                                    }
-                                  },
-                                  icon: const Icon(Icons.add),
-                                  label: const Text('Ekle'),
-                                ),
-                        ),
-                      );
-                    }),
-                  ],
-                );
-              },
-            );
-          },
-        );
-      },
+      initialTime: _alarmSaati,
     );
+    if (secilen != null) {
+      setState(() => _alarmSaati = secilen);
+    }
+  }
+
+  Future<void> _telefondanMuzikSec() async {
+    final dosyalar = await FilePicker.pickFiles(type: FileType.audio);
+    if (dosyalar.isEmpty) return;
+    final secilen = dosyalar.first;
+    if (secilen.path == null) return;
+    setState(() {
+      _alarmMuzikYolu = secilen.path;
+      _alarmMuzikAdi = secilen.name;
+    });
+  }
+
+  Future<void> _alarmTestEt() async {
+    await ref.read(bildirimServisiSaglayici).izinIste();
+    await ref
+        .read(bildirimServisiSaglayici)
+        .testBildirimiGonder(
+          ozelMuzikYolu: _alarmMuzikYolu,
+          rutinAdi: _adDenetleyici.text.trim().isEmpty
+              ? 'Rutin'
+              : _adDenetleyici.text.trim(),
+          rutinId: widget.duzenlenecekRutin?.id,
+        );
   }
 
   Future<void> _kaydet() async {
     if (!_formAnahtari.currentState!.validate()) return;
-    if (_seciliGunler.isEmpty) {
+    if (!_sadeceBugunMu && _seciliGunler.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Lütfen en az bir gün seçin.')),
       );
       return;
     }
-    if (_seciliEgzersizler.isEmpty) {
+    if (_seciliGorevler.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Lütfen rutine en az bir hareket ekleyin.')),
+        const SnackBar(content: Text('Lütfen en az bir görev ekleyin.')),
       );
       return;
     }
 
+    final bugun = TarihYardimcisi.bugununTarihi();
     final basarili = await ref
         .read(rutinKontrolcusuSaglayici.notifier)
         .rutinKaydet(
           rutinId: widget.duzenlenecekRutin?.id,
           ad: _adDenetleyici.text,
-          seciliGunler: _seciliGunler.toList(),
-          aktifMi: _aktifMi,
-          egzersizIdListesi: _seciliEgzersizler.map((e) => e.id).toList(),
+          seciliGunler: _sadeceBugunMu
+              ? [DateTime.now().weekday]
+              : _seciliGunler.toList(),
+          aktifMi: true,
+          egzersizIdListesi: _seciliGorevler.map((e) => e.id).toList(),
+          sadeceTarih: _sadeceBugunMu
+              ? (widget.duzenlenecekRutin?.sadeceTarih ?? bugun)
+              : null,
+          alarmAcikMi: _alarmAcikMi,
+          alarmSaati: _alarmSaati.hour,
+          alarmDakikasi: _alarmSaati.minute,
+          alarmMuzikYolu: _alarmMuzikYolu,
+          alarmMuzikAdi: _alarmMuzikAdi,
         );
 
     if (!mounted) return;
@@ -287,6 +239,8 @@ class _RutinFormEkraniState extends ConsumerState<RutinFormEkrani> {
   @override
   Widget build(BuildContext context) {
     final duzenlemeMi = widget.duzenlenecekRutin != null;
+    final saatMetni =
+        '${_alarmSaati.hour.toString().padLeft(2, '0')}:${_alarmSaati.minute.toString().padLeft(2, '0')}';
 
     return Scaffold(
       appBar: AppBar(
@@ -304,145 +258,252 @@ class _RutinFormEkraniState extends ConsumerState<RutinFormEkrani> {
           ? const Center(child: CircularProgressIndicator())
           : Form(
               key: _formAnahtari,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+              child: ListView(
+                padding: const EdgeInsets.all(16),
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        TextFormField(
-                          controller: _adDenetleyici,
-                          decoration: const InputDecoration(
-                            labelText: 'Rutin Adı *',
-                            hintText: 'Örn: Fizyoterapi Egzersizlerim',
-                            border: OutlineInputBorder(),
-                          ),
-                          validator: (deger) =>
-                              (deger == null || deger.trim().isEmpty)
-                                  ? 'Lütfen rutin adını girin'
-                                  : null,
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          'Hangi Günler Yapılacak?',
-                          style: Theme.of(context).textTheme.titleSmall,
-                        ),
-                        const SizedBox(height: 6),
-                        Wrap(
-                          spacing: 6,
-                          children: List.generate(7, (indeks) {
-                            final gunNo = indeks + 1;
-                            final secili = _seciliGunler.contains(gunNo);
-                            return FilterChip(
-                              label: Text(TarihYardimcisi.gunKisaAdi(gunNo)),
-                              selected: secili,
-                              onSelected: (deger) {
-                                setState(() {
-                                  if (deger) {
-                                    _seciliGunler.add(gunNo);
-                                  } else {
-                                    _seciliGunler.remove(gunNo);
-                                  }
-                                });
-                              },
-                            );
-                          }),
-                        ),
-                        const Divider(height: 20),
-                        Text(
-                          'Rutindeki Hareketler (${_seciliEgzersizler.length})',
-                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: FilledButton.icon(
-                                onPressed: _yeniHareketYazPenceresiAc,
-                                icon: const Icon(Icons.edit),
-                                label: const Text('Yeni Hareket Yaz'),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: _hazirListedenSecAc,
-                                icon: const Icon(Icons.medical_services_outlined),
-                                label: const Text('Hazır Listeden Seç'),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                      ],
+                  TextFormField(
+                    controller: _adDenetleyici,
+                    decoration: const InputDecoration(
+                      labelText: 'Rutin Adı *',
+                      hintText: 'Örn: Sabah İlaç, Diz Fizyoterapi, Akşam Okuma',
+                      border: OutlineInputBorder(),
                     ),
+                    validator: (deger) => (deger == null || deger.trim().isEmpty)
+                        ? 'Lütfen rutin adını girin'
+                        : null,
                   ),
-                  Expanded(
-                    child: _seciliEgzersizler.isEmpty
-                        ? const Center(
-                            child: Padding(
-                              padding: EdgeInsets.all(24),
-                              child: Text(
-                                'Henüz hareket eklenmedi.\nYukarıdaki "Yeni Hareket Yaz" veya "Hazır Listeden Seç" butonuna dokunarak egzersizlerinizi ekleyin.',
-                                textAlign: TextAlign.center,
-                              ),
+                  const SizedBox(height: 12),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Sadece Bugün (Tek Seferlik)'),
+                    subtitle: const Text(
+                      'Açık olursa sadece bugün için geçerli olur, yarın tekrar çıkmaz.',
+                    ),
+                    value: _sadeceBugunMu,
+                    onChanged: (deger) =>
+                        setState(() => _sadeceBugunMu = deger),
+                  ),
+                  if (!_sadeceBugunMu) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      'Hangi Günler Tekrarlansın?',
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 6,
+                      children: List.generate(7, (indeks) {
+                        final gunNo = indeks + 1;
+                        final secili = _seciliGunler.contains(gunNo);
+                        return FilterChip(
+                          label: Text(TarihYardimcisi.gunKisaAdi(gunNo)),
+                          selected: secili,
+                          onSelected: (deger) {
+                            setState(() {
+                              if (deger) {
+                                _seciliGunler.add(gunNo);
+                              } else {
+                                _seciliGunler.remove(gunNo);
+                              }
+                            });
+                          },
+                        );
+                      }),
+                    ),
+                  ],
+                  const Divider(height: 24),
+                  _RutinAlarmAyarKarti(
+                    alarmAcikMi: _alarmAcikMi,
+                    saatMetni: saatMetni,
+                    muzikAdi: _alarmMuzikAdi ?? 'Varsayılan Sistem Alarmı',
+                    ozelMuzikVarMi: _alarmMuzikYolu != null,
+                    alarmAcikDegistiginde: (deger) =>
+                        setState(() => _alarmAcikMi = deger),
+                    saatSecTiklandiginda: _alarmSaatiSec,
+                    muzikSecTiklandiginda: _telefondanMuzikSec,
+                    varsayilanMuzikTiklandiginda: () => setState(() {
+                      _alarmMuzikYolu = null;
+                      _alarmMuzikAdi = null;
+                    }),
+                    testTiklandiginda: _alarmTestEt,
+                    susturTiklandiginda: () => ref
+                        .read(bildirimServisiSaglayici)
+                        .tumBildirimleriIptalEt(),
+                  ),
+                  const Divider(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Görevler (${_seciliGorevler.length})',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
                             ),
-                          )
-                        : ReorderableListView.builder(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            itemCount: _seciliEgzersizler.length,
-                            onReorderItem: (eskiIndeks, yeniIndeks) {
-                              setState(() {
-                                final oge = _seciliEgzersizler.removeAt(
-                                  eskiIndeks,
-                                );
-                                _seciliEgzersizler.insert(yeniIndeks, oge);
-                              });
-                            },
-                            itemBuilder: (context, indeks) {
-                              final egz = _seciliEgzersizler[indeks];
-                              return Card(
-                                key: ValueKey('${egz.id}_$indeks'),
-                                margin: const EdgeInsets.only(bottom: 8),
-                                child: ListTile(
-                                  leading: CircleAvatar(
-                                    child: Text('${indeks + 1}'),
-                                  ),
-                                  title: Text(egz.ad),
-                                  subtitle: Text(
-                                    egz.aciklama.isNotEmpty
-                                        ? egz.aciklama
-                                        : egz.kategori,
-                                  ),
-                                  trailing: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      IconButton(
-                                        tooltip: 'Rutinden Çıkar',
-                                        icon: const Icon(
-                                          Icons.remove_circle_outline,
-                                        ),
-                                        onPressed: () {
-                                          setState(() {
-                                            _seciliEgzersizler.removeAt(indeks);
-                                          });
-                                        },
-                                      ),
-                                      const Icon(Icons.drag_handle),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
+                      ),
+                      FilledButton.icon(
+                        onPressed: _yeniGorevEklePenceresiAc,
+                        icon: const Icon(Icons.add),
+                        label: const Text('+ Görev Ekle'),
+                      ),
+                    ],
                   ),
+                  const SizedBox(height: 10),
+                  if (_seciliGorevler.isEmpty)
+                    const Card(
+                      child: Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Text(
+                          'Henüz görev eklenmedi. "+ Görev Ekle" butonuna basarak bu rutinde yapılacakları yazın.',
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    )
+                  else
+                    ReorderableListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: _seciliGorevler.length,
+                      onReorderItem: (eskiIndeks, yeniIndeks) {
+                        setState(() {
+                          final oge = _seciliGorevler.removeAt(eskiIndeks);
+                          _seciliGorevler.insert(yeniIndeks, oge);
+                        });
+                      },
+                      itemBuilder: (context, indeks) {
+                        final gorev = _seciliGorevler[indeks];
+                        return Card(
+                          key: ValueKey('${gorev.id}_$indeks'),
+                          margin: const EdgeInsets.only(bottom: 8),
+                          child: ListTile(
+                            leading: CircleAvatar(
+                              child: Text('${indeks + 1}'),
+                            ),
+                            title: Text(gorev.ad),
+                            subtitle: gorev.aciklama.isNotEmpty
+                                ? Text(gorev.aciklama)
+                                : null,
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  tooltip: 'Çıkar',
+                                  icon: const Icon(Icons.remove_circle_outline),
+                                  onPressed: () {
+                                    setState(() {
+                                      _seciliGorevler.removeAt(indeks);
+                                    });
+                                  },
+                                ),
+                                const Icon(Icons.drag_handle),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
                 ],
               ),
             ),
+    );
+  }
+}
+
+// Rutine özel alarm saati, MP3 müzik seçimi ve test kartı.
+class _RutinAlarmAyarKarti extends StatelessWidget {
+  final bool alarmAcikMi;
+  final String saatMetni;
+  final String muzikAdi;
+  final bool ozelMuzikVarMi;
+  final ValueChanged<bool> alarmAcikDegistiginde;
+  final VoidCallback saatSecTiklandiginda;
+  final VoidCallback muzikSecTiklandiginda;
+  final VoidCallback varsayilanMuzikTiklandiginda;
+  final VoidCallback testTiklandiginda;
+  final VoidCallback susturTiklandiginda;
+
+  const _RutinAlarmAyarKarti({
+    required this.alarmAcikMi,
+    required this.saatMetni,
+    required this.muzikAdi,
+    required this.ozelMuzikVarMi,
+    required this.alarmAcikDegistiginde,
+    required this.saatSecTiklandiginda,
+    required this.muzikSecTiklandiginda,
+    required this.varsayilanMuzikTiklandiginda,
+    required this.testTiklandiginda,
+    required this.susturTiklandiginda,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          children: [
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              secondary: Icon(
+                alarmAcikMi ? Icons.alarm_on : Icons.alarm_off_outlined,
+              ),
+              title: const Text(
+                'Bu Rutin İçin Alarm Çalsın',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              subtitle: const Text(
+                'İsterseniz alarm saati ve kendi müziğinizi seçebilirsiniz.',
+              ),
+              value: alarmAcikMi,
+              onChanged: alarmAcikDegistiginde,
+            ),
+            if (alarmAcikMi) ...[
+              const Divider(),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.schedule),
+                title: const Text('Alarm Saati'),
+                trailing: OutlinedButton(
+                  onPressed: saatSecTiklandiginda,
+                  child: Text(saatMetni),
+                ),
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.music_note),
+                title: const Text('Alarm Müziği'),
+                subtitle: Text(muzikAdi),
+                trailing: FilledButton.tonalIcon(
+                  onPressed: muzikSecTiklandiginda,
+                  icon: const Icon(Icons.folder_open, size: 18),
+                  label: const Text('Müzik Seç'),
+                ),
+              ),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  if (ozelMuzikVarMi)
+                    TextButton.icon(
+                      onPressed: varsayilanMuzikTiklandiginda,
+                      icon: const Icon(Icons.restore, size: 18),
+                      label: const Text('Varsayılan Sese Dön'),
+                    ),
+                  OutlinedButton.icon(
+                    onPressed: testTiklandiginda,
+                    icon: const Icon(Icons.volume_up, size: 18),
+                    label: const Text('Alarmı Test Et'),
+                  ),
+                  TextButton.icon(
+                    onPressed: susturTiklandiginda,
+                    icon: const Icon(Icons.volume_off, size: 18),
+                    label: const Text('Sesi Durdur'),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }
