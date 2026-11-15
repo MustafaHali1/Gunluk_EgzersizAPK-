@@ -2,6 +2,11 @@
 
 Tüm önemli değişiklikler bu dosyada belgelenir.
 
+## [0.4.0] - 2026-11-15
+### Eklendi
+- Geçmiş ekranı (`GecmisEkrani`, `GecmisTakvimIzgarasi`) ve planlı olmayan günlerin seriyi bozmadığı seri hesaplayıcı (`SeriHesaplayici`) ile birim testleri eklendi.
+- Doktor gösterimine uygun Rapor ekranı (`RaporEkrani`, `RaporOlusturucu`), 7/30 gün ve özel tarih aralığı filtresi, hareket/gün matris tablosu (`✅`, `❌`, `➖`), arşivlenmiş hareketler için `egzersizAdiKopyasi` koruması ve yatay A4 PDF dışa aktarma/paylaşma servisi (`PdfDisaAktarmaServisi`) eklendi.
+
 ## [0.3.0] - 2026-11-15
 ### Eklendi
 - Egzersizler ekranı (`EgzersizlerEkrani`), egzersiz ekleme/düzenleme/arşivleme ve hazır örnek listeden tek dokunuşla hareket ekleme özelliği eklendi.

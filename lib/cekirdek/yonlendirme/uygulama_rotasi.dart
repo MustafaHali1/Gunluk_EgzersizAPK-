@@ -1,12 +1,12 @@
 // lib/cekirdek/yonlendirme/uygulama_rotasi.dart
 
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../ozellikler/ayarlar/sunum/ayarlar_ekrani.dart';
 import '../../ozellikler/bugun/sunum/bugun_ekrani.dart';
 import '../../ozellikler/egzersizler/sunum/egzersizler_ekrani.dart';
 import '../../ozellikler/gecmis/sunum/gecmis_ekrani.dart';
+import '../../ozellikler/rapor/sunum/rapor_ekrani.dart';
 import '../../ozellikler/rutinler/sunum/rutinler_ekrani.dart';
 import '../sabitler/uygulama_sabitleri.dart';
 import 'ana_iskelet_ekrani.dart';
@@ -57,9 +57,7 @@ final uygulamaRotasiSaglayici = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: UygulamaSabitleri.rotaRapor,
-                builder: (context, durum) => const _YerTutucuEkran(
-                  baslik: UygulamaSabitleri.sekmeRapor,
-                ),
+                builder: (context, durum) => const RaporEkrani(),
               ),
             ],
           ),
@@ -76,23 +74,3 @@ final uygulamaRotasiSaglayici = Provider<GoRouter>((ref) {
     ],
   );
 });
-
-// Özellik ekranları tamamlanana kadar kullanılan geçici yer tutucu ekran.
-class _YerTutucuEkran extends StatelessWidget {
-  final String baslik;
-
-  const _YerTutucuEkran({required this.baslik});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(baslik)),
-      body: Center(
-        child: Text(
-          '$baslik ekranı hazırlanıyor...',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-      ),
-    );
-  }
-}

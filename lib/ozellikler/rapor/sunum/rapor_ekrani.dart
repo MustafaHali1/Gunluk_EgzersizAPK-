@@ -1,0 +1,256 @@
+// lib/ozellikler/rapor/sunum/rapor_ekrani.dart
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../cekirdek/sabitler/uygulama_sabitleri.dart';
+import '../alan/rapor_olusturucu.dart';
+import 'rapor_kontrolcusu.dart';
+
+// Doktora gösterilebilecek egzersiz takip tablosunu ve PDF paylaşımını sunan ekran.
+class RaporEkrani extends ConsumerWidget {
+  const RaporEkrani({super.key});
+
+  Future<void> _ozelTarihAraligiSeciciAc(
+    BuildContext context,
+    RaporKontrolcusu kontrolcu,
+    RaporDurumu mevcutDurum,
+  ) async {
+    final secilen = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2024, 1, 1),
+      lastDate: DateTime.now(),
+      initialDateRange: DateTimeRange(
+        start: mevcutDurum.baslangic,
+        end: mevcutDurum.bitis,
+      ),
+      helpText: 'Rapor Tarih Aralığını Seçin',
+    );
+    if (secilen != null) {
+      await kontrolcu.ozelTarihAraligiSec(secilen.start, secilen.end);
+    }
+  }
+
+  Future<void> _pdfPaylas(
+    BuildContext context,
+    RaporKontrolcusu kontrolcu,
+  ) async {
+    final basarili = await kontrolcu.pdfOlarakPaylas();
+    if (!basarili && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('PDF paylaşılırken bir sorun oluştu.')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final raporDurumu = ref.watch(raporKontrolcusuSaglayici);
+    final kontrolcu = ref.read(raporKontrolcusuSaglayici.notifier);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(UygulamaSabitleri.sekmeRapor),
+        actions: [
+          IconButton(
+            tooltip: 'PDF Olarak Paylaş',
+            onPressed: () => _pdfPaylas(context, kontrolcu),
+            icon: const Icon(Icons.picture_as_pdf),
+          ),
+        ],
+      ),
+      body: raporDurumu.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (h, _) => Center(child: Text('Rapor oluşturulamadı: $h')),
+        data: (durum) => ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            _AralikSeciciSatiri(
+              seciliTur: durum.aralikTuru,
+              turSecildiginde: (tur) {
+                if (tur == RaporAralikTuru.ozel) {
+                  _ozelTarihAraligiSeciciAc(context, kontrolcu, durum);
+                } else {
+                  kontrolcu.aralikTuruSec(tur);
+                }
+              },
+            ),
+            const SizedBox(height: 12),
+            _RaporOzetKarti(
+              tablo: durum.tablo,
+              pdfPaylasTiklandiginda: () => _pdfPaylas(context, kontrolcu),
+            ),
+            const SizedBox(height: 12),
+            _RaporMatrisKarti(tablo: durum.tablo),
+            const SizedBox(height: 12),
+            Text(
+              UygulamaMetinleri.tibbiUyariNotu,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontStyle: FontStyle.italic,
+                  ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// 7 gün, 30 gün veya özel tarih aralığı seçimini sağlayan bileşen.
+class _AralikSeciciSatiri extends StatelessWidget {
+  final RaporAralikTuru seciliTur;
+  final ValueChanged<RaporAralikTuru> turSecildiginde;
+
+  const _AralikSeciciSatiri({
+    required this.seciliTur,
+    required this.turSecildiginde,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SegmentedButton<RaporAralikTuru>(
+      segments: const [
+        ButtonSegment(
+          value: RaporAralikTuru.son7Gun,
+          label: Text('Son 7 Gün'),
+        ),
+        ButtonSegment(
+          value: RaporAralikTuru.son30Gun,
+          label: Text('Son 30 Gün'),
+        ),
+        ButtonSegment(
+          value: RaporAralikTuru.ozel,
+          label: Text('Özel Aralık'),
+        ),
+      ],
+      selected: {seciliTur},
+      onSelectionChanged: (secim) => turSecildiginde(secim.first),
+    );
+  }
+}
+
+// Genel tamamlanma yüzdesini, en uzun seriyi ve PDF dışa aktarma butonunu gösteren kart.
+class _RaporOzetKarti extends StatelessWidget {
+  final RaporTablosu tablo;
+  final VoidCallback pdfPaylasTiklandiginda;
+
+  const _RaporOzetKarti({
+    required this.tablo,
+    required this.pdfPaylasTiklandiginda,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '${tablo.baslangicTarihi} — ${tablo.bitisTarihi}',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                FilledButton.tonalIcon(
+                  onPressed: pdfPaylasTiklandiginda,
+                  icon: const Icon(Icons.share, size: 18),
+                  label: const Text('PDF Paylaş'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Genel Tamamlanma: %${tablo.genelTamamlanmaYuzdesi}   •   En Uzun Seri: ${tablo.enUzunSeri} Gün',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '✅ Yapıldı   ❌ Yapılmadı / Atlandı   ➖ Planlı Değil',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Satırlarda hareketlerin, sütunlarda günlerin yer aldığı yatay kaydırılabilir rapor tablosu.
+class _RaporMatrisKarti extends StatelessWidget {
+  final RaporTablosu tablo;
+
+  const _RaporMatrisKarti({required this.tablo});
+
+  String _kisaGunBasligi(String tarihMetni) {
+    final parcalar = tarihMetni.split('-');
+    if (parcalar.length != 3) return tarihMetni;
+    return '${parcalar[2]}/${parcalar[1]}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (tablo.satirlar.isEmpty) {
+      return const Card(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Center(
+            child: Text(
+              'Seçilen tarih aralığında gösterilecek hareket veya aktif rutin bulunmuyor.',
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Card(
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.all(8),
+        child: DataTable(
+          columnSpacing: 16,
+          headingRowHeight: 42,
+          dataRowMinHeight: 40,
+          dataRowMaxHeight: 48,
+          columns: [
+            const DataColumn(label: Text('Hareket')),
+            ...tablo.gunler.map(
+              (g) => DataColumn(label: Text(_kisaGunBasligi(g))),
+            ),
+            const DataColumn(label: Text('Oran')),
+          ],
+          rows: tablo.satirlar.map((satir) {
+            return DataRow(
+              cells: [
+                DataCell(
+                  Text(
+                    satir.egzersizAdi,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+                ...tablo.gunler.map((gun) {
+                  final durum =
+                      satir.gunlukDurumlar[gun] ?? RaporHucreDurumu.planliDegil;
+                  return DataCell(Center(child: Text(durum.sembol)));
+                }),
+                DataCell(
+                  Text(
+                    '%${satir.tamamlanmaYuzdesi}',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+}
