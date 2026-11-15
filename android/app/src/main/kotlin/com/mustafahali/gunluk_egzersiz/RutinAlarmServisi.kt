@@ -17,6 +17,7 @@ import android.os.Looper
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.provider.Settings
 import android.widget.Toast
 import java.io.File
 import java.io.FileInputStream
@@ -106,6 +107,20 @@ class RutinAlarmServisi : Service() {
 
                 muzigiBaslat(mevcutMuzikYolu)
                 titresimiBaslat()
+
+                // Ekran kilidi kapalıysa fullScreenIntent açar; izin varsa veya uygulama öndeyse erteleme penceresini doğrudan aç
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || Settings.canDrawOverlays(this)) {
+                    try {
+                        val aktiviteIntent = Intent(this, RutinAlarmAktivitesi::class.java).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                            putExtra("rutinId", mevcutRutinId)
+                            putExtra("rutinAdi", mevcutRutinAdi)
+                            putExtra("muzikYolu", mevcutMuzikYolu)
+                        }
+                        startActivity(aktiviteIntent)
+                    } catch (_: Exception) {
+                    }
+                }
 
                 zamanlayici.removeCallbacks(otomatikDurdurGorevi)
                 zamanlayici.postDelayed(otomatikDurdurGorevi, OTOMATIK_DURDURMA_MS)
@@ -203,7 +218,7 @@ class RutinAlarmServisi : Service() {
         builder
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle("⏰ $rutinAdi Alarmı Çalıyor!")
-            .setContentText("Ertelemek veya rutini açmak için dokunun.")
+            .setContentText("Susturmak veya ertelemek (5 dk / 1 sa / gün sonu) için dokunun.")
             .setOngoing(true)
             .setCategory(Notification.CATEGORY_ALARM)
             .setVisibility(Notification.VISIBILITY_PUBLIC)
@@ -219,8 +234,8 @@ class RutinAlarmServisi : Service() {
             .addAction(
                 Notification.Action.Builder(
                     null,
-                    ertelemeEtiketi,
-                    hizliErtelePendingIntent,
+                    "Ertele (Seç)",
+                    tamEkranPendingIntent,
                 ).build(),
             )
             .addAction(

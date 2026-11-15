@@ -55,6 +55,12 @@ class MainActivity : FlutterActivity() {
                         } else {
                             applicationContext.startService(servisIntent)
                         }
+                        val aktiviteIntent = Intent(this@MainActivity, RutinAlarmAktivitesi::class.java).apply {
+                            putExtra("rutinId", rutinId)
+                            putExtra("rutinAdi", rutinAdi)
+                            putExtra("muzikYolu", muzikYolu)
+                        }
+                        startActivity(aktiviteIntent)
                         result.success(true)
                     }
                     "alarmiDurdur" -> {
