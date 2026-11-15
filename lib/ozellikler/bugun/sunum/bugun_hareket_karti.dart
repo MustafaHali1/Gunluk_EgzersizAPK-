@@ -21,14 +21,11 @@ class BugunHareketKarti extends StatelessWidget {
 
   String _hedefBilgisiOlustur() {
     final detay = egzersizDetayi;
-    if (detay == null) return 'Kayıtlı hareket';
-    final hedefMetni = detay.tur == 'sureli'
-        ? '${detay.sureSaniye ?? 30} saniye'
-        : '${detay.setSayisi ?? 3} set × ${detay.tekrarSayisi ?? 10} tekrar';
+    if (detay == null) return 'Kayıtlı görev';
     if (detay.aciklama.trim().isNotEmpty) {
-      return '$hedefMetni • ${detay.aciklama}';
+      return detay.aciklama.trim();
     }
-    return '$hedefMetni • ${detay.kategori}';
+    return detay.kategori;
   }
 
   Future<void> _notDuzenlemePenceresiAc(BuildContext context) async {

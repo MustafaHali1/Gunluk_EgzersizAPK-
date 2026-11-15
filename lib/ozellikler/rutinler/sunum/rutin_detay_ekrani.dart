@@ -8,6 +8,8 @@ import '../../bugun/sunum/bugun_hareket_karti.dart';
 import '../../bugun/sunum/bugun_kontrolcusu.dart';
 import '../../bugun/veri/antrenman_deposu_uygulamasi.dart';
 import '../../egzersizler/veri/egzersiz_deposu_uygulamasi.dart';
+import '../../gecmis/sunum/gecmis_kontrolcusu.dart';
+import '../../rapor/sunum/rapor_kontrolcusu.dart';
 import '../veri/rutin_deposu_uygulamasi.dart';
 
 // Tek bir rutinin bugünkü görev kayıtlarını ve detaylarını tutan durum sınıfı.
@@ -62,7 +64,7 @@ final rutinDetayDurumuSaglayici =
       );
     });
 
-// Kullanıcının yalnızca görevleri "Yaptım" / "Yapmadım" işaretlediği sade rutin içi ekranı.
+// Kullanıcının yalnızca görevleri "Yaptım" / "Yapmadım" işaretleyip Kaydet'e bastığı ekran.
 class RutinDetayEkrani extends ConsumerWidget {
   final int rutinId;
 
@@ -70,6 +72,13 @@ class RutinDetayEkrani extends ConsumerWidget {
     super.key,
     required this.rutinId,
   });
+
+  void _tumEkranlariTazele(WidgetRef ref) {
+    ref.invalidate(rutinDetayDurumuSaglayici(rutinId));
+    ref.invalidate(bugunKontrolcusuSaglayici);
+    ref.invalidate(raporKontrolcusuSaglayici);
+    ref.invalidate(gecmisKontrolcusuSaglayici);
+  }
 
   Future<void> _durumDegistir(
     WidgetRef ref,
@@ -83,8 +92,7 @@ class RutinDetayEkrani extends ConsumerWidget {
           egzersizKaydiId: kayit.id,
           durum: yeniDurum,
         );
-    ref.invalidate(rutinDetayDurumuSaglayici(rutinId));
-    ref.invalidate(bugunKontrolcusuSaglayici);
+    _tumEkranlariTazele(ref);
   }
 
   Future<void> _notKaydet(
@@ -99,7 +107,7 @@ class RutinDetayEkrani extends ConsumerWidget {
           durum: kayit.durum,
           notMetni: notMetni.trim(),
         );
-    ref.invalidate(rutinDetayDurumuSaglayici(rutinId));
+    _tumEkranlariTazele(ref);
   }
 
   Future<void> _tumunuYaptim(WidgetRef ref) async {
@@ -111,8 +119,15 @@ class RutinDetayEkrani extends ConsumerWidget {
           haftaninGunu: simdi.weekday,
           rutinId: rutinId,
         );
-    ref.invalidate(rutinDetayDurumuSaglayici(rutinId));
-    ref.invalidate(bugunKontrolcusuSaglayici);
+    _tumEkranlariTazele(ref);
+  }
+
+  void _kaydetVeKapat(BuildContext context, WidgetRef ref) {
+    _tumEkranlariTazele(ref);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Rutin kayıtları kaydedildi.')),
+    );
+    Navigator.of(context).pop();
   }
 
   @override
@@ -138,9 +153,19 @@ class RutinDetayEkrani extends ConsumerWidget {
 
         final yuzde = (durum.oran * 100).round();
         return Scaffold(
-          appBar: AppBar(title: Text(durum.rutin.ad)),
+          appBar: AppBar(
+            title: Text(durum.rutin.ad),
+            actions: [
+              FilledButton.icon(
+                onPressed: () => _kaydetVeKapat(context, ref),
+                icon: const Icon(Icons.check),
+                label: const Text('Kaydet'),
+              ),
+              const SizedBox(width: 12),
+            ],
+          ),
           body: ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
             children: [
               Card(
                 color: Theme.of(context).colorScheme.primaryContainer,
@@ -218,6 +243,15 @@ class RutinDetayEkrani extends ConsumerWidget {
                         _notKaydet(ref, kayit, notMetni),
                   ),
                 ),
+              const SizedBox(height: 16),
+              SizedBox(
+                height: 48,
+                child: FilledButton.icon(
+                  onPressed: () => _kaydetVeKapat(context, ref),
+                  icon: const Icon(Icons.save),
+                  label: const Text('Kaydet'),
+                ),
+              ),
             ],
           ),
         );

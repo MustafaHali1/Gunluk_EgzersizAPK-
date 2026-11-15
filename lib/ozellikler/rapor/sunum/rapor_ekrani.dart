@@ -7,7 +7,7 @@ import '../../gecmis/sunum/gecmis_ekrani.dart';
 import '../alan/rapor_olusturucu.dart';
 import 'rapor_kontrolcusu.dart';
 
-// Doktora gösterilebilecek egzersiz takip tablosunu, PDF paylaşımını ve geçmiş takvimini sunan ekran.
+// Doktora gösterilebilecek açılır-kapanır rapor tablosunu, PDF paylaşımını ve geçmiş takvimini sunan ekran.
 class RaporEkrani extends ConsumerWidget {
   const RaporEkrani({super.key});
 
@@ -79,7 +79,7 @@ class RaporEkrani extends ConsumerWidget {
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (h, _) => Center(child: Text('Rapor oluşturulamadı: $h')),
               data: (durum) => ListView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
                 children: [
                   _AralikSeciciSatiri(
                     seciliTur: durum.aralikTuru,
@@ -98,6 +98,10 @@ class RaporEkrani extends ConsumerWidget {
                   ),
                   const SizedBox(height: 12),
                   _RaporMatrisKarti(tablo: durum.tablo),
+                  if (durum.tablo.satirlar.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    _GorevDetayAcilirKarti(tablo: durum.tablo),
+                  ],
                   const SizedBox(height: 12),
                   Text(
                     UygulamaMetinleri.tibbiUyariNotu,
@@ -150,7 +154,7 @@ class _AralikSeciciSatiri extends StatelessWidget {
   }
 }
 
-// Genel tamamlanma yüzdesini, en uzun seriyi ve PDF dışa aktarma butonunu gösteren kart.
+// Genel tamamlanma yüzdesini, en uzun seriyi ve açılır-kapanır özeti gösteren kart.
 class _RaporOzetKarti extends StatelessWidget {
   final RaporTablosu tablo;
   final VoidCallback pdfPaylasTiklandiginda;
@@ -163,47 +167,43 @@ class _RaporOzetKarti extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  '${tablo.baslangicTarihi} — ${tablo.bitisTarihi}',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-                FilledButton.tonalIcon(
-                  onPressed: pdfPaylasTiklandiginda,
-                  icon: const Icon(Icons.share, size: 18),
-                  label: const Text('PDF Paylaş'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Genel Tamamlanma: %${tablo.genelTamamlanmaYuzdesi}   •   En Uzun Seri: ${tablo.enUzunSeri} Gün',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              '✅ Yaptım   ❌ Yapmadım   ➖ Planlı Değil',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ],
+      clipBehavior: Clip.antiAlias,
+      child: ExpansionTile(
+        initiallyExpanded: true,
+        title: Text(
+          '${tablo.baslangicTarihi} — ${tablo.bitisTarihi}',
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
         ),
+        subtitle: Text(
+          'Tamamlanma: %${tablo.genelTamamlanmaYuzdesi} • En Uzun Seri: ${tablo.enUzunSeri} Gün',
+        ),
+        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Expanded(
+                child: Text(
+                  '✅ Yaptım   ❌ Yapmadım   ➖ Planlı Değil',
+                  style: TextStyle(fontSize: 12),
+                ),
+              ),
+              FilledButton.tonalIcon(
+                onPressed: pdfPaylasTiklandiginda,
+                icon: const Icon(Icons.share, size: 18),
+                label: const Text('PDF Paylaş'),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 }
 
-// Satırlarda hareketlerin, sütunlarda günlerin yer aldığı yatay kaydırılabilir rapor tablosu.
+// Açılıp kapanabilir tırnağa sahip yatay kaydırılabilir rapor tablosu kartı.
 class _RaporMatrisKarti extends StatelessWidget {
   final RaporTablosu tablo;
 
@@ -223,7 +223,7 @@ class _RaporMatrisKarti extends StatelessWidget {
           padding: EdgeInsets.all(24),
           child: Center(
             child: Text(
-              'Seçilen tarih aralığında gösterilecek hareket veya aktif rutin bulunmuyor.',
+              'Seçilen tarih aralığında gösterilecek görev veya rutin bulunmuyor.',
               textAlign: TextAlign.center,
             ),
           ),
@@ -232,45 +232,98 @@ class _RaporMatrisKarti extends StatelessWidget {
     }
 
     return Card(
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.all(8),
-        child: DataTable(
-          columnSpacing: 16,
-          headingRowHeight: 42,
-          dataRowMinHeight: 40,
-          dataRowMaxHeight: 48,
-          columns: [
-            const DataColumn(label: Text('Hareket')),
-            ...tablo.gunler.map(
-              (g) => DataColumn(label: Text(_kisaGunBasligi(g))),
-            ),
-            const DataColumn(label: Text('Oran')),
-          ],
-          rows: tablo.satirlar.map((satir) {
-            return DataRow(
-              cells: [
-                DataCell(
-                  Text(
-                    satir.egzersizAdi,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                ),
-                ...tablo.gunler.map((gun) {
-                  final durum =
-                      satir.gunlukDurumlar[gun] ?? RaporHucreDurumu.planliDegil;
-                  return DataCell(Center(child: Text(durum.sembol)));
-                }),
-                DataCell(
-                  Text(
-                    '%${satir.tamamlanmaYuzdesi}',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
-            );
-          }).toList(),
+      clipBehavior: Clip.antiAlias,
+      child: ExpansionTile(
+        initiallyExpanded: true,
+        title: Text(
+          'Günlük Takip Tablosu (${tablo.satirlar.length} görev)',
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
         ),
+        children: [
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+            child: DataTable(
+              columnSpacing: 16,
+              headingRowHeight: 42,
+              dataRowMinHeight: 40,
+              dataRowMaxHeight: 48,
+              columns: [
+                const DataColumn(label: Text('Görev')),
+                ...tablo.gunler.map(
+                  (g) => DataColumn(label: Text(_kisaGunBasligi(g))),
+                ),
+                const DataColumn(label: Text('Oran')),
+              ],
+              rows: tablo.satirlar.map((satir) {
+                return DataRow(
+                  cells: [
+                    DataCell(
+                      Text(
+                        satir.egzersizAdi,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    ...tablo.gunler.map((gun) {
+                      final durum =
+                          satir.gunlukDurumlar[gun] ??
+                          RaporHucreDurumu.planliDegil;
+                      return DataCell(Center(child: Text(durum.sembol)));
+                    }),
+                    DataCell(
+                      Text(
+                        '%${satir.tamamlanmaYuzdesi}',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// Her bir görevin kendi açılır-kapanır tırnağıyla yapılan/yapılmayan özetini gösteren kart.
+class _GorevDetayAcilirKarti extends StatelessWidget {
+  final RaporTablosu tablo;
+
+  const _GorevDetayAcilirKarti({required this.tablo});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: ExpansionTile(
+        initiallyExpanded: false,
+        title: const Text(
+          'Görev Bazlı İstatistikler',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: const Text('Açıp görevlerin yapılma oranlarını inceleyin'),
+        children: tablo.satirlar.map((satir) {
+          final yapilmayan = satir.planlananSayisi - satir.yapilanSayisi;
+          return ExpansionTile(
+            title: Text(satir.egzersizAdi),
+            subtitle: Text('Başarı: %${satir.tamamlanmaYuzdesi}'),
+            childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('✅ Yapılan: ${satir.yapilanSayisi} gün'),
+                  Text('❌ Yapılmayan: $yapilmayan gün'),
+                  Text('📅 Planlı: ${satir.planlananSayisi} gün'),
+                ],
+              ),
+            ],
+          );
+        }).toList(),
       ),
     );
   }

@@ -98,6 +98,22 @@ class AntrenmanDao extends DatabaseAccessor<UygulamaVeritabani>
             ..orderBy([(t) => OrderingTerm.asc(t.id)]))
           .get();
 
+      // Eski sürümden kalan rutinId=null kayıtları bu rutine bağla ki rapor çakışmasın
+      final sahipsizKayitlar = await (select(egzersizKayitlari)
+            ..where(
+              (t) =>
+                  t.antrenmanKaydiId.equals(antrenman!.id) &
+                  t.rutinId.isNull(),
+            ))
+          .get();
+      for (final sahipsiz in sahipsizKayitlar) {
+        if (aktifGorevIdleri.contains(sahipsiz.egzersizId)) {
+          await (update(egzersizKayitlari)
+                ..where((t) => t.id.equals(sahipsiz.id)))
+              .write(EgzersizKayitlariCompanion(rutinId: Value(rutinId)));
+        }
+      }
+
       // Rutinden çıkarılmış ve hâlâ 'bekliyor' durumunda olan görevleri temizle
       for (final kayit in mevcutKayitlar) {
         if (kayit.durum == 'bekliyor' &&

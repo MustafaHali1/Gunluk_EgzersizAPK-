@@ -210,7 +210,7 @@ class _BugunUstOzetKarti extends StatelessWidget {
   }
 }
 
-// Bugün ekranındaki her bir rutinin kartı; dokunulunca doğrudan rutin içi açılır.
+// Bugün ekranındaki her bir rutinin açılır-kapanır tırnaklı kartı.
 class _BugunRutinKarti extends StatelessWidget {
   final BugunRutinOzeti ozet;
   final VoidCallback tiklandiginda;
@@ -227,10 +227,25 @@ class _BugunRutinKarti extends StatelessWidget {
         ? '⏰ ${r.alarmSaati.toString().padLeft(2, '0')}:${r.alarmDakikasi.toString().padLeft(2, '0')}'
         : 'Alarmsız';
 
+    if (ozet.gorevKayitlari.isEmpty) {
+      return Card(
+        margin: const EdgeInsets.only(bottom: 10),
+        child: ListTile(
+          onTap: tiklandiginda,
+          leading: CircleAvatar(
+            child: Icon(Icons.playlist_play, color: Theme.of(context).colorScheme.primary),
+          ),
+          title: Text(r.ad, style: const TextStyle(fontWeight: FontWeight.bold)),
+          subtitle: Text('$saatBilgisi • 0 görev'),
+          trailing: const Icon(Icons.chevron_right),
+        ),
+      );
+    }
+
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
-      child: ListTile(
-        onTap: tiklandiginda,
+      clipBehavior: Clip.antiAlias,
+      child: ExpansionTile(
         leading: CircleAvatar(
           backgroundColor: ozet.tamamlandiMi
               ? UygulamaRenkleri.basariYesili.withValues(alpha: 0.15)
@@ -250,15 +265,49 @@ class _BugunRutinKarti extends StatelessWidget {
                     : Theme.of(context).colorScheme.primary,
           ),
         ),
-        title: Text(
-          r.ad,
-          style: const TextStyle(fontWeight: FontWeight.bold),
+        title: GestureDetector(
+          onTap: tiklandiginda,
+          child: Text(
+            r.ad,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
         ),
-        subtitle: Text(
-          '$saatBilgisi • ${ozet.yapilanSayisi}/${ozet.toplamSayisi} yapıldı'
-          '${ozet.suresiGectiMi ? ' • Süresi geçti' : ''}',
+        subtitle: GestureDetector(
+          onTap: tiklandiginda,
+          child: Text(
+            '$saatBilgisi • ${ozet.yapilanSayisi}/${ozet.toplamSayisi} yapıldı'
+            '${ozet.suresiGectiMi ? ' • Süresi geçti' : ''}',
+          ),
         ),
-        trailing: const Icon(Icons.chevron_right),
+        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+        children: [
+          ...ozet.gorevKayitlari.map((k) {
+            final ikon = k.durum == 'yapildi'
+                ? '✅'
+                : k.durum == 'atlandi'
+                    ? '❌'
+                    : '⏳';
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 3),
+              child: Row(
+                children: [
+                  Text(ikon),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(k.egzersizAdiKopyasi)),
+                ],
+              ),
+            );
+          }),
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerRight,
+            child: FilledButton.tonalIcon(
+              onPressed: tiklandiginda,
+              icon: const Icon(Icons.open_in_new, size: 18),
+              label: const Text('Rutini Aç ve İşaretle'),
+            ),
+          ),
+        ],
       ),
     );
   }

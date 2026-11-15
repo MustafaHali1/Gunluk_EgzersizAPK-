@@ -132,8 +132,10 @@ class RaporOlusturucu {
         if (gunDetayi != null) {
           for (final k in gunDetayi.egzersizKayitlari) {
             if (k.egzersizId == egzId) {
-              ilgiliKayit = k;
-              break;
+              if (ilgiliKayit == null || k.durum == 'yapildi') {
+                ilgiliKayit = k;
+                if (k.durum == 'yapildi') break;
+              }
             }
           }
         }

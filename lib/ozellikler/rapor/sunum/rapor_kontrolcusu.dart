@@ -52,42 +52,39 @@ class RaporKontrolcusu extends AsyncNotifier<RaporDurumu> {
     final bugun = DateTime.now();
     final temizBugun = DateTime(bugun.year, bugun.month, bugun.day);
 
-    final aktifRutin = await _rutinDeposu.aktifRutiniGetir();
-    Set<int> planliGunler = <int>{};
-    List<EgzersizlerData> rutinEgzersizleri = const [];
+    final tumRutinler = await _rutinDeposu.tumRutinleriGetir();
+    final planliGunler = <int>{};
+    final gorevHaritasi = <int, EgzersizlerData>{};
 
-    if (aktifRutin != null) {
-      planliGunler = aktifRutin.haftaninGunleri
-          .split(',')
-          .map((e) => int.tryParse(e.trim()))
-          .whereType<int>()
-          .toSet();
-      final detaylar = await _rutinDeposu.rutinEgzersizleriniGetir(
-        aktifRutin.id,
-      );
-      rutinEgzersizleri = detaylar.map((d) => d.egzersiz).toList();
+    for (final rutin in tumRutinler) {
+      if (rutin.sadeceTarih == null) {
+        planliGunler.addAll(
+          rutin.haftaninGunleri
+              .split(',')
+              .map((e) => int.tryParse(e.trim()))
+              .whereType<int>(),
+        );
+      } else {
+        final t = TarihYardimcisi.metindenTarihe(rutin.sadeceTarih!);
+        planliGunler.add(t.weekday);
+      }
+      final detaylar = await _rutinDeposu.rutinEgzersizleriniGetir(rutin.id);
+      for (final d in detaylar) {
+        gorevHaritasi[d.egzersiz.id] = d.egzersiz;
+      }
     }
+    final rutinGorevleri = gorevHaritasi.values.toList();
 
-    // Rutinin başladığı ilk günü tespit et (örn. 15/11'de başlatıldıysa 1. gün 15/11 olur)
+    // Rutinlerin başladığı ilk günü tespit et (örn. 15/11'de başlatıldıysa 1. sütun 15/11 olur)
     final gecmisKayitlar = await _antrenmanDeposu
         .tarihAraligindakiAntrenmanlariGetir(
           baslangicTarihi: '2024-01-01',
           bitisTarihi: TarihYardimcisi.tarihiFormatla(temizBugun),
         );
 
-    final rutinKayitlari = aktifRutin != null
-        ? gecmisKayitlar
-              .where((k) => k.antrenmanKaydi.rutinId == aktifRutin.id)
-              .toList()
-        : gecmisKayitlar;
-
-    final referansKayitlar = rutinKayitlari.isNotEmpty
-        ? rutinKayitlari
-        : gecmisKayitlar;
-
-    final ilkBaslangicGunu = referansKayitlar.isNotEmpty
+    final ilkBaslangicGunu = gecmisKayitlar.isNotEmpty
         ? TarihYardimcisi.metindenTarihe(
-            referansKayitlar.first.antrenmanKaydi.tarih,
+            gecmisKayitlar.first.antrenmanKaydi.tarih,
           )
         : temizBugun;
 
@@ -95,7 +92,6 @@ class RaporKontrolcusu extends AsyncNotifier<RaporDurumu> {
     late final DateTime bitis;
 
     if (_seciliTur == RaporAralikTuru.son7Gun) {
-      // Başlangıç gününden (örn. 15/11) itibaren 7 günlük blok (15/11 - 21/11)
       final gecenGun = temizBugun.difference(ilkBaslangicGunu).inDays;
       final blokIndeksi = gecenGun >= 0 ? (gecenGun ~/ 7) : 0;
       baslangic = DateTime(
@@ -109,7 +105,6 @@ class RaporKontrolcusu extends AsyncNotifier<RaporDurumu> {
         baslangic.day + 6,
       );
     } else if (_seciliTur == RaporAralikTuru.son30Gun) {
-      // Başlangıç gününden (örn. 15/11) itibaren 30 günlük blok (15/11 - 14/12)
       final gecenGun = temizBugun.difference(ilkBaslangicGunu).inDays;
       final blokIndeksi = gecenGun >= 0 ? (gecenGun ~/ 30) : 0;
       baslangic = DateTime(
@@ -140,7 +135,7 @@ class RaporKontrolcusu extends AsyncNotifier<RaporDurumu> {
       bitis: bitis,
       antrenmanKayitlari: aralikKayitlari,
       planliHaftaninGunleri: planliGunler,
-      rutinEgzersizleri: rutinEgzersizleri,
+      rutinEgzersizleri: rutinGorevleri,
       bugunReferansi: temizBugun,
     );
 
