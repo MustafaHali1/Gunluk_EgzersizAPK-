@@ -8,7 +8,7 @@ class UygulamaSabitleri {
 
   static const String uygulamaAdi = 'Günlük Egzersiz';
   static const String paketKimligi = 'com.mustafahali.gunlukegzersiz';
-  static const String uygulamaSurumu = '0.4.0+4';
+  static const String uygulamaSurumu = '1.0.0+5';
 
   // Rota yolları
   static const String rotaTanitim = '/tanitim';

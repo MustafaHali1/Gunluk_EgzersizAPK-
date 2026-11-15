@@ -2,6 +2,12 @@
 
 Tüm önemli değişiklikler bu dosyada belgelenir.
 
+## [1.0.0] - 2026-11-15
+### Eklendi
+- Veritabanı JSON yedekleme, şema sürümü (`semaSurumu`) doğrulamalı geri yükleme ve çift onaylı tüm verileri silme özelliği (`YedeklemeServisi`, `YedeklemeAyarKarti`) ile birim testleri eklendi.
+- İlk açılışta bir kez gösterilen 3 adımlı tanıtım (`TanitimEkrani`), bildirim izni/saat seçimi ve hazır hareketlerden başlangıç rutini kurulumu eklendi.
+- `flutter_launcher_icons` ve `flutter_native_splash` yapılandırmaları, widget testleri (`test/widget_test.dart`), GitHub Actions CI iş akışı (`.github/workflows/ci.yml`), mimari belgesi (`docs/ARCHITECTURE.md`) ve macOS/iOS derleme rehberini içeren `README.md` tamamlandı.
+
 ## [0.4.0] - 2026-11-15
 ### Eklendi
 - Geçmiş ekranı (`GecmisEkrani`, `GecmisTakvimIzgarasi`) ve planlı olmayan günlerin seriyi bozmadığı seri hesaplayıcı (`SeriHesaplayici`) ile birim testleri eklendi.

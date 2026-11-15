@@ -1,20 +1,59 @@
 # Mimari Belgesi (docs/ARCHITECTURE.md)
 
-## Katmanlı Mimari Kuralları
-Uygulama tek sorumluluk ilkesine (Single Responsibility) ve katmanlı mimariye sıkı sıkıya bağlıdır:
+## 1. Katmanlı Mimari ve Tek Yönlü Veri Akışı
 
-`Ekran (Screen) → Kontrolcü (Riverpod Notifier) → Depo (Repository Arayüz + Uygulama) → DAO (Drift) → Veritabanı (SQLite)`
+Uygulama, sorumlulukların net biçimde ayrıldığı katmanlı bir mimari izler. Hiçbir ekran (UI) doğrudan veritabanına (`Drift`), DAO sınıflarına veya platform servislerine erişmez.
 
-1. **Sunum Katmanı (`sunum/`):**
-   - `*_ekrani.dart`: Yalnızca kullanıcı arayüzü (UI) bileşenlerini içerir. Veritabanı, bildirim, PDF veya istatistik hesabı içermez.
-   - `*_kontrolcusu.dart`: Riverpod `Notifier` / `AsyncNotifier` sınıflarıdır. Ekran ile depo/servisler arasındaki akışı yönetir ve hataları yakalayıp kullanıcıya Türkçe mesaj sunar.
-2. **Alan Katmanı (`alan/`):**
-   - İş modelleri ve soyut depo (`abstract class *_deposu.dart`) arayüzlerini barındırır.
-3. **Veri Katmanı (`veri/`):**
-   - `*_dao.dart`: Drift veritabanı sorgularını içerir.
-   - `*_deposu_uygulamasi.dart`: Soyut depo arayüzlerini uygular, DAO'yu çağırır ve hataları `UygulamaHatasi` olarak sarmalar.
-4. **Çekirdek (`lib/cekirdek/`):**
-   - `veritabani/`: Drift tablo tanımları, veritabanı sınıfı ve şema göç (migration) stratejisi.
-   - `bildirimler/`: Platform farklarını soyutlayan `BildirimServisi`.
-   - `hatalar/`: `MerkeziKaydedici` ve `UygulamaHatasi`.
-   - `sabitler/`, `tema/`, `yonlendirme/`, `yardimcilar/`.
+```
+Ekran (Screen / Widget)
+   ↓  (Riverpod watch / read)
+Kontrolcü (Notifier / AsyncNotifier)
+   ├─→ Depo (Soyut Arayüz → Somut Uygulama)
+   │      ↓
+   │   DAO (Drift DatabaseAccessor)
+   │      ↓
+   │   UygulamaVeritabani (SQLite)
+   │
+   └─→ Servisler (BildirimServisi, PdfDisaAktarmaServisi, YedeklemeServisi, UygulamaTercihleriServisi)
+```
+
+## 2. Klasör Yapısı
+
+```
+lib/
+  cekirdek/
+    ayarlar/        # UygulamaTercihleriServisi (SharedPreferences, TemaModuKontrolcusu)
+    bildirimler/    # BildirimServisi ve arkaPlanBildirimYanitiIsleyici
+    hatalar/        # MerkeziKaydedici ve UygulamaHatasi
+    sabitler/       # UygulamaSabitleri, UygulamaRenkleri, UygulamaBoyutlari, UygulamaMetinleri
+    tema/           # UygulamaTemasi (Material 3 açık ve koyu tema)
+    veritabani/     # tablolar.dart, uygulama_veritabani.dart
+    yardimcilar/    # TarihYardimcisi
+    yonlendirme/    # uygulama_rotasi.dart, ana_iskelet_ekrani.dart
+  ozellikler/
+    tanitim/        # 3 adımlı ilk açılış tanıtımı ve başlangıç rutini kurulumu
+    bugun/          # Günlük antrenman kontrol listesi, hızlı ekle, gece yarısı gün geçişi
+    egzersizler/    # Egzersiz ekleme, düzenleme, hazır şablonlar ve arşivleme (soft delete)
+    rutinler/       # Rutin oluşturma, sürükle-bırak sıralama, aktif rutin seçimi
+    gecmis/         # Aylık takvim görünümü ve SeriHesaplayici (streak)
+    rapor/          # RaporOlusturucu (hareket × gün matrisi) ve PdfDisaAktarmaServisi
+    ayarlar/        # Hatırlatıcı saat/gün seçimi, izin durumu, tema ve pil rehberi
+    yedekleme/      # YedeklemeServisi (JSON dışa/içe aktarma, çift onaylı sıfırlama)
+```
+
+## 3. Veritabanı Şeması ve Göç (Migration) Stratejisi
+
+- `schemaVersion`: `1`
+- Yabancı anahtarlar (`PRAGMA foreign_keys = ON`) her bağlantıda etkinleştirilir.
+- Tablolar:
+  1. `Egzersizler`: `id`, `ad`, `aciklama`, `tur` (`sureli`/`tekrarli`), `sureSaniye`, `setSayisi`, `tekrarSayisi`, `kategori`, `arsivlendiMi`
+  2. `Rutinler`: `id`, `ad`, `haftaninGunleri` (`1,2,3...`), `aktifMi`
+  3. `RutinEgzersizleri`: `id`, `rutinId`, `egzersizId`, `siraIndeksi`
+  4. `AntrenmanKayitlari`: `id`, `tarih` (`YYYY-MM-DD`, benzersiz `UNIQUE`), `rutinId`
+  5. `EgzersizKayitlari`: `id`, `antrenmanKaydiId`, `egzersizId`, `egzersizAdiKopyasi`, `durum` (`yapildi`/`atlandi`/`bekliyor`), `notMetni`
+  6. `Hatirlaticilar`: `id`, `etiket` (`sabah`/`aksam`), `saat`, `dakika`, `haftaninGunleri`, `etkinMi`
+- **Geçmiş Koruması:** Bir egzersiz silindiğinde veritabanından silinmez (`arsivlendiMi = true` yapılır) ve günlük kayıtlarda o günkü adı `egzersizAdiKopyasi` (`exerciseNameSnapshot`) sütununda saklanır. Böylece eski raporlar ve geçmiş takvimi hiçbir zaman bozulmaz.
+
+## 4. Arka Plan Bildirim İşleyicisi ve Güvenli Veritabanı Erişimi
+
+`lib/cekirdek/bildirimler/bildirim_servisi.dart` içindeki `@pragma('vm:entry-point') arkaPlanBildirimYanitiIsleyici` fonksiyonu, uygulama kapalıyken bildirim üzerindeki **"Yaptım"** butonuna basıldığında ayrı bir Dart izole alanında (isolate) çalışır. Bu izole alanda güvenli erişim için kendi `UygulamaVeritabani()` bağlantısını açar, `gununTumHareketleriniYapildiIsaretle` işlemini bir `transaction` içinde tamamlar ve `finally` bloğunda bağlantıyı hemen kapatır (`await veritabani.close()`).

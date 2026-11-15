@@ -1,0 +1,40 @@
+name: Flutter CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  analiz_test_ve_derleme:
+    name: Analiz, Test ve Debug APK Derlemesi
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Depoyu Çek (Checkout)
+        uses: actions/checkout@v4
+
+      - name: Java 17 Kurulumu
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Flutter Kurulumu
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Bağımlılıkları Yükle
+        run: flutter pub get
+
+      - name: Statik Kod Analizi
+        run: flutter analyze
+
+      - name: Birim ve Widget Testleri
+        run: flutter test
+
+      - name: Android Debug APK Derlemesi
+        run: flutter build apk --debug
