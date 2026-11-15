@@ -5,6 +5,7 @@ import '../../../cekirdek/veritabani/uygulama_veritabani.dart';
 import '../../../cekirdek/yardimcilar/tarih_yardimcisi.dart';
 import '../../bugun/alan/antrenman_deposu.dart';
 import '../../bugun/sunum/bugun_kontrolcusu.dart';
+import '../../bugun/veri/antrenman_dao.dart';
 import '../../bugun/veri/antrenman_deposu_uygulamasi.dart';
 import '../../rutinler/alan/rutin_deposu.dart';
 import '../../rutinler/sunum/rutin_kontrolcusu.dart';
@@ -15,18 +16,33 @@ import '../veri/pdf_disa_aktarma_servisi.dart';
 // Rapor ekranındaki tarih aralığı seçeneklerini belirten sabit listesi.
 enum RaporAralikTuru { son7Gun, son30Gun, ozel }
 
-// Rapor ekranının seçili tarih aralığı ve hesaplanan rapor tablosunu tutan durum sınıfı.
+// Tek bir rutine ait ayrı rapor tablosunu tutan sınıf.
+class RutinRaporGrubu {
+  final int rutinId;
+  final String rutinAdi;
+  final RaporTablosu tablo;
+
+  const RutinRaporGrubu({
+    required this.rutinId,
+    required this.rutinAdi,
+    required this.tablo,
+  });
+}
+
+// Rapor ekranının seçili tarih aralığı, rutin bazlı grupları ve genel PDF tablosunu tutan durum sınıfı.
 class RaporDurumu {
   final RaporAralikTuru aralikTuru;
   final DateTime baslangic;
   final DateTime bitis;
   final RaporTablosu tablo;
+  final List<RutinRaporGrubu> rutinGruplari;
 
   const RaporDurumu({
     required this.aralikTuru,
     required this.baslangic,
     required this.bitis,
     required this.tablo,
+    this.rutinGruplari = const [],
   });
 }
 
@@ -53,29 +69,6 @@ class RaporKontrolcusu extends AsyncNotifier<RaporDurumu> {
     final temizBugun = DateTime(bugun.year, bugun.month, bugun.day);
 
     final tumRutinler = await _rutinDeposu.tumRutinleriGetir();
-    final planliGunler = <int>{};
-    final gorevHaritasi = <int, EgzersizlerData>{};
-
-    for (final rutin in tumRutinler) {
-      if (rutin.sadeceTarih == null) {
-        planliGunler.addAll(
-          rutin.haftaninGunleri
-              .split(',')
-              .map((e) => int.tryParse(e.trim()))
-              .whereType<int>(),
-        );
-      } else {
-        final t = TarihYardimcisi.metindenTarihe(rutin.sadeceTarih!);
-        planliGunler.add(t.weekday);
-      }
-      final detaylar = await _rutinDeposu.rutinEgzersizleriniGetir(rutin.id);
-      for (final d in detaylar) {
-        gorevHaritasi[d.egzersiz.id] = d.egzersiz;
-      }
-    }
-    final rutinGorevleri = gorevHaritasi.values.toList();
-
-    // Rutinlerin başladığı ilk günü tespit et (örn. 15/11'de başlatıldıysa 1. sütun 15/11 olur)
     final gecmisKayitlar = await _antrenmanDeposu
         .tarihAraligindakiAntrenmanlariGetir(
           baslangicTarihi: '2024-01-01',
@@ -130,12 +123,68 @@ class RaporKontrolcusu extends AsyncNotifier<RaporDurumu> {
           bitisTarihi: TarihYardimcisi.tarihiFormatla(bitis),
         );
 
-    final tablo = RaporOlusturucu.olustur(
+    final tumPlanliGunler = <int>{};
+    final tumGorevHaritasi = <int, EgzersizlerData>{};
+    final rutinGruplari = <RutinRaporGrubu>[];
+
+    for (final rutin in tumRutinler) {
+      final rutinGunleri = <int>{};
+      if (rutin.sadeceTarih == null) {
+        rutinGunleri.addAll(
+          rutin.haftaninGunleri
+              .split(',')
+              .map((e) => int.tryParse(e.trim()))
+              .whereType<int>(),
+        );
+      } else {
+        rutinGunleri.add(
+          TarihYardimcisi.metindenTarihe(rutin.sadeceTarih!).weekday,
+        );
+      }
+      tumPlanliGunler.addAll(rutinGunleri);
+
+      final detaylar = await _rutinDeposu.rutinEgzersizleriniGetir(rutin.id);
+      final rutinGorevleri = detaylar.map((d) => d.egzersiz).toList();
+      for (final g in rutinGorevleri) {
+        tumGorevHaritasi[g.id] = g;
+      }
+
+      // Yalnızca bu rutine ait günlük kayıtları filtrele ki rutinler birbirine karışmasın
+      final rutineOzelKayitlar = aralikKayitlari
+          .map(
+            (detay) => GunlukAntrenmanDetayi(
+              antrenmanKaydi: detay.antrenmanKaydi,
+              egzersizKayitlari: detay.egzersizKayitlari
+                  .where((k) => k.rutinId == rutin.id)
+                  .toList(),
+            ),
+          )
+          .toList();
+
+      final rutinTablosu = RaporOlusturucu.olustur(
+        baslangic: baslangic,
+        bitis: bitis,
+        antrenmanKayitlari: rutineOzelKayitlar,
+        planliHaftaninGunleri: rutinGunleri,
+        rutinEgzersizleri: rutinGorevleri,
+        bugunReferansi: temizBugun,
+      );
+
+      rutinGruplari.add(
+        RutinRaporGrubu(
+          rutinId: rutin.id,
+          rutinAdi: rutin.ad,
+          tablo: rutinTablosu,
+        ),
+      );
+    }
+
+    final genelTablo = RaporOlusturucu.olustur(
       baslangic: baslangic,
       bitis: bitis,
       antrenmanKayitlari: aralikKayitlari,
-      planliHaftaninGunleri: planliGunler,
-      rutinEgzersizleri: rutinGorevleri,
+      planliHaftaninGunleri: tumPlanliGunler,
+      rutinEgzersizleri: tumGorevHaritasi.values.toList(),
       bugunReferansi: temizBugun,
     );
 
@@ -143,7 +192,8 @@ class RaporKontrolcusu extends AsyncNotifier<RaporDurumu> {
       aralikTuru: _seciliTur,
       baslangic: baslangic,
       bitis: bitis,
-      tablo: tablo,
+      tablo: genelTablo,
+      rutinGruplari: rutinGruplari,
     );
   }
 

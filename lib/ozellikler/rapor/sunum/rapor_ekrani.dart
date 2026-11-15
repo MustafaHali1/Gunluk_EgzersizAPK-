@@ -7,7 +7,7 @@ import '../../gecmis/sunum/gecmis_ekrani.dart';
 import '../alan/rapor_olusturucu.dart';
 import 'rapor_kontrolcusu.dart';
 
-// Doktora gösterilebilecek açılır-kapanır rapor tablosunu, PDF paylaşımını ve geçmiş takvimini sunan ekran.
+// Her rutini kendi açılır-kapanır tablosuyla gösteren, PDF paylaşımı ve geçmiş takvimi sunan ekran.
 class RaporEkrani extends ConsumerWidget {
   const RaporEkrani({super.key});
 
@@ -97,12 +97,23 @@ class RaporEkrani extends ConsumerWidget {
                     pdfPaylasTiklandiginda: () => _pdfPaylas(context, kontrolcu),
                   ),
                   const SizedBox(height: 12),
-                  _RaporMatrisKarti(tablo: durum.tablo),
-                  if (durum.tablo.satirlar.isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    _GorevDetayAcilirKarti(tablo: durum.tablo),
-                  ],
-                  const SizedBox(height: 12),
+                  if (durum.rutinGruplari.isEmpty)
+                    _RaporMatrisKarti(
+                      baslik: 'Günlük Takip Tablosu',
+                      tablo: durum.tablo,
+                    )
+                  else
+                    ...durum.rutinGruplari.map(
+                      (grup) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _RaporMatrisKarti(
+                          baslik:
+                              '${grup.rutinAdi} (%${grup.tablo.genelTamamlanmaYuzdesi})',
+                          tablo: grup.tablo,
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 4),
                   Text(
                     UygulamaMetinleri.tibbiUyariNotu,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -177,7 +188,7 @@ class _RaporOzetKarti extends StatelessWidget {
               ),
         ),
         subtitle: Text(
-          'Tamamlanma: %${tablo.genelTamamlanmaYuzdesi} • En Uzun Seri: ${tablo.enUzunSeri} Gün',
+          'Genel Tamamlanma: %${tablo.genelTamamlanmaYuzdesi} • En Uzun Seri: ${tablo.enUzunSeri} Gün',
         ),
         childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
         children: [
@@ -203,11 +214,15 @@ class _RaporOzetKarti extends StatelessWidget {
   }
 }
 
-// Açılıp kapanabilir tırnağa sahip yatay kaydırılabilir rapor tablosu kartı.
+// Her rutin için ayrı açılıp kapanabilir tırnağa sahip yatay kaydırılabilir rapor tablosu kartı.
 class _RaporMatrisKarti extends StatelessWidget {
+  final String baslik;
   final RaporTablosu tablo;
 
-  const _RaporMatrisKarti({required this.tablo});
+  const _RaporMatrisKarti({
+    required this.baslik,
+    required this.tablo,
+  });
 
   String _kisaGunBasligi(String tarihMetni) {
     final parcalar = tarihMetni.split('-');
@@ -218,15 +233,10 @@ class _RaporMatrisKarti extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (tablo.satirlar.isEmpty) {
-      return const Card(
+      return Card(
         child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Center(
-            child: Text(
-              'Seçilen tarih aralığında gösterilecek görev veya rutin bulunmuyor.',
-              textAlign: TextAlign.center,
-            ),
-          ),
+          padding: const EdgeInsets.all(16),
+          child: Text('$baslik: Bu aralıkta kayıtlı görev yok.'),
         ),
       );
     }
@@ -236,11 +246,12 @@ class _RaporMatrisKarti extends StatelessWidget {
       child: ExpansionTile(
         initiallyExpanded: true,
         title: Text(
-          'Günlük Takip Tablosu (${tablo.satirlar.length} görev)',
+          baslik,
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
         ),
+        subtitle: Text('${tablo.satirlar.length} görev'),
         children: [
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -284,46 +295,6 @@ class _RaporMatrisKarti extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// Her bir görevin kendi açılır-kapanır tırnağıyla yapılan/yapılmayan özetini gösteren kart.
-class _GorevDetayAcilirKarti extends StatelessWidget {
-  final RaporTablosu tablo;
-
-  const _GorevDetayAcilirKarti({required this.tablo});
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: ExpansionTile(
-        initiallyExpanded: false,
-        title: const Text(
-          'Görev Bazlı İstatistikler',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        subtitle: const Text('Açıp görevlerin yapılma oranlarını inceleyin'),
-        children: tablo.satirlar.map((satir) {
-          final yapilmayan = satir.planlananSayisi - satir.yapilanSayisi;
-          return ExpansionTile(
-            title: Text(satir.egzersizAdi),
-            subtitle: Text('Başarı: %${satir.tamamlanmaYuzdesi}'),
-            childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('✅ Yapılan: ${satir.yapilanSayisi} gün'),
-                  Text('❌ Yapılmayan: $yapilmayan gün'),
-                  Text('📅 Planlı: ${satir.planlananSayisi} gün'),
-                ],
-              ),
-            ],
-          );
-        }).toList(),
       ),
     );
   }
