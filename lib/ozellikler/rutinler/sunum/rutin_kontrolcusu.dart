@@ -2,6 +2,7 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../cekirdek/veritabani/uygulama_veritabani.dart';
+import '../../bugun/sunum/bugun_kontrolcusu.dart';
 import '../alan/rutin_deposu.dart';
 import '../veri/rutin_dao.dart';
 import '../veri/rutin_deposu_uygulamasi.dart';
@@ -55,6 +56,7 @@ class RutinKontrolcusu extends Notifier<AsyncValue<void>> {
         );
         ref.invalidate(rutinEgzersizleriSaglayici(rutinId));
       }
+      ref.invalidate(bugunKontrolcusuSaglayici);
       state = const AsyncData(null);
       return true;
     } catch (hata, iz) {
@@ -67,6 +69,7 @@ class RutinKontrolcusu extends Notifier<AsyncValue<void>> {
     state = const AsyncLoading();
     try {
       await _depo.aktifRutiniBelirle(rutinId);
+      ref.invalidate(bugunKontrolcusuSaglayici);
       state = const AsyncData(null);
       return true;
     } catch (hata, iz) {
@@ -79,6 +82,7 @@ class RutinKontrolcusu extends Notifier<AsyncValue<void>> {
     state = const AsyncLoading();
     try {
       await _depo.rutinSil(rutinId);
+      ref.invalidate(bugunKontrolcusuSaglayici);
       state = const AsyncData(null);
       return true;
     } catch (hata, iz) {

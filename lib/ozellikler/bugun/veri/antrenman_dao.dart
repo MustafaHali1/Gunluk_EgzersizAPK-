@@ -67,7 +67,9 @@ class AntrenmanDao extends DatabaseAccessor<UygulamaVeritabani>
   }) async {
     return transaction(() async {
       final mevcut = await gunlukAntrenmanDetayiGetir(tarih);
-      if (mevcut != null) return mevcut;
+      if (mevcut != null && mevcut.egzersizKayitlari.isNotEmpty) {
+        return mevcut;
+      }
 
       final aktifRutin = await (select(rutinler)
             ..where((t) => t.aktifMi.equals(true))
@@ -102,12 +104,27 @@ class AntrenmanDao extends DatabaseAccessor<UygulamaVeritabani>
         }
       }
 
-      final antrenmanId = await into(antrenmanKayitlari).insert(
-        AntrenmanKayitlariCompanion.insert(
-          tarih: tarih,
-          rutinId: Value(kullanilacakRutinId),
-        ),
-      );
+      final int antrenmanId;
+      if (mevcut != null) {
+        antrenmanId = mevcut.antrenmanKaydi.id;
+        if (kullanilacakRutinId != null &&
+            mevcut.antrenmanKaydi.rutinId != kullanilacakRutinId) {
+          await (update(antrenmanKayitlari)
+                ..where((t) => t.id.equals(antrenmanId)))
+              .write(
+                AntrenmanKayitlariCompanion(
+                  rutinId: Value(kullanilacakRutinId),
+                ),
+              );
+        }
+      } else {
+        antrenmanId = await into(antrenmanKayitlari).insert(
+          AntrenmanKayitlariCompanion.insert(
+            tarih: tarih,
+            rutinId: Value(kullanilacakRutinId),
+          ),
+        );
+      }
 
       for (final hareket in rutinHareketleri) {
         await into(egzersizKayitlari).insert(

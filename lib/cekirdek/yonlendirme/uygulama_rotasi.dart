@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../ozellikler/bugun/sunum/bugun_ekrani.dart';
 import '../../ozellikler/egzersizler/sunum/egzersizler_ekrani.dart';
 import '../../ozellikler/rutinler/sunum/rutinler_ekrani.dart';
 import '../sabitler/uygulama_sabitleri.dart';
@@ -22,9 +23,7 @@ final uygulamaRotasiSaglayici = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: UygulamaSabitleri.rotaBugun,
-                builder: (context, durum) => const _YerTutucuEkran(
-                  baslik: UygulamaSabitleri.sekmeBugun,
-                ),
+                builder: (context, durum) => const BugunEkrani(),
               ),
             ],
           ),

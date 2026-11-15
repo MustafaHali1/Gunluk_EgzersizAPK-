@@ -84,3 +84,15 @@ const List<HazirEgzersizSablonu> hazirEgzersizSablonlari = [
     kategori: 'Esneklik / Boyun',
   ),
 ];
+
+// Egzersiz formlarında kullanılan varsayılan kategori listesi.
+const List<String> varsayilanEgzersizKategorileri = [
+  'Alt Vücut',
+  'Üst Vücut',
+  'Karın / Merkez',
+  'Kalça / Bel',
+  'Esneklik / Omurga',
+  'Esneklik / Boyun',
+  'Kardiyo / Genel',
+];
+
