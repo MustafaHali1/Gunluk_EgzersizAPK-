@@ -9,8 +9,9 @@ import 'cekirdek/sabitler/uygulama_sabitleri.dart';
 import 'cekirdek/tema/uygulama_temasi.dart';
 import 'cekirdek/yonlendirme/uygulama_rotasi.dart';
 import 'ozellikler/ayarlar/sunum/ayarlar_kontrolcusu.dart';
+import 'ozellikler/tanitim/sunum/tanitim_kontrolcusu.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   FlutterError.onError = (FlutterErrorDetails detaylar) {
@@ -30,7 +31,19 @@ void main() {
     return true;
   };
 
-  runApp(const ProviderScope(child: GunlukEgzersizUygulamasi()));
+  final tercihServisi = UygulamaTercihleriServisi();
+  final tanitimTamamlandi = await tercihServisi.tanitimTamamlandiMiGetir();
+
+  runApp(
+    ProviderScope(
+      overrides: [
+        tanitimDurumuSaglayici.overrideWith(
+          () => TanitimDurumuKontrolcusu(tanitimTamamlandi),
+        ),
+      ],
+      child: const GunlukEgzersizUygulamasi(),
+    ),
+  );
 }
 
 // Uygulamanın kök widget sınıfı; açılışta bildirim/saat dilimi eşitlemesini ve tema modunu yönetir.

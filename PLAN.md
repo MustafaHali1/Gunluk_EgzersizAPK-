@@ -13,5 +13,5 @@ Bu belge, uygulamanın 11 adımda geliştirme ve teslim planını takip eder.
 - [x] **Adım 7:** Geçmiş + seri (streak) → `feat: geçmiş ve seri`
 - [x] **Adım 8:** Rapor sayfası + PDF dışa aktarma → `feat: rapor ve pdf` — Etiket: `v0.4.0`
 - [x] **Adım 9:** Yedekleme/geri yükleme + tüm veriyi sil → `feat: yedekleme`
-- [ ] **Adım 10:** Tanıtım (onboarding), boş durumlar, tema, ikon/splash → `feat: onboarding ve cilalama`
+- [x] **Adım 10:** Tanıtım (onboarding), boş durumlar, tema, ikon/splash → `feat: onboarding ve cilalama`
 - [ ] **Adım 11:** CI, README (Mac'te iOS adımları dahil), CHANGELOG, son kontrol → `docs: ci ve readme` — Etiket: `v1.0.0`

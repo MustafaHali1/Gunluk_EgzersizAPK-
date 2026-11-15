@@ -8,14 +8,33 @@ import '../../ozellikler/egzersizler/sunum/egzersizler_ekrani.dart';
 import '../../ozellikler/gecmis/sunum/gecmis_ekrani.dart';
 import '../../ozellikler/rapor/sunum/rapor_ekrani.dart';
 import '../../ozellikler/rutinler/sunum/rutinler_ekrani.dart';
+import '../../ozellikler/tanitim/sunum/tanitim_ekrani.dart';
+import '../../ozellikler/tanitim/sunum/tanitim_kontrolcusu.dart';
 import '../sabitler/uygulama_sabitleri.dart';
 import 'ana_iskelet_ekrani.dart';
 
 // Uygulama içi sayfa yönlendirmelerini yöneten GoRouter sağlayıcısı.
 final uygulamaRotasiSaglayici = Provider<GoRouter>((ref) {
+  final tanitimTamamlandi = ref.watch(tanitimDurumuSaglayici);
+
   return GoRouter(
     initialLocation: UygulamaSabitleri.rotaBugun,
+    redirect: (context, durum) {
+      final tanitimRotasindaMi =
+          durum.matchedLocation == UygulamaSabitleri.rotaTanitim;
+      if (!tanitimTamamlandi && !tanitimRotasindaMi) {
+        return UygulamaSabitleri.rotaTanitim;
+      }
+      if (tanitimTamamlandi && tanitimRotasindaMi) {
+        return UygulamaSabitleri.rotaBugun;
+      }
+      return null;
+    },
     routes: [
+      GoRoute(
+        path: UygulamaSabitleri.rotaTanitim,
+        builder: (context, durum) => const TanitimEkrani(),
+      ),
       StatefulShellRoute.indexedStack(
         builder: (context, durum, navigasyonKabugu) {
           return AnaIskeletEkrani(navigasyonKabugu: navigasyonKabugu);

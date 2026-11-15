@@ -104,3 +104,19 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/ikon/uygulama_ikonu.png"
+  adaptive_icon_background: "#0D9488"
+  remove_alpha_ios: true
+
+flutter_native_splash:
+  color: "#0D9488"
+  color_dark: "#0F172A"
+  android_12:
+    color: "#0D9488"
+    color_dark: "#0F172A"
+  web: false
