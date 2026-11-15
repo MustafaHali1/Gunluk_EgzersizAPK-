@@ -37,7 +37,7 @@ class RutinlerEkrani extends ConsumerWidget {
     final rutinlerDurumu = ref.watch(tumRutinlerAkisSaglayici);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Rutinler')),
+      appBar: AppBar(title: const Text('Rutinim')),
       body: rutinlerDurumu.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (hata, _) => Center(child: Text(hata.toString())),

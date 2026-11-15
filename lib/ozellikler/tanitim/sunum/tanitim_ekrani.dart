@@ -7,7 +7,7 @@ import '../../../cekirdek/sabitler/uygulama_sabitleri.dart';
 import '../../egzersizler/alan/hazir_egzersiz_sablonu.dart';
 import 'tanitim_kontrolcusu.dart';
 
-// İlk açılışta gösterilen 3 adımlı tanıtım, bildirim saati ve başlangıç rutini kurulum ekranı.
+// İlk açılışta gösterilen 3 adımlı tanıtım, alarm tercihi ve başlangıç rutini kurulum ekranı.
 class TanitimEkrani extends ConsumerStatefulWidget {
   const TanitimEkrani({super.key});
 
@@ -18,7 +18,7 @@ class TanitimEkrani extends ConsumerStatefulWidget {
 class _TanitimEkraniDurumu extends ConsumerState<TanitimEkrani> {
   final _sayfaDenetleyicisi = PageController();
   int _aktifSayfa = 0;
-  bool _bildirimIzniVerildi = false;
+  bool _hatirlaticiIstiyorMu = true;
   TimeOfDay _sabahSaati = const TimeOfDay(hour: 8, minute: 30);
   TimeOfDay _aksamSaati = const TimeOfDay(hour: 20, minute: 0);
   late final Set<int> _secilenSablonIndeksleri;
@@ -49,6 +49,7 @@ class _TanitimEkraniDurumu extends ConsumerState<TanitimEkrani> {
     final basarili = await ref
         .read(tanitimKontrolcusuSaglayici.notifier)
         .tanitimiTamamla(
+          hatirlaticiIstiyorMu: _hatirlaticiIstiyorMu,
           sabahSaati: _sabahSaati,
           aksamSaati: _aksamSaati,
           secilenSablonlar: secilenler,
@@ -74,15 +75,15 @@ class _TanitimEkraniDurumu extends ConsumerState<TanitimEkrani> {
                 children: [
                   const _TanitimHosGeldinizSayfasi(),
                   _TanitimBildirimSayfasi(
-                    izinVerildiMi: _bildirimIzniVerildi,
+                    hatirlaticiIstiyorMu: _hatirlaticiIstiyorMu,
                     sabahSaatiMetni: _saatBicimlendir(_sabahSaati),
                     aksamSaatiMetni: _saatBicimlendir(_aksamSaati),
-                    izinIsteTiklandiginda: () async {
-                      final sonuc = await ref
-                          .read(tanitimKontrolcusuSaglayici.notifier)
-                          .bildirimIzniIste();
-                      if (mounted) {
-                        setState(() => _bildirimIzniVerildi = sonuc);
+                    tercihDegistiginde: (deger) async {
+                      setState(() => _hatirlaticiIstiyorMu = deger);
+                      if (deger) {
+                        await ref
+                            .read(tanitimKontrolcusuSaglayici.notifier)
+                            .bildirimIzniIste();
                       }
                     },
                     sabahSecTiklandiginda: () async {
@@ -178,7 +179,7 @@ class _TanitimHosGeldinizSayfasi extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            Icons.fitness_center,
+            Icons.healing_outlined,
             size: 84,
             color: Theme.of(context).colorScheme.primary,
           ),
@@ -192,7 +193,7 @@ class _TanitimHosGeldinizSayfasi extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           const Text(
-            'Kendi egzersiz rutininizi oluşturun, sabah ve akşam hatırlatıcılarıyla düzeninizi koruyun ve doktorunuza gösterebileceğiniz PDF raporlar üretin.',
+            'Fizyoterapistinizin verdiği hareketleri veya günlük sağlık rutininizi kolayca oluşturun. Her gün yaptıklarınızı "Yaptım", yapamadıklarınızı "Yapmadım" olarak işaretleyin ve doktorunuz için PDF rapor alın.',
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 20),
@@ -213,18 +214,18 @@ class _TanitimHosGeldinizSayfasi extends StatelessWidget {
 }
 
 class _TanitimBildirimSayfasi extends StatelessWidget {
-  final bool izinVerildiMi;
+  final bool hatirlaticiIstiyorMu;
   final String sabahSaatiMetni;
   final String aksamSaatiMetni;
-  final VoidCallback izinIsteTiklandiginda;
+  final ValueChanged<bool> tercihDegistiginde;
   final VoidCallback sabahSecTiklandiginda;
   final VoidCallback aksamSecTiklandiginda;
 
   const _TanitimBildirimSayfasi({
-    required this.izinVerildiMi,
+    required this.hatirlaticiIstiyorMu,
     required this.sabahSaatiMetni,
     required this.aksamSaatiMetni,
-    required this.izinIsteTiklandiginda,
+    required this.tercihDegistiginde,
     required this.sabahSecTiklandiginda,
     required this.aksamSecTiklandiginda,
   });
@@ -238,13 +239,15 @@ class _TanitimBildirimSayfasi extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Icon(
-            Icons.notifications_active_outlined,
+            hatirlaticiIstiyorMu
+                ? Icons.alarm_on_outlined
+                : Icons.notifications_off_outlined,
             size: 72,
             color: Theme.of(context).colorScheme.primary,
           ),
           const SizedBox(height: 20),
           Text(
-            'Sabah ve Akşam Hatırlatıcıları',
+            'Hatırlatıcı / Uyandırma Alarmı',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
@@ -252,42 +255,48 @@ class _TanitimBildirimSayfasi extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           const Text(
-            'Egzersizlerinizi aksatmamak için bildirim izni verin ve size uygun hatırlatma saatlerini seçin.',
+            'İsterseniz sabah/akşam saatlerinde uyandırma alarmı gibi çalmasını sağlayabilir (Ayarlar\'dan kendi müziğinizi de seçebilirsiniz) veya bildirimleri tamamen kapatabilirsiniz.',
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 20),
-          FilledButton.tonalIcon(
-            onPressed: izinIsteTiklandiginda,
-            icon: Icon(
-              izinVerildiMi ? Icons.check_circle : Icons.notifications,
-            ),
-            label: Text(
-              izinVerildiMi
-                  ? 'Bildirim İzni Verildi'
-                  : 'Bildirim İznini Etkinleştir',
+          Card(
+            child: SwitchListTile(
+              title: const Text(
+                'Hatırlatıcı / Alarm Kullanmak İstiyorum',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              subtitle: Text(
+                hatirlaticiIstiyorMu
+                    ? 'Seçtiğiniz saatlerde alarm çalar ve tıklayınca egzersiz ekranı açılır.'
+                    : 'Bildirim gönderilmez, istediğiniz zaman kendiniz girip işaretlersiniz.',
+              ),
+              value: hatirlaticiIstiyorMu,
+              onChanged: tercihDegistiginde,
             ),
           ),
-          const SizedBox(height: 16),
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.wb_sunny_outlined),
-              title: const Text('Sabah Hatırlatıcısı'),
-              trailing: OutlinedButton(
-                onPressed: sabahSecTiklandiginda,
-                child: Text(sabahSaatiMetni),
+          if (hatirlaticiIstiyorMu) ...[
+            const SizedBox(height: 12),
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.wb_sunny_outlined),
+                title: const Text('Sabah Alarm Saati'),
+                trailing: OutlinedButton(
+                  onPressed: sabahSecTiklandiginda,
+                  child: Text(sabahSaatiMetni),
+                ),
               ),
             ),
-          ),
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.nights_stay_outlined),
-              title: const Text('Akşam Hatırlatıcısı'),
-              trailing: OutlinedButton(
-                onPressed: aksamSecTiklandiginda,
-                child: Text(aksamSaatiMetni),
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.nights_stay_outlined),
+                title: const Text('Akşam Alarm Saati'),
+                trailing: OutlinedButton(
+                  onPressed: aksamSecTiklandiginda,
+                  child: Text(aksamSaatiMetni),
+                ),
               ),
             ),
-          ),
+          ],
         ],
       ),
     );
@@ -311,14 +320,14 @@ class _TanitimRutinOlusturmaSayfasi extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Başlangıç Rutininizi Seçin',
+            'Fizyoterapi & Sağlık Rutininizi Seçin',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
           ),
           const SizedBox(height: 6),
           const Text(
-            'İlk rutininize eklemek istediğiniz örnek hareketleri işaretleyin (daha sonra istediğiniz gibi değiştirebilirsiniz):',
+            'İlk rutininize eklemek istediğiniz hareketleri işaretleyin (daha sonra Rutinim sekmesinden istediğiniz hareketi kendiniz de yazabilirsiniz):',
           ),
           const SizedBox(height: 12),
           Expanded(

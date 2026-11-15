@@ -8,100 +8,90 @@ import '../../yedekleme/sunum/yedekleme_ayar_karti.dart';
 import 'ayarlar_kontrolcusu.dart';
 import 'hatirlatici_ayar_karti.dart';
 
-// Bildirim saatleri, izin durumu, tema, gizlilik ve uygulama bilgilerini sunan ekran.
+// Sadeleştirilmiş Ayarlar ekranı: Hatırlatıcı/Alarm (ve Müzik Seçimi), Tema ve Veri Yedekleme.
 class AyarlarEkrani extends ConsumerWidget {
   const AyarlarEkrani({super.key});
 
-  void _sistemAyarlariBilgisiGoster(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      builder: (baglam) => AlertDialog(
-        title: const Text('Bildirim İzni ve Pil Optimizasyonu'),
-        content: const Text(
-          '1. Bildirim izni reddedildiyse: Telefonunuzun Ayarlar > Uygulamalar > Günlük Egzersiz > Bildirimler bölümünden bildirimlere izin verin.\n\n'
-          '2. Zamanında hatırlatma için (Android): Ayarlar > Uygulamalar > Günlük Egzersiz > Pil bölümünden "Kısıtlanmamış" (Pil optimizasyonunu kapat) seçeneğini işaretleyin.',
-        ),
-        actions: [
-          FilledButton(
-            onPressed: () => Navigator.of(baglam).pop(),
-            child: const Text('Anladım'),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final istiyorMuDurumu = ref.watch(hatirlaticiIstiyorMuSaglayici);
+    final muzikAdiDurumu = ref.watch(alarmMuzikAdiSaglayici);
     final hatirlaticilarDurumu = ref.watch(hatirlaticilarAkisSaglayici);
-    final izinDurumu = ref.watch(bildirimIzinDurumuSaglayici);
     final temaModu = ref.watch(temaModuKontrolcusuSaglayici);
     final kontrolcu = ref.read(ayarlarKontrolcusuSaglayici.notifier);
+    final alarmAcikMi = istiyorMuDurumu.value ?? true;
+    final muzikAdi = muzikAdiDurumu.value ?? 'Varsayılan Sistem Alarmı';
 
     return Scaffold(
       appBar: AppBar(title: const Text(UygulamaSabitleri.sekmeAyarlar)),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _BildirimIzinDurumKarti(
-            izinDurumu: izinDurumu,
-            izinIsteTiklandiginda: () async {
-              final verildi = await kontrolcu.bildirimIzniIste();
-              if (!verildi && context.mounted) {
-                _sistemAyarlariBilgisiGoster(context);
+          _AlarmVeMuzikKarti(
+            alarmAcikMi: alarmAcikMi,
+            muzikAdi: muzikAdi,
+            alarmAcikDegistiginde: (deger) {
+              kontrolcu.hatirlaticiKullaniminiDegistir(deger);
+            },
+            muzikSecTiklandiginda: () async {
+              final secildi = await kontrolcu.telefondanAlarmMuzigiSec();
+              if (secildi && context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Alarm müziği güncellendi!'),
+                  ),
+                );
               }
             },
-            testBildirimiTiklandiginda: () async {
-              final basarili = await kontrolcu.testBildirimiGonder();
+            varsayilanSesTiklandiginda: () {
+              kontrolcu.varsayilanAlarmSesineDon();
+            },
+            alarmTestTiklandiginda: () async {
+              await kontrolcu.testBildirimiGonder();
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
+                  const SnackBar(
                     content: Text(
-                      basarili
-                          ? 'Test bildirimi gönderildi!'
-                          : 'Test bildirimi gönderilemedi.',
+                      'Alarm çalıyor! Susturmak için bildirime dokunun veya "Sesi Durdur"a basın.',
                     ),
                   ),
                 );
               }
             },
-            rehberTiklandiginda: () => _sistemAyarlariBilgisiGoster(context),
+            alarmSusturTiklandiginda: () {
+              kontrolcu.alarmiSustur();
+            },
           ),
-          const SizedBox(height: 16),
-          Text(
-            'Hatırlatıcı Saatleri',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-          ),
-          const SizedBox(height: 8),
-          hatirlaticilarDurumu.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (h, _) => Text('Hatırlatıcılar yüklenemedi: $h'),
-            data: (liste) => Column(
-              children: liste
-                  .map(
-                    (hatirlatici) => HatirlaticiAyarKarti(
-                      hatirlatici: hatirlatici,
-                      degistiginde: ({
-                        required saat,
-                        required dakika,
-                        required seciliGunler,
-                        required etkinMi,
-                      }) {
-                        kontrolcu.hatirlaticiKaydet(
-                          etiket: hatirlatici.etiket,
-                          saat: saat,
-                          dakika: dakika,
-                          seciliGunler: seciliGunler,
-                          etkinMi: etkinMi,
-                        );
-                      },
-                    ),
-                  )
-                  .toList(),
+          if (alarmAcikMi) ...[
+            const SizedBox(height: 12),
+            hatirlaticilarDurumu.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (h, _) => Text('Hatırlatıcılar yüklenemedi: $h'),
+              data: (liste) => Column(
+                children: liste
+                    .map(
+                      (hatirlatici) => HatirlaticiAyarKarti(
+                        hatirlatici: hatirlatici,
+                        degistiginde: ({
+                          required saat,
+                          required dakika,
+                          required seciliGunler,
+                          required etkinMi,
+                        }) {
+                          kontrolcu.hatirlaticiKaydet(
+                            etiket: hatirlatici.etiket,
+                            saat: saat,
+                            dakika: dakika,
+                            seciliGunler: seciliGunler,
+                            etkinMi: etkinMi,
+                          );
+                        },
+                      ),
+                    )
+                    .toList(),
+              ),
             ),
-          ),
+          ],
           const SizedBox(height: 16),
           _TemaSecimKarti(
             seciliMod: temaModu,
@@ -114,85 +104,103 @@ class AyarlarEkrani extends ConsumerWidget {
           const SizedBox(height: 16),
           const YedeklemeAyarKarti(),
           const SizedBox(height: 16),
-          const _BilgiVeSurumKarti(),
+          Center(
+            child: Text(
+              'Günlük Egzersiz v${UygulamaSabitleri.uygulamaSurumu} • Verileriniz yalnızca cihazınızda saklanır.',
+              style: Theme.of(context).textTheme.bodySmall,
+              textAlign: TextAlign.center,
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-// Bildirim izin durumunu, pil optimizasyonu notunu ve test bildirimi butonunu gösteren kart.
-class _BildirimIzinDurumKarti extends StatelessWidget {
-  final AsyncValue<bool> izinDurumu;
-  final VoidCallback izinIsteTiklandiginda;
-  final VoidCallback testBildirimiTiklandiginda;
-  final VoidCallback rehberTiklandiginda;
+// Hatırlatıcı/Alarm ana şalterini, MP3 müzik seçimini ve alarm testini barındıran kart.
+class _AlarmVeMuzikKarti extends StatelessWidget {
+  final bool alarmAcikMi;
+  final String muzikAdi;
+  final ValueChanged<bool> alarmAcikDegistiginde;
+  final VoidCallback muzikSecTiklandiginda;
+  final VoidCallback varsayilanSesTiklandiginda;
+  final VoidCallback alarmTestTiklandiginda;
+  final VoidCallback alarmSusturTiklandiginda;
 
-  const _BildirimIzinDurumKarti({
-    required this.izinDurumu,
-    required this.izinIsteTiklandiginda,
-    required this.testBildirimiTiklandiginda,
-    required this.rehberTiklandiginda,
+  const _AlarmVeMuzikKarti({
+    required this.alarmAcikMi,
+    required this.muzikAdi,
+    required this.alarmAcikDegistiginde,
+    required this.muzikSecTiklandiginda,
+    required this.varsayilanSesTiklandiginda,
+    required this.alarmTestTiklandiginda,
+    required this.alarmSusturTiklandiginda,
   });
 
   @override
   Widget build(BuildContext context) {
-    final izinVarMi = izinDurumu.value ?? false;
-
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Icon(
-                  izinVarMi ? Icons.notifications_active : Icons.notifications_off,
-                  color: izinVarMi
-                      ? UygulamaRenkleri.basariYesili
-                      : UygulamaRenkleri.uyariTuruncusu,
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              secondary: Icon(
+                alarmAcikMi ? Icons.alarm_on : Icons.notifications_off_outlined,
+                color: alarmAcikMi
+                    ? Theme.of(context).colorScheme.primary
+                    : null,
+              ),
+              title: const Text(
+                'Hatırlatıcı / Uyandırma Alarmı Kullan',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              subtitle: Text(
+                alarmAcikMi
+                    ? 'Seçtiğiniz saatte çalar, bildirime dokunduğunuzda egzersiz ekranı açılır.'
+                    : 'Bildirim ve alarm kapalı. İstediğiniz zaman uygulamaya girip işaretleyebilirsiniz.',
+              ),
+              value: alarmAcikMi,
+              onChanged: alarmAcikDegistiginde,
+            ),
+            if (alarmAcikMi) ...[
+              const Divider(),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.music_note),
+                title: const Text('Alarm Sesi / Müzik'),
+                subtitle: Text(muzikAdi),
+                trailing: FilledButton.tonalIcon(
+                  onPressed: muzikSecTiklandiginda,
+                  icon: const Icon(Icons.folder_open, size: 18),
+                  label: const Text('Müzik Seç'),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    izinVarMi
-                        ? 'Bildirim İzni: Verildi'
-                        : 'Bildirim İzni: Kapalı veya Bekliyor',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+              ),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  if (muzikAdi != 'Varsayılan Sistem Alarmı')
+                    TextButton.icon(
+                      onPressed: varsayilanSesTiklandiginda,
+                      icon: const Icon(Icons.restore, size: 18),
+                      label: const Text('Varsayılan Sese Dön'),
+                    ),
+                  OutlinedButton.icon(
+                    onPressed: alarmTestTiklandiginda,
+                    icon: const Icon(Icons.volume_up, size: 18),
+                    label: const Text('Alarmı Test Et'),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Android cihazlarda bildirimlerin gecikmemesi için pil optimizasyonunu kapatmanız önerilir.',
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                if (!izinVarMi)
-                  FilledButton.icon(
-                    onPressed: izinIsteTiklandiginda,
-                    icon: const Icon(Icons.security),
-                    label: const Text('Bildirim İzni Ver'),
+                  TextButton.icon(
+                    onPressed: alarmSusturTiklandiginda,
+                    icon: const Icon(Icons.volume_off, size: 18),
+                    label: const Text('Sesi Durdur'),
                   ),
-                OutlinedButton.icon(
-                  onPressed: testBildirimiTiklandiginda,
-                  icon: const Icon(Icons.send),
-                  label: const Text('Test Bildirimi Gönder'),
-                ),
-                TextButton.icon(
-                  onPressed: rehberTiklandiginda,
-                  icon: const Icon(Icons.battery_saver),
-                  label: const Text('Pil & Sistem Ayarları Notu'),
-                ),
-              ],
-            ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
@@ -248,49 +256,6 @@ class _TemaSecimKarti extends StatelessWidget {
                 selected: {seciliMod},
                 onSelectionChanged: (secim) => degistiginde(secim.first),
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// Gizlilik notu, sağlık uyarısı ve sürüm bilgisini gösteren kart bileşeni.
-class _BilgiVeSurumKarti extends StatelessWidget {
-  const _BilgiVeSurumKarti();
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Gizlilik ve Sağlık Uyarısı',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-            const SizedBox(height: 8),
-            const ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(Icons.lock_outline),
-              title: Text('Yerel Veri Gizliliği'),
-              subtitle: Text(UygulamaMetinleri.gizlilikNotu),
-            ),
-            const ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(Icons.health_and_safety_outlined),
-              title: Text('Tıbbi Uyarı'),
-              subtitle: Text(UygulamaMetinleri.tibbiUyariNotu),
-            ),
-            const Divider(),
-            Text(
-              'Uygulama Sürümü: ${UygulamaSabitleri.uygulamaSurumu}',
-              style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
         ),

@@ -10,42 +10,52 @@ import 'gecmis_kontrolcusu.dart';
 import 'gecmis_takvim_izgarasi.dart';
 
 // Kullanıcının geçmiş antrenman takvimini, gün detaylarını ve seri sayacını gösteren ekran.
-class GecmisEkrani extends ConsumerWidget {
+class GecmisEkrani extends StatelessWidget {
   const GecmisEkrani({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text(UygulamaSabitleri.sekmeGecmis)),
+      body: const GecmisGorunumu(),
+    );
+  }
+}
+
+// Rapor ve Geçmiş ekranlarında ortak kullanılabilen takvim ve seri görünümü.
+class GecmisGorunumu extends ConsumerWidget {
+  const GecmisGorunumu({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final gecmisDurumu = ref.watch(gecmisKontrolcusuSaglayici);
     final kontrolcu = ref.read(gecmisKontrolcusuSaglayici.notifier);
 
-    return Scaffold(
-      appBar: AppBar(title: const Text(UygulamaSabitleri.sekmeGecmis)),
-      body: gecmisDurumu.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (h, _) => Center(child: Text('Geçmiş yüklenemedi: $h')),
-        data: (durum) => ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            _SeriSayaciKarti(seri: durum.seriSonucu),
-            const SizedBox(height: 12),
-            GecmisTakvimIzgarasi(
-              goruntulenenAy: durum.goruntulenenAy,
-              seciliTarih: durum.seciliTarih,
-              gunlukKayitlar: durum.gunlukKayitlar,
-              oncekiAyTiklandiginda: kontrolcu.oncekiAyaGec,
-              sonrakiAyTiklandiginda: kontrolcu.sonrakiAyaGec,
-              gunSecildiginde: kontrolcu.gunSec,
+    return gecmisDurumu.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (h, _) => Center(child: Text('Geçmiş yüklenemedi: $h')),
+      data: (durum) => ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          _SeriSayaciKarti(seri: durum.seriSonucu),
+          const SizedBox(height: 12),
+          GecmisTakvimIzgarasi(
+            goruntulenenAy: durum.goruntulenenAy,
+            seciliTarih: durum.seciliTarih,
+            gunlukKayitlar: durum.gunlukKayitlar,
+            oncekiAyTiklandiginda: kontrolcu.oncekiAyaGec,
+            sonrakiAyTiklandiginda: kontrolcu.sonrakiAyaGec,
+            gunSecildiginde: kontrolcu.gunSec,
+          ),
+          const SizedBox(height: 16),
+          _SeciliGunHareketDetayi(
+            seciliTarih: durum.seciliTarih,
+            hareketler: durum.seciliGunDetayi?.egzersizKayitlari ?? const [],
+            planliGunMu: durum.planliGunler.contains(
+              TarihYardimcisi.metindenTarihe(durum.seciliTarih).weekday,
             ),
-            const SizedBox(height: 16),
-            _SeciliGunHareketDetayi(
-              seciliTarih: durum.seciliTarih,
-              hareketler: durum.seciliGunDetayi?.egzersizKayitlari ?? const [],
-              planliGunMu: durum.planliGunler.contains(
-                TarihYardimcisi.metindenTarihe(durum.seciliTarih).weekday,
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -189,7 +199,7 @@ class _SeciliGunHareketDetayi extends StatelessWidget {
                     color: yapildi
                         ? UygulamaRenkleri.basariYesili
                         : atlandi
-                            ? UygulamaRenkleri.uyariTuruncusu
+                            ? UygulamaRenkleri.hataKirmizisi
                             : null,
                   ),
                   title: Text(kayit.egzersizAdiKopyasi),
@@ -200,9 +210,9 @@ class _SeciliGunHareketDetayi extends StatelessWidget {
                   trailing: Chip(
                     label: Text(
                       yapildi
-                          ? 'Yapıldı'
+                          ? 'Yaptım'
                           : atlandi
-                              ? 'Atlandı'
+                              ? 'Yapmadım'
                               : 'Bekliyor',
                     ),
                   ),

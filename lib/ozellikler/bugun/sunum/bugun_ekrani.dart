@@ -55,9 +55,9 @@ class _BugunEkraniDurumu extends ConsumerState<BugunEkrani> {
         title: const Text(UygulamaMetinleri.sekmeBugun),
         actions: [
           TextButton.icon(
-            onPressed: () => context.push(RotaAdlari.rutinler),
+            onPressed: () => context.go(RotaAdlari.rutinler),
             icon: const Icon(Icons.playlist_add_check),
-            label: const Text('Rutinler'),
+            label: const Text('Rutinim'),
           ),
         ],
       ),
@@ -193,7 +193,7 @@ class _GunlukIlerlemeKarti extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '${durum.yapilanHareketSayisi}/${durum.toplamHareketSayisi} yapıldı • ${durum.atlananHareketSayisi} atlandı',
+                  '${durum.yapilanHareketSayisi}/${durum.toplamHareketSayisi} yapıldı • ${durum.atlananHareketSayisi} yapılmadı',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
                 if (durum.bekleyenHareketSayisi > 0)
@@ -250,7 +250,7 @@ class _BugunBosDurum extends StatelessWidget {
               alignment: WrapAlignment.center,
               children: [
                 FilledButton.icon(
-                  onPressed: () => context.push(RotaAdlari.rutinler),
+                  onPressed: () => context.go(RotaAdlari.rutinler),
                   icon: const Icon(Icons.calendar_today),
                   label: const Text('Rutin Oluştur / Seç'),
                 ),

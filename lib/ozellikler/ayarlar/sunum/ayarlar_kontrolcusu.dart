@@ -1,5 +1,6 @@
 // lib/ozellikler/ayarlar/sunum/ayarlar_kontrolcusu.dart
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../cekirdek/ayarlar/uygulama_tercihleri_servisi.dart';
@@ -29,7 +30,19 @@ final bildirimIzinDurumuSaglayici = FutureProvider<bool>((ref) async {
   return servis.izinDurumunuKontrolEt();
 });
 
-// Bildirim saatleri, izin isteme ve saat dilimi eşitlemesini yöneten kontrolcü.
+// Kullanıcının hatırlatıcı/alarm kullanmak isteyip istemediğini sağlayan sağlayıcı.
+final hatirlaticiIstiyorMuSaglayici = FutureProvider<bool>((ref) async {
+  final tercihler = ref.watch(uygulamaTercihleriServisiSaglayici);
+  return tercihler.hatirlaticiIstiyorMuGetir();
+});
+
+// Seçili alarm müziğinin görünen adını sağlayan sağlayıcı.
+final alarmMuzikAdiSaglayici = FutureProvider<String>((ref) async {
+  final tercihler = ref.watch(uygulamaTercihleriServisiSaglayici);
+  return tercihler.alarmMuzikAdiniGetir();
+});
+
+// Bildirim saatleri, uyandırma alarmı müziği, izin isteme ve saat dilimi eşitlemesini yöneten kontrolcü.
 class AyarlarKontrolcusu extends Notifier<AsyncValue<void>> {
   @override
   AsyncValue<void> build() => const AsyncData(null);
@@ -41,8 +54,21 @@ class AyarlarKontrolcusu extends Notifier<AsyncValue<void>> {
   UygulamaTercihleriServisi get _tercihlerServisi =>
       ref.read(uygulamaTercihleriServisiSaglayici);
 
-  // Uygulama açılışında bildirim servisini başlatır, saat dilimi veya yaz saati değişmişse
-  // hatırlatıcıları yeniden kurar ve açılış bildirimi varsa işler.
+  Future<void> _alarmlariTercihlereGoreKur() async {
+    final istiyorMu = await _tercihlerServisi.hatirlaticiIstiyorMuGetir();
+    if (!istiyorMu) {
+      await _bildirimServisi.tumBildirimleriIptalEt();
+      return;
+    }
+    final muzikYolu = await _tercihlerServisi.alarmMuzikYolunuGetir();
+    final hatirlaticilar = await _hatirlaticiDeposu.hatirlaticilariGetir();
+    await _bildirimServisi.hatirlaticilariYenidenKur(
+      hatirlaticilar,
+      ozelMuzikYolu: muzikYolu,
+    );
+  }
+
+  // Uygulama açılışında bildirim servisini başlatır ve alarmları eşitler.
   Future<void> uygulamaAcilisindaBildirimleriEsitle() async {
     try {
       await _bildirimServisi.baslat(
@@ -61,14 +87,10 @@ class AyarlarKontrolcusu extends Notifier<AsyncValue<void>> {
       final guncelAnahtar = '$saatDilimiKimligi|$yazSaatiFarki';
       final kayitliAnahtar = await _tercihlerServisi.sonSaatDiliminiGetir();
 
-      final hatirlaticilar = await _hatirlaticiDeposu.hatirlaticilariGetir();
-      await _bildirimServisi.hatirlaticilariYenidenKur(hatirlaticilar);
+      await _alarmlariTercihlereGoreKur();
 
       if (kayitliAnahtar != guncelAnahtar) {
         await _tercihlerServisi.sonSaatDiliminiKaydet(guncelAnahtar);
-        MerkeziKaydedici.bilgiYaz(
-          'Saat dilimi/yaz saati kaydedildi ve bildirimler eşitlendi: $guncelAnahtar',
-        );
       }
     } catch (hata, iz) {
       MerkeziKaydedici.hataYaz(
@@ -103,7 +125,53 @@ class AyarlarKontrolcusu extends Notifier<AsyncValue<void>> {
     }
   }
 
-  // Sabah veya akşam hatırlatıcısını günceller ve bildirim zamanlamalarını yeniden kurar.
+  // Hatırlatıcı/Alarm kullanımını tamamen açar veya kapatır.
+  Future<void> hatirlaticiKullaniminiDegistir(bool istiyorMu) async {
+    await _tercihlerServisi.hatirlaticiIstiyorMuKaydet(istiyorMu);
+    if (istiyorMu) {
+      await _bildirimServisi.izinIste();
+      ref.invalidate(bildirimIzinDurumuSaglayici);
+    }
+    await _alarmlariTercihlereGoreKur();
+    ref.invalidate(hatirlaticiIstiyorMuSaglayici);
+  }
+
+  // Telefondan özel MP3 / müzik dosyası seçer ve alarm sesi olarak kaydeder.
+  Future<bool> telefondanAlarmMuzigiSec() async {
+    try {
+      final dosyalar = await FilePicker.pickFiles(type: FileType.audio);
+      if (dosyalar.isEmpty) return false;
+      final secilen = dosyalar.first;
+      if (secilen.path == null) return false;
+
+      await _tercihlerServisi.alarmMuziginiKaydet(
+        dosyaYolu: secilen.path,
+        gorunenAd: secilen.name,
+      );
+      await _alarmlariTercihlereGoreKur();
+      ref.invalidate(alarmMuzikAdiSaglayici);
+      return true;
+    } catch (hata, iz) {
+      MerkeziKaydedici.hataYaz(
+        'Alarm müziği seçilirken hata oluştu',
+        hata: hata,
+        yiginIzi: iz,
+      );
+      return false;
+    }
+  }
+
+  // Alarm sesini telefonun varsayılan uyandırma alarmına döndürür.
+  Future<void> varsayilanAlarmSesineDon() async {
+    await _tercihlerServisi.alarmMuziginiKaydet(
+      dosyaYolu: null,
+      gorunenAd: 'Varsayılan Sistem Alarmı',
+    );
+    await _alarmlariTercihlereGoreKur();
+    ref.invalidate(alarmMuzikAdiSaglayici);
+  }
+
+  // Sabah veya akşam hatırlatıcısını günceller ve alarmları yeniden kurar.
   Future<bool> hatirlaticiKaydet({
     required String etiket,
     required int saat,
@@ -122,9 +190,7 @@ class AyarlarKontrolcusu extends Notifier<AsyncValue<void>> {
         etkinMi: etkinMi,
       );
 
-      final guncelListe = await _hatirlaticiDeposu.hatirlaticilariGetir();
-      await _bildirimServisi.hatirlaticilariYenidenKur(guncelListe);
-
+      await _alarmlariTercihlereGoreKur();
       state = const AsyncData(null);
       return true;
     } catch (hata, iz) {
@@ -138,21 +204,27 @@ class AyarlarKontrolcusu extends Notifier<AsyncValue<void>> {
     final verildiMi = await _bildirimServisi.izinIste();
     ref.invalidate(bildirimIzinDurumuSaglayici);
     if (verildiMi) {
-      final liste = await _hatirlaticiDeposu.hatirlaticilariGetir();
-      await _bildirimServisi.hatirlaticilariYenidenKur(liste);
+      await _alarmlariTercihlereGoreKur();
     }
     return verildiMi;
   }
 
-  // Anlık test bildirimi gönderir.
+  // Seçili müzikle uyandırma alarmını test eder.
   Future<bool> testBildirimiGonder() async {
     try {
-      await _bildirimServisi.testBildirimiGonder();
+      final muzikYolu = await _tercihlerServisi.alarmMuzikYolunuGetir();
+      await _bildirimServisi.testBildirimiGonder(ozelMuzikYolu: muzikYolu);
       return true;
     } catch (hata, iz) {
       state = AsyncError(hata, iz);
       return false;
     }
+  }
+
+  // Çalan test veya hatırlatıcı alarmını susturur.
+  Future<void> alarmiSustur() async {
+    await _bildirimServisi.tumBildirimleriIptalEt();
+    await _alarmlariTercihlereGoreKur();
   }
 }
 

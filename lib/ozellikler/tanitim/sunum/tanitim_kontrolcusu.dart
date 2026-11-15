@@ -57,29 +57,40 @@ class TanitimKontrolcusu extends Notifier<AsyncValue<void>> {
   }
 
   Future<bool> tanitimiTamamla({
+    required bool hatirlaticiIstiyorMu,
     required TimeOfDay sabahSaati,
     required TimeOfDay aksamSaati,
     required List<HazirEgzersizSablonu> secilenSablonlar,
   }) async {
     state = const AsyncLoading();
     try {
+      await _tercihlerServisi.hatirlaticiIstiyorMuKaydet(hatirlaticiIstiyorMu);
+
       await _hatirlaticiDeposu.hatirlaticiGuncelle(
         etiket: 'sabah',
         saat: sabahSaati.hour,
         dakika: sabahSaati.minute,
         haftaninGunleri: '1,2,3,4,5,6,7',
-        etkinMi: true,
+        etkinMi: hatirlaticiIstiyorMu,
       );
       await _hatirlaticiDeposu.hatirlaticiGuncelle(
         etiket: 'aksam',
         saat: aksamSaati.hour,
         dakika: aksamSaati.minute,
         haftaninGunleri: '1,2,3,4,5,6,7',
-        etkinMi: true,
+        etkinMi: hatirlaticiIstiyorMu,
       );
 
-      final hatirlaticilar = await _hatirlaticiDeposu.hatirlaticilariGetir();
-      await _bildirimServisi.hatirlaticilariYenidenKur(hatirlaticilar);
+      if (hatirlaticiIstiyorMu) {
+        final muzikYolu = await _tercihlerServisi.alarmMuzikYolunuGetir();
+        final hatirlaticilar = await _hatirlaticiDeposu.hatirlaticilariGetir();
+        await _bildirimServisi.hatirlaticilariYenidenKur(
+          hatirlaticilar,
+          ozelMuzikYolu: muzikYolu,
+        );
+      } else {
+        await _bildirimServisi.tumBildirimleriIptalEt();
+      }
 
       if (secilenSablonlar.isNotEmpty) {
         final eklenenIdler = <int>[];
@@ -97,7 +108,7 @@ class TanitimKontrolcusu extends Notifier<AsyncValue<void>> {
         }
 
         await _rutinDeposu.rutinOlustur(
-          ad: 'Başlangıç Rutinim',
+          ad: 'Günlük Egzersiz Rutinim',
           haftaninGunleri: '1,2,3,4,5,6,7',
           aktifMi: true,
           egzersizIdListesi: eklenenIdler,
@@ -111,6 +122,7 @@ class TanitimKontrolcusu extends Notifier<AsyncValue<void>> {
       ref.invalidate(tumRutinlerAkisSaglayici);
       ref.invalidate(bugunKontrolcusuSaglayici);
       ref.invalidate(hatirlaticilarAkisSaglayici);
+      ref.invalidate(hatirlaticiIstiyorMuSaglayici);
 
       state = const AsyncData(null);
       return true;

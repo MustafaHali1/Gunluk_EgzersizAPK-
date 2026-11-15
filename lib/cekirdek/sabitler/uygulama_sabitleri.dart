@@ -8,7 +8,7 @@ class UygulamaSabitleri {
 
   static const String uygulamaAdi = 'Günlük Egzersiz';
   static const String paketKimligi = 'com.mustafahali.gunlukegzersiz';
-  static const String uygulamaSurumu = '1.0.0+5';
+  static const String uygulamaSurumu = '1.1.0+6';
 
   // Rota yolları
   static const String rotaTanitim = '/tanitim';
@@ -22,7 +22,7 @@ class UygulamaSabitleri {
   // Sekme başlıkları
   static const String sekmeBugun = 'Bugün';
   static const String sekmeEgzersizler = 'Egzersizler';
-  static const String sekmeRutinler = 'Rutinler';
+  static const String sekmeRutinler = 'Rutinim';
   static const String sekmeGecmis = 'Geçmiş';
   static const String sekmeRapor = 'Rapor';
   static const String sekmeAyarlar = 'Ayarlar';
@@ -37,7 +37,7 @@ class UygulamaRenkleri {
   UygulamaRenkleri._();
 
   static const Color basariYesili = Color(0xFF16A34A);
-  static const Color uyariTuruncusu = Color(0xFFD97706);
+  static const Color uyariTuruncusu = Color(0xFFDC2626);
   static const Color hataKirmizisi = Color(0xFFDC2626);
 }
 
@@ -72,15 +72,15 @@ class UygulamaMetinleri {
   static const String kaydet = 'Kaydet';
   static const String iptal = 'İptal';
   static const String yaptim = 'Yaptım';
-  static const String atladim = 'Atladım';
-  static const String hizliEkle = 'Hızlı Ekle';
+  static const String atladim = 'Yapmadım';
+  static const String hizliEkle = 'Hareket Ekle';
 
-  static const String bosBugunBaslik = 'Bugün İçin Planlı Hareket Yok';
+  static const String bosBugunBaslik = 'Bugün İçin Rutin Hareketi Yok';
   static const String bosBugunAciklama =
-      'Aktif rutininizde bugün için seçili hareket bulunmuyor veya henüz bir rutin etkinleştirmediniz. Rutinler sekmesinden rutin seçebilir ya da bugüne özel hızlı hareket ekleyebilirsiniz.';
+      'Henüz bir rutin oluşturmadınız veya bugün için seçili hareket yok. "Rutinim" sekmesinden fizyoterapi / günlük hareketlerinizi ekleyebilirsiniz.';
 
   static const String tibbiUyariNotu =
       'Bu rapor tıbbi tavsiye değildir, kullanıcının kendi kaydıdır';
   static const String gizlilikNotu =
-      'Tüm egzersiz ve antrenman verileriniz yalnızca kendi cihazınızda yerel olarak saklanır; hiçbir sunucuya gönderilmez.';
+      'Tüm egzersiz ve takip verileriniz yalnızca kendi cihazınızda yerel olarak saklanır; hiçbir sunucuya gönderilmez.';
 }

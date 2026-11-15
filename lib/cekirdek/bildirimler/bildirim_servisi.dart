@@ -1,6 +1,7 @@
 // lib/cekirdek/bildirimler/bildirim_servisi.dart
 
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,9 +12,7 @@ import '../hatalar/merkezi_kaydedici.dart';
 import '../veritabani/uygulama_veritabani.dart';
 import '../yardimcilar/tarih_yardimcisi.dart';
 
-// Bildirim içindeki "Yaptım" aksiyon butonuna arka planda tıklandığında çalışan üst seviye işleyici.
-// Arka plan izole alanında (isolate) güvenli erişim için kendi UygulamaVeritabani bağlantısını açar,
-// bugünün hareketlerini 'yapildi' olarak işaretler ve bağlantıyı hemen kapatır.
+// Bildirim içindeki "Hepsini Yaptım" aksiyon butonuna arka planda tıklandığında çalışan işleyici.
 @pragma('vm:entry-point')
 Future<void> arkaPlanBildirimYanitiIsleyici(
   NotificationResponse yanit,
@@ -39,14 +38,17 @@ Future<void> arkaPlanBildirimYanitiIsleyici(
   }
 }
 
-// Android ve iOS bildirim işlemlerini, saat dilimi ayarlarını ve günlük tekrarları yöneten servis sınıfı.
+// Android ve iOS uyandırma alarmı / hatırlatıcı bildirimlerini ve müzik seçimini yöneten servis.
 class BildirimServisi {
-  static const String kanalId = 'gunluk_egzersiz_hatirlatici_kanali';
-  static const String kanalAdi = 'Günlük Egzersiz Hatırlatıcıları';
+  static const String varsayilanKanalTabani = 'gunluk_egzersiz_alarm_kanali';
+  static const String kanalAdi = 'Egzersiz Uyandırma Alarmı';
   static const String kanalAciklamasi =
-      'Sabah ve akşam egzersiz rutin hatırlatıcı bildirimleri';
+      'Rutin vakti geldiğinde çalar saat / müzik ile hatırlatan alarm bildirimleri';
+  static const String aksiyonBaslaId = 'aksiyon_rutine_basla';
   static const String aksiyonYaptimId = 'aksiyon_yaptim';
   static const String iosKategoriId = 'egzersiz_hatirlatici_kategori';
+  static const String sistemAlarmSesiUri =
+      'content://settings/system/alarm_alert';
 
   final FlutterLocalNotificationsPlugin _eklenti =
       FlutterLocalNotificationsPlugin();
@@ -76,8 +78,15 @@ class BildirimServisi {
             iosKategoriId,
             actions: [
               DarwinNotificationAction.plain(
+                aksiyonBaslaId,
+                'Rutini Aç ve Başla',
+                options: <DarwinNotificationActionOption>{
+                  DarwinNotificationActionOption.foreground,
+                },
+              ),
+              DarwinNotificationAction.plain(
                 aksiyonYaptimId,
-                'Yaptım',
+                'Hepsini Yaptım',
                 options: <DarwinNotificationActionOption>{
                   DarwinNotificationActionOption.foreground,
                 },
@@ -126,7 +135,6 @@ class BildirimServisi {
     }
   }
 
-  // Cihazın mevcut saat dilimi kimliğini döndürür.
   Future<String> guncelSaatDiliminiGetir() async {
     return _saatDiliminiYapilandir();
   }
@@ -142,6 +150,7 @@ class BildirimServisi {
         final bildirimIzni =
             await androidEklenti?.requestNotificationsPermission() ?? false;
         await androidEklenti?.requestExactAlarmsPermission();
+        await androidEklenti?.requestFullScreenIntentPermission();
         return bildirimIzni;
       } else if (Platform.isIOS) {
         final iosEklenti = _eklenti
@@ -194,7 +203,7 @@ class BildirimServisi {
     }
   }
 
-  // Uygulama kapalıyken bildirime tıklanarak açıldıysa o bildirimin yanıtını döndürür.
+  // Uygulama kapalıyken alarma/bildirime tıklanarak açıldıysa yanıtı döndürür.
   Future<NotificationResponse?> acilisBildirimYanitiniGetir() async {
     try {
       final detaylar = await _eklenti.getNotificationAppLaunchDetails();
@@ -212,35 +221,59 @@ class BildirimServisi {
     }
   }
 
-  // Anlık test bildirimi gönderir.
-  Future<void> testBildirimiGonder() async {
+  // Tüm kurulu alarmları ve çalan bildirimi iptal eder.
+  Future<void> tumBildirimleriIptalEt() async {
+    try {
+      await _eklenti.cancelAll();
+    } catch (hata, iz) {
+      MerkeziKaydedici.hataYaz(
+        'Alarmlar iptal edilirken hata oluştu',
+        hata: hata,
+        yiginIzi: iz,
+      );
+    }
+  }
+
+  // Seçili alarm müziği ile anlık uyandırma alarmı testi gönderir.
+  Future<void> testBildirimiGonder({String? ozelMuzikYolu}) async {
     try {
       await _eklenti.show(
         id: 999,
-        title: 'Günlük Egzersiz Test Bildirimi',
-        body: 'Harika! Bildirimleriniz sorunsuz çalışıyor.',
-        notificationDetails: _bildirimDetaylariniOlustur(),
+        title: '⏰ Egzersiz Alarmı Çalıyor!',
+        body: 'Rutininizi açıp hareketleri Yaptım / Yapmadım olarak işaretleyin.',
+        notificationDetails: _alarmDetaylariniOlustur(
+          ozelMuzikYolu: ozelMuzikYolu,
+        ),
         payload: '/bugun',
       );
     } catch (hata, iz) {
       MerkeziKaydedici.hataYaz(
-        'Test bildirimi gönderilirken hata oluştu',
+        'Test alarmı gönderilirken hata oluştu',
         hata: hata,
         yiginIzi: iz,
       );
-      throw const UygulamaHatasi('Test bildirimi gönderilemedi.');
+      throw const UygulamaHatasi('Test alarmı gönderilemedi.');
     }
   }
 
-  // Sabah ve akşam hatırlatıcı listesine göre haftalık tekrarlı bildirimleri baştan kurar.
-  // iOS 64 bekleyen bildirim limitini aşmamak için DateTimeComponents.dayOfWeekAndTime kullanılır
-  // (en fazla 7 sabah + 7 akşam = 14 bildirim kurulur).
+  // Sabah ve akşam hatırlatıcılarını seçilen alarm müziğiyle kurar.
   Future<void> hatirlaticilariYenidenKur(
-    List<HatirlaticilarData> hatirlaticilar,
-  ) async {
+    List<HatirlaticilarData> hatirlaticilar, {
+    bool kullaniciAlarmIstiyorMu = true,
+    String? ozelMuzikYolu,
+  }) async {
     try {
       await _saatDiliminiYapilandir();
       await _eklenti.cancelAll();
+
+      if (!kullaniciAlarmIstiyorMu) {
+        MerkeziKaydedici.bilgiYaz(
+          'Kullanıcı hatırlatıcı istemediği için tüm alarmlar kapalı tutuldu.',
+        );
+        return;
+      }
+
+      final detaylar = _alarmDetaylariniOlustur(ozelMuzikYolu: ozelMuzikYolu);
 
       for (final hatirlatici in hatirlaticilar) {
         if (!hatirlatici.etkinMi) continue;
@@ -254,11 +287,10 @@ class BildirimServisi {
         final sabahMi = hatirlatici.etiket == 'sabah';
         final tabanId = sabahMi ? 100 : 200;
         final baslik = sabahMi
-            ? 'Günaydın! Egzersiz Zamanı'
-            : 'İyi Akşamlar! Günün Hareketlerini Tamamla';
-        final icerik = sabahMi
-            ? 'Bugünkü rutinin seni bekliyor. Hareketlerini yapıp işaretlemeyi unutma!'
-            : 'Günü tamamlamadan önce egzersizlerini kontrol et.';
+            ? '⏰ Sabah Egzersiz Alarmı!'
+            : '⏰ Akşam Egzersiz Alarmı!';
+        final icerik =
+            'Egzersiz vakti geldi! Dokunarak rutininizi açın ve hareketleri Yaptım / Yapmadım işaretleyin.';
 
         for (final gun in gunler) {
           final planlananZaman = _sonrakiGunVeSaatHesapla(
@@ -272,35 +304,62 @@ class BildirimServisi {
             title: baslik,
             body: icerik,
             scheduledDate: planlananZaman,
-            notificationDetails: _bildirimDetaylariniOlustur(),
-            androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+            notificationDetails: detaylar,
+            androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
             matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
             payload: '/bugun',
           );
         }
       }
-      MerkeziKaydedici.bilgiYaz('Hatırlatıcı bildirimleri yeniden kuruldu.');
+      MerkeziKaydedici.bilgiYaz('Egzersiz alarmları yeniden kuruldu.');
     } catch (hata, iz) {
       MerkeziKaydedici.hataYaz(
-        'Hatırlatıcılar kurulurken hata oluştu',
+        'Alarmlar kurulurken hata oluştu',
         hata: hata,
         yiginIzi: iz,
       );
-      throw const UygulamaHatasi('Bildirim saatleri kurulamadı.');
+      throw const UygulamaHatasi('Alarm saatleri kurulamadı.');
     }
   }
 
-  NotificationDetails _bildirimDetaylariniOlustur() {
-    const androidDetay = AndroidNotificationDetails(
-      kanalId,
+  // Uyandırma alarmı gibi sürekli çalan (FLAG_INSISTENT = 4) ve özel müzik destekleyen bildirim detayı.
+  NotificationDetails _alarmDetaylariniOlustur({String? ozelMuzikYolu}) {
+    final bool ozelDosyaVar =
+        ozelMuzikYolu != null &&
+        ozelMuzikYolu.trim().isNotEmpty &&
+        File(ozelMuzikYolu).existsSync();
+
+    final String sesUri = ozelDosyaVar
+        ? Uri.file(ozelMuzikYolu).toString()
+        : sistemAlarmSesiUri;
+
+    final String kanalKimligi = ozelDosyaVar
+        ? '${varsayilanKanalTabani}_${ozelMuzikYolu.hashCode.abs()}'
+        : '${varsayilanKanalTabani}_sistem_alarm';
+
+    final androidDetay = AndroidNotificationDetails(
+      kanalKimligi,
       kanalAdi,
       channelDescription: kanalAciklamasi,
       importance: Importance.max,
-      priority: Priority.high,
-      actions: <AndroidNotificationAction>[
+      priority: Priority.max,
+      category: AndroidNotificationCategory.alarm,
+      fullScreenIntent: true,
+      playSound: true,
+      sound: UriAndroidNotificationSound(sesUri),
+      audioAttributesUsage: AudioAttributesUsage.alarm,
+      // FLAG_INSISTENT (4): Kullanıcı bildirime dokunana veya kapatana kadar müziği alarm gibi tekrarlar.
+      additionalFlags: Int32List.fromList(<int>[4]),
+      actions: const <AndroidNotificationAction>[
+        AndroidNotificationAction(
+          aksiyonBaslaId,
+          'Rutini Aç ve Başla',
+          showsUserInterface: true,
+          cancelNotification: true,
+        ),
         AndroidNotificationAction(
           aksiyonYaptimId,
-          'Yaptım',
+          'Hepsini Yaptım',
           showsUserInterface: false,
           cancelNotification: true,
         ),
@@ -312,9 +371,10 @@ class BildirimServisi {
       presentAlert: true,
       presentBadge: true,
       presentSound: true,
+      interruptionLevel: InterruptionLevel.timeSensitive,
     );
 
-    return const NotificationDetails(android: androidDetay, iOS: iosDetay);
+    return NotificationDetails(android: androidDetay, iOS: iosDetay);
   }
 
   tz.TZDateTime _sonrakiGunVeSaatHesapla({

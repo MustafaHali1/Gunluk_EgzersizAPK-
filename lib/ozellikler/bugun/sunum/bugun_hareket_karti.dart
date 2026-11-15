@@ -22,10 +22,13 @@ class BugunHareketKarti extends StatelessWidget {
   String _hedefBilgisiOlustur() {
     final detay = egzersizDetayi;
     if (detay == null) return 'Kayıtlı hareket';
-    if (detay.tur == 'sureli') {
-      return '${detay.sureSaniye ?? 30} saniye • ${detay.kategori}';
+    final hedefMetni = detay.tur == 'sureli'
+        ? '${detay.sureSaniye ?? 30} saniye'
+        : '${detay.setSayisi ?? 3} set × ${detay.tekrarSayisi ?? 10} tekrar';
+    if (detay.aciklama.trim().isNotEmpty) {
+      return '$hedefMetni • ${detay.aciklama}';
     }
-    return '${detay.setSayisi ?? 3} set × ${detay.tekrarSayisi ?? 10} tekrar • ${detay.kategori}';
+    return '$hedefMetni • ${detay.kategori}';
   }
 
   Future<void> _notDuzenlemePenceresiAc(BuildContext context) async {
@@ -38,7 +41,7 @@ class BugunHareketKarti extends StatelessWidget {
           controller: yazici,
           maxLines: 3,
           decoration: const InputDecoration(
-            hintText: 'Örn: Sağ dizde hafif zorlanma oldu, 2 set yaptım...',
+            hintText: 'Örn: Sağ dizde hafif ağrı oldu, 2 set yaptım...',
             border: OutlineInputBorder(),
           ),
         ),
@@ -64,7 +67,8 @@ class BugunHareketKarti extends StatelessWidget {
   Widget build(BuildContext context) {
     final yapildiMi = kayit.durum == 'yapildi';
     final atlandiMi = kayit.durum == 'atlandi';
-    final notVarMi = kayit.notMetni != null && kayit.notMetni!.trim().isNotEmpty;
+    final notVarMi =
+        kayit.notMetni != null && kayit.notMetni!.trim().isNotEmpty;
 
     return Card(
       margin: const EdgeInsets.only(bottom: UygulamaBoyutlari.altBosluk),
@@ -74,7 +78,7 @@ class BugunHareketKarti extends StatelessWidget {
           color: yapildiMi
               ? UygulamaRenkleri.basariYesili.withValues(alpha: 0.6)
               : atlandiMi
-                  ? UygulamaRenkleri.uyariTuruncusu.withValues(alpha: 0.6)
+                  ? UygulamaRenkleri.hataKirmizisi.withValues(alpha: 0.6)
                   : Colors.transparent,
           width: 1.5,
         ),
@@ -100,7 +104,8 @@ class BugunHareketKarti extends StatelessWidget {
                   width: double.infinity,
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    color:
+                        Theme.of(context).colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
@@ -157,18 +162,18 @@ class _HareketBaslikSatiri extends StatelessWidget {
           backgroundColor: yapildiMi
               ? UygulamaRenkleri.basariYesili.withValues(alpha: 0.15)
               : atlandiMi
-                  ? UygulamaRenkleri.uyariTuruncusu.withValues(alpha: 0.15)
+                  ? UygulamaRenkleri.hataKirmizisi.withValues(alpha: 0.15)
                   : Theme.of(context).colorScheme.surfaceContainerHighest,
           child: Icon(
             yapildiMi
                 ? Icons.check_circle
                 : atlandiMi
-                    ? Icons.skip_next
+                    ? Icons.cancel
                     : Icons.radio_button_unchecked,
             color: yapildiMi
                 ? UygulamaRenkleri.basariYesili
                 : atlandiMi
-                    ? UygulamaRenkleri.uyariTuruncusu
+                    ? UygulamaRenkleri.hataKirmizisi
                     : Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
@@ -202,7 +207,7 @@ class _HareketBaslikSatiri extends StatelessWidget {
   }
 }
 
-// "Yaptım" ve "Atladım" geri alınabilir aksiyon butonlarını barındıran alt bileşen.
+// "Yaptım" ve "Yapmadım" geri alınabilir aksiyon butonlarını barındıran alt bileşen.
 class _DurumButonlariSatiri extends StatelessWidget {
   final bool yapildiMi;
   final bool atlandiMi;
@@ -224,7 +229,8 @@ class _DurumButonlariSatiri extends StatelessWidget {
           child: Semantics(
             button: true,
             selected: yapildiMi,
-            label: yapildiMi ? 'Yapıldı işaretini geri al' : 'Yaptım olarak işaretle',
+            label:
+                yapildiMi ? 'Yapıldı işaretini geri al' : 'Yaptım olarak işaretle',
             child: SizedBox(
               height: UygulamaBoyutlari.dokunmaHedefiMin,
               child: yapildiMi
@@ -250,22 +256,24 @@ class _DurumButonlariSatiri extends StatelessWidget {
           child: Semantics(
             button: true,
             selected: atlandiMi,
-            label: atlandiMi ? 'Atlandı işaretini geri al' : 'Atladım olarak işaretle',
+            label: atlandiMi
+                ? 'Yapmadım işaretini geri al'
+                : 'Yapmadım olarak işaretle',
             child: SizedBox(
               height: UygulamaBoyutlari.dokunmaHedefiMin,
               child: atlandiMi
                   ? FilledButton.icon(
                       style: FilledButton.styleFrom(
-                        backgroundColor: UygulamaRenkleri.uyariTuruncusu,
+                        backgroundColor: UygulamaRenkleri.hataKirmizisi,
                         foregroundColor: Colors.white,
                       ),
                       onPressed: atlandiTiklandiginda,
-                      icon: const Icon(Icons.redo),
-                      label: const Text('Atlandı (Geri Al)'),
+                      icon: const Icon(Icons.close),
+                      label: const Text('Yapmadım (Geri Al)'),
                     )
                   : OutlinedButton.icon(
                       onPressed: atlandiTiklandiginda,
-                      icon: const Icon(Icons.skip_next_outlined),
+                      icon: const Icon(Icons.cancel_outlined),
                       label: const Text(UygulamaMetinleri.atladim),
                     ),
             ),

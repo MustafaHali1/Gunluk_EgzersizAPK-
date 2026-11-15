@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../cekirdek/veritabani/uygulama_veritabani.dart';
 import '../../../cekirdek/yardimcilar/tarih_yardimcisi.dart';
+import '../../egzersizler/alan/hazir_egzersiz_sablonu.dart';
 import '../../egzersizler/sunum/egzersiz_kontrolcusu.dart';
+import '../../egzersizler/veri/egzersiz_deposu_uygulamasi.dart';
 import '../veri/rutin_deposu_uygulamasi.dart';
 import 'rutin_kontrolcusu.dart';
 
-// Rutin oluşturma, gün seçme, hareket ekleme ve sürükleyerek sıralama ekranı.
+// Rutin oluşturma, gün seçme, doğrudan hareket yazma/seçme ve sıralama ekranı.
 class RutinFormEkrani extends ConsumerStatefulWidget {
   final RutinlerData? duzenlenecekRutin;
 
@@ -33,7 +35,9 @@ class _RutinFormEkraniState extends ConsumerState<RutinFormEkrani> {
   void initState() {
     super.initState();
     final r = widget.duzenlenecekRutin;
-    _adDenetleyici = TextEditingController(text: r?.ad ?? '');
+    _adDenetleyici = TextEditingController(
+      text: r?.ad ?? 'Günlük Fizyoterapi / Sağlık Rutinim',
+    );
     if (r != null) {
       _aktifMi = r.aktifMi;
       _seciliGunler
@@ -74,33 +78,168 @@ class _RutinFormEkraniState extends ConsumerState<RutinFormEkrani> {
     super.dispose();
   }
 
-  void _hareketSeciciAc(List<EgzersizlerData> tumAktifEgzersizler) {
-    showModalBottomSheet<void>(
+  Future<void> _yeniHareketYazPenceresiAc() async {
+    final adYazici = TextEditingController();
+    final tarifYazici = TextEditingController(text: '3 set × 10 tekrar');
+
+    final eklensinMi = await showDialog<bool>(
+      context: context,
+      builder: (baglam) => AlertDialog(
+        title: const Text('Rutine Yeni Hareket Yaz'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: adYazici,
+              autofocus: true,
+              decoration: const InputDecoration(
+                labelText: 'Hareket Adı *',
+                hintText: 'Örn: Havlu ile Diz Bastırma',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: tarifYazici,
+              maxLines: 2,
+              decoration: const InputDecoration(
+                labelText: 'Tarif / Tekrar Bilgisi (Opsiyonel)',
+                hintText: 'Örn: 10 tekrar, her seferinde 5 sn basılı tut',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(baglam).pop(false),
+            child: const Text('İptal'),
+          ),
+          FilledButton.icon(
+            onPressed: () => Navigator.of(baglam).pop(true),
+            icon: const Icon(Icons.add),
+            label: const Text('Rutine Ekle'),
+          ),
+        ],
+      ),
+    );
+
+    final ad = adYazici.text.trim();
+    final tarif = tarifYazici.text.trim();
+    adYazici.dispose();
+    tarifYazici.dispose();
+
+    if (eklensinMi != true || ad.isEmpty) return;
+
+    final egzDepo = ref.read(egzersizDeposuSaglayici);
+    final yeniId = await egzDepo.egzersizEkle(
+      ad: ad,
+      aciklama: tarif,
+      tur: 'tekrarli',
+      setSayisi: 3,
+      tekrarSayisi: 10,
+      kategori: 'Fizyoterapi / Günlük',
+    );
+    final yeniKayit = await egzDepo.idIleEgzersizGetir(yeniId);
+    ref.invalidate(aktifEgzersizlerAkisSaglayici);
+    if (yeniKayit != null && mounted) {
+      setState(() {
+        _seciliEgzersizler.add(yeniKayit);
+      });
+    }
+  }
+
+  Future<void> _hazirListedenSecAc() async {
+    final egzDepo = ref.read(egzersizDeposuSaglayici);
+    final kayitliListe = await egzDepo.aktifEgzersizleriGetir();
+    if (!mounted) return;
+
+    await showModalBottomSheet<void>(
       context: context,
       useSafeArea: true,
+      isScrollControlled: true,
       builder: (altContext) {
         return StatefulBuilder(
           builder: (context, altSetState) {
-            return ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: tumAktifEgzersizler.length,
-              itemBuilder: (context, indeks) {
-                final egz = tumAktifEgzersizler[indeks];
-                final seciliMi = _seciliEgzersizler.any((e) => e.id == egz.id);
-                return CheckboxListTile(
-                  value: seciliMi,
-                  title: Text(egz.ad),
-                  subtitle: Text(egz.kategori),
-                  onChanged: (deger) {
-                    setState(() {
-                      if (deger == true) {
-                        _seciliEgzersizler.add(egz);
-                      } else {
-                        _seciliEgzersizler.removeWhere((e) => e.id == egz.id);
-                      }
-                    });
-                    altSetState(() {});
-                  },
+            return DraggableScrollableSheet(
+              expand: false,
+              initialChildSize: 0.75,
+              maxChildSize: 0.92,
+              builder: (context, kaydirmaDenetleyicisi) {
+                return ListView(
+                  controller: kaydirmaDenetleyicisi,
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Hazır Fizyoterapi & Sağlık Hareketleri',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.of(altContext).pop(),
+                          child: const Text('Tamam'),
+                        ),
+                      ],
+                    ),
+                    const Text(
+                      'İstediğiniz hareketlere dokunarak rutininize ekleyin:',
+                    ),
+                    const SizedBox(height: 8),
+                    ...hazirEgzersizSablonlari.map((sablon) {
+                      final zatenSecili = _seciliEgzersizler.any(
+                        (e) => e.ad.toLowerCase() == sablon.ad.toLowerCase(),
+                      );
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        child: ListTile(
+                          title: Text(sablon.ad),
+                          subtitle: Text('${sablon.kategori} • ${sablon.aciklama}'),
+                          trailing: zatenSecili
+                              ? const Chip(label: Text('Eklendi'))
+                              : FilledButton.tonalIcon(
+                                  onPressed: () async {
+                                    var mevcut = kayitliListe
+                                        .where(
+                                          (k) =>
+                                              k.ad.toLowerCase() ==
+                                              sablon.ad.toLowerCase(),
+                                        )
+                                        .firstOrNull;
+                                    if (mevcut == null) {
+                                      final id = await egzDepo.egzersizEkle(
+                                        ad: sablon.ad,
+                                        aciklama: sablon.aciklama,
+                                        tur: sablon.tur,
+                                        sureSaniye: sablon.sureSaniye,
+                                        setSayisi: sablon.setSayisi,
+                                        tekrarSayisi: sablon.tekrarSayisi,
+                                        kategori: sablon.kategori,
+                                      );
+                                      mevcut = await egzDepo.idIleEgzersizGetir(id);
+                                      if (mevcut != null) {
+                                        kayitliListe.add(mevcut);
+                                      }
+                                      ref.invalidate(aktifEgzersizlerAkisSaglayici);
+                                    }
+                                    if (mevcut != null && mounted) {
+                                      final eklenecek = mevcut;
+                                      setState(() {
+                                        _seciliEgzersizler.add(eklenecek);
+                                      });
+                                      altSetState(() {});
+                                    }
+                                  },
+                                  icon: const Icon(Icons.add),
+                                  label: const Text('Ekle'),
+                                ),
+                        ),
+                      );
+                    }),
+                  ],
                 );
               },
             );
@@ -120,7 +259,7 @@ class _RutinFormEkraniState extends ConsumerState<RutinFormEkrani> {
     }
     if (_seciliEgzersizler.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Lütfen rutine en az bir egzersiz ekleyin.')),
+        const SnackBar(content: Text('Lütfen rutine en az bir hareket ekleyin.')),
       );
       return;
     }
@@ -147,18 +286,18 @@ class _RutinFormEkraniState extends ConsumerState<RutinFormEkrani> {
 
   @override
   Widget build(BuildContext context) {
-    final aktifEgzersizlerDurumu = ref.watch(aktifEgzersizlerAkisSaglayici);
     final duzenlemeMi = widget.duzenlenecekRutin != null;
 
     return Scaffold(
       appBar: AppBar(
         title: Text(duzenlemeMi ? 'Rutini Düzenle' : 'Yeni Rutin Oluştur'),
         actions: [
-          TextButton.icon(
+          FilledButton.icon(
             onPressed: _kaydet,
             icon: const Icon(Icons.check),
             label: const Text('Kaydet'),
           ),
+          const SizedBox(width: 12),
         ],
       ),
       body: _yukleniyor
@@ -176,7 +315,8 @@ class _RutinFormEkraniState extends ConsumerState<RutinFormEkrani> {
                         TextFormField(
                           controller: _adDenetleyici,
                           decoration: const InputDecoration(
-                            labelText: 'Rutin Adı (örn. Sabah Esneme Rutini) *',
+                            labelText: 'Rutin Adı *',
+                            hintText: 'Örn: Fizyoterapi Egzersizlerim',
                             border: OutlineInputBorder(),
                           ),
                           validator: (deger) =>
@@ -184,9 +324,9 @@ class _RutinFormEkraniState extends ConsumerState<RutinFormEkrani> {
                                   ? 'Lütfen rutin adını girin'
                                   : null,
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 10),
                         Text(
-                          'Yapılacak Günler',
+                          'Hangi Günler Yapılacak?',
                           style: Theme.of(context).textTheme.titleSmall,
                         ),
                         const SizedBox(height: 6),
@@ -210,36 +350,34 @@ class _RutinFormEkraniState extends ConsumerState<RutinFormEkrani> {
                             );
                           }),
                         ),
-                        SwitchListTile(
-                          contentPadding: EdgeInsets.zero,
-                          title: const Text('Aktif Rutin Olarak Belirle'),
-                          subtitle: const Text(
-                            'Bugün ekranında bu rutinin hareketleri gösterilir',
-                          ),
-                          value: _aktifMi,
-                          onChanged: (deger) =>
-                              setState(() => _aktifMi = deger),
-                        ),
-                        const Divider(),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Hareketler (${_seciliEgzersizler.length}) — Sürükleyerek Sırala',
-                              style: Theme.of(context).textTheme.titleSmall,
-                            ),
-                            aktifEgzersizlerDurumu.maybeWhen(
-                              data: (liste) => TextButton.icon(
-                                onPressed: liste.isEmpty
-                                    ? null
-                                    : () => _hareketSeciciAc(liste),
-                                icon: const Icon(Icons.add),
-                                label: const Text('Hareket Seç'),
+                        const Divider(height: 20),
+                        Text(
+                          'Rutindeki Hareketler (${_seciliEgzersizler.length})',
+                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
                               ),
-                              orElse: () => const SizedBox.shrink(),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: FilledButton.icon(
+                                onPressed: _yeniHareketYazPenceresiAc,
+                                icon: const Icon(Icons.edit),
+                                label: const Text('Yeni Hareket Yaz'),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: _hazirListedenSecAc,
+                                icon: const Icon(Icons.medical_services_outlined),
+                                label: const Text('Hazır Listeden Seç'),
+                              ),
                             ),
                           ],
                         ),
+                        const SizedBox(height: 8),
                       ],
                     ),
                   ),
@@ -249,7 +387,7 @@ class _RutinFormEkraniState extends ConsumerState<RutinFormEkrani> {
                             child: Padding(
                               padding: EdgeInsets.all(24),
                               child: Text(
-                                'Henüz hareket seçilmedi. "Hareket Seç" butonuna dokunarak rutine egzersiz ekleyin.',
+                                'Henüz hareket eklenmedi.\nYukarıdaki "Yeni Hareket Yaz" veya "Hazır Listeden Seç" butonuna dokunarak egzersizlerinizi ekleyin.',
                                 textAlign: TextAlign.center,
                               ),
                             ),
@@ -268,15 +406,35 @@ class _RutinFormEkraniState extends ConsumerState<RutinFormEkrani> {
                             itemBuilder: (context, indeks) {
                               final egz = _seciliEgzersizler[indeks];
                               return Card(
-                                key: ValueKey(egz.id),
+                                key: ValueKey('${egz.id}_$indeks'),
                                 margin: const EdgeInsets.only(bottom: 8),
                                 child: ListTile(
                                   leading: CircleAvatar(
                                     child: Text('${indeks + 1}'),
                                   ),
                                   title: Text(egz.ad),
-                                  subtitle: Text(egz.kategori),
-                                  trailing: const Icon(Icons.drag_handle),
+                                  subtitle: Text(
+                                    egz.aciklama.isNotEmpty
+                                        ? egz.aciklama
+                                        : egz.kategori,
+                                  ),
+                                  trailing: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        tooltip: 'Rutinden Çıkar',
+                                        icon: const Icon(
+                                          Icons.remove_circle_outline,
+                                        ),
+                                        onPressed: () {
+                                          setState(() {
+                                            _seciliEgzersizler.removeAt(indeks);
+                                          });
+                                        },
+                                      ),
+                                      const Icon(Icons.drag_handle),
+                                    ],
+                                  ),
                                 ),
                               );
                             },

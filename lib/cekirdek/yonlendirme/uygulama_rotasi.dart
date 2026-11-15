@@ -35,6 +35,14 @@ final uygulamaRotasiSaglayici = Provider<GoRouter>((ref) {
         path: UygulamaSabitleri.rotaTanitim,
         builder: (context, durum) => const TanitimEkrani(),
       ),
+      GoRoute(
+        path: UygulamaSabitleri.rotaEgzersizler,
+        builder: (context, durum) => const EgzersizlerEkrani(),
+      ),
+      GoRoute(
+        path: UygulamaSabitleri.rotaGecmis,
+        builder: (context, durum) => const GecmisEkrani(),
+      ),
       StatefulShellRoute.indexedStack(
         builder: (context, durum, navigasyonKabugu) {
           return AnaIskeletEkrani(navigasyonKabugu: navigasyonKabugu);
@@ -51,24 +59,8 @@ final uygulamaRotasiSaglayici = Provider<GoRouter>((ref) {
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: UygulamaSabitleri.rotaEgzersizler,
-                builder: (context, durum) => const EgzersizlerEkrani(),
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
                 path: UygulamaSabitleri.rotaRutinler,
                 builder: (context, durum) => const RutinlerEkrani(),
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: UygulamaSabitleri.rotaGecmis,
-                builder: (context, durum) => const GecmisEkrani(),
               ),
             ],
           ),

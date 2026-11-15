@@ -30,9 +30,7 @@ void main() {
     await testci.pump(const Duration(milliseconds: 100));
 
     expect(find.text(UygulamaSabitleri.sekmeBugun), findsWidgets);
-    expect(find.text(UygulamaSabitleri.sekmeEgzersizler), findsOneWidget);
     expect(find.text(UygulamaSabitleri.sekmeRutinler), findsWidgets);
-    expect(find.text(UygulamaSabitleri.sekmeGecmis), findsOneWidget);
     expect(find.text(UygulamaSabitleri.sekmeRapor), findsOneWidget);
     expect(find.text(UygulamaSabitleri.sekmeAyarlar), findsOneWidget);
 

@@ -3,10 +3,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../cekirdek/sabitler/uygulama_sabitleri.dart';
+import '../../gecmis/sunum/gecmis_ekrani.dart';
 import '../alan/rapor_olusturucu.dart';
 import 'rapor_kontrolcusu.dart';
 
-// Doktora gösterilebilecek egzersiz takip tablosunu ve PDF paylaşımını sunan ekran.
+// Doktora gösterilebilecek egzersiz takip tablosunu, PDF paylaşımını ve geçmiş takvimini sunan ekran.
 class RaporEkrani extends ConsumerWidget {
   const RaporEkrani({super.key});
 
@@ -47,48 +48,68 @@ class RaporEkrani extends ConsumerWidget {
     final raporDurumu = ref.watch(raporKontrolcusuSaglayici);
     final kontrolcu = ref.read(raporKontrolcusuSaglayici.notifier);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(UygulamaSabitleri.sekmeRapor),
-        actions: [
-          IconButton(
-            tooltip: 'PDF Olarak Paylaş',
-            onPressed: () => _pdfPaylas(context, kontrolcu),
-            icon: const Icon(Icons.picture_as_pdf),
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text(UygulamaSabitleri.sekmeRapor),
+          actions: [
+            IconButton(
+              tooltip: 'PDF Olarak Paylaş',
+              onPressed: () => _pdfPaylas(context, kontrolcu),
+              icon: const Icon(Icons.picture_as_pdf),
+            ),
+          ],
+          bottom: const TabBar(
+            tabs: [
+              Tab(
+                icon: Icon(Icons.table_chart_outlined),
+                text: 'Doktor Raporu (PDF)',
+              ),
+              Tab(
+                icon: Icon(Icons.calendar_month_outlined),
+                text: 'Takvim & Geçmiş',
+              ),
+            ],
           ),
-        ],
-      ),
-      body: raporDurumu.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (h, _) => Center(child: Text('Rapor oluşturulamadı: $h')),
-        data: (durum) => ListView(
-          padding: const EdgeInsets.all(16),
+        ),
+        body: TabBarView(
           children: [
-            _AralikSeciciSatiri(
-              seciliTur: durum.aralikTuru,
-              turSecildiginde: (tur) {
-                if (tur == RaporAralikTuru.ozel) {
-                  _ozelTarihAraligiSeciciAc(context, kontrolcu, durum);
-                } else {
-                  kontrolcu.aralikTuruSec(tur);
-                }
-              },
-            ),
-            const SizedBox(height: 12),
-            _RaporOzetKarti(
-              tablo: durum.tablo,
-              pdfPaylasTiklandiginda: () => _pdfPaylas(context, kontrolcu),
-            ),
-            const SizedBox(height: 12),
-            _RaporMatrisKarti(tablo: durum.tablo),
-            const SizedBox(height: 12),
-            Text(
-              UygulamaMetinleri.tibbiUyariNotu,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontStyle: FontStyle.italic,
+            raporDurumu.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (h, _) => Center(child: Text('Rapor oluşturulamadı: $h')),
+              data: (durum) => ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  _AralikSeciciSatiri(
+                    seciliTur: durum.aralikTuru,
+                    turSecildiginde: (tur) {
+                      if (tur == RaporAralikTuru.ozel) {
+                        _ozelTarihAraligiSeciciAc(context, kontrolcu, durum);
+                      } else {
+                        kontrolcu.aralikTuruSec(tur);
+                      }
+                    },
                   ),
-              textAlign: TextAlign.center,
+                  const SizedBox(height: 12),
+                  _RaporOzetKarti(
+                    tablo: durum.tablo,
+                    pdfPaylasTiklandiginda: () => _pdfPaylas(context, kontrolcu),
+                  ),
+                  const SizedBox(height: 12),
+                  _RaporMatrisKarti(tablo: durum.tablo),
+                  const SizedBox(height: 12),
+                  Text(
+                    UygulamaMetinleri.tibbiUyariNotu,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontStyle: FontStyle.italic,
+                        ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
             ),
+            const GecmisGorunumu(),
           ],
         ),
       ),
@@ -172,7 +193,7 @@ class _RaporOzetKarti extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              '✅ Yapıldı   ❌ Yapılmadı / Atlandı   ➖ Planlı Değil',
+              '✅ Yaptım   ❌ Yapmadım   ➖ Planlı Değil',
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ],

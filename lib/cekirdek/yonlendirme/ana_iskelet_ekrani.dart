@@ -34,19 +34,9 @@ class AnaIskeletEkrani extends StatelessWidget {
             label: UygulamaSabitleri.sekmeBugun,
           ),
           NavigationDestination(
-            icon: Icon(Icons.fitness_center_outlined),
-            selectedIcon: Icon(Icons.fitness_center),
-            label: UygulamaSabitleri.sekmeEgzersizler,
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.repeat_outlined),
-            selectedIcon: Icon(Icons.repeat),
+            icon: Icon(Icons.playlist_add_check_outlined),
+            selectedIcon: Icon(Icons.playlist_add_check),
             label: UygulamaSabitleri.sekmeRutinler,
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.calendar_month_outlined),
-            selectedIcon: Icon(Icons.calendar_month),
-            label: UygulamaSabitleri.sekmeGecmis,
           ),
           NavigationDestination(
             icon: Icon(Icons.table_chart_outlined),
