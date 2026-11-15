@@ -16,6 +16,7 @@ class PdfDisaAktarmaServisi {
   // güvenli karşılıklarına dönüştürerek PDF oluşturmanın çevrimdışı hata vermesini önler.
   String _pdfMetniTemizle(String metin) {
     return metin
+        .replaceAll('—', '-')
         .replaceAll('ğ', 'g')
         .replaceAll('Ğ', 'G')
         .replaceAll('ı', 'i')

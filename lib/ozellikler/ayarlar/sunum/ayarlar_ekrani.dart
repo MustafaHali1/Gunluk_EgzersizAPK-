@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../cekirdek/ayarlar/uygulama_tercihleri_servisi.dart';
 import '../../../cekirdek/sabitler/uygulama_sabitleri.dart';
+import '../../yedekleme/sunum/yedekleme_ayar_karti.dart';
 import 'ayarlar_kontrolcusu.dart';
 import 'hatirlatici_ayar_karti.dart';
 
@@ -110,6 +111,8 @@ class AyarlarEkrani extends ConsumerWidget {
                   .temaModunuDegistir(mod);
             },
           ),
+          const SizedBox(height: 16),
+          const YedeklemeAyarKarti(),
           const SizedBox(height: 16),
           const _BilgiVeSurumKarti(),
         ],
