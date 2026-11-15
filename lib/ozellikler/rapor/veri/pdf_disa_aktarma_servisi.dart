@@ -43,9 +43,15 @@ class PdfDisaAktarmaServisi {
   }
 
   // RaporTablosu nesnesinden yatay (landscape) PDF bayt dizisi üretir.
-  Future<Uint8List> pdfBaytlariniOlustur(RaporTablosu tablo) async {
+  Future<Uint8List> pdfBaytlariniOlustur(
+    RaporTablosu tablo, {
+    String? rutinAdi,
+  }) async {
     final belge = pw.Document();
     final olusturmaTarihi = TarihYardimcisi.tarihiFormatla(DateTime.now());
+    final raporBasligi = (rutinAdi != null && rutinAdi.trim().isNotEmpty)
+        ? '${rutinAdi.trim()} - Takip Raporu'
+        : 'Günlük Rutin Takip Raporu';
 
     // Çok fazla sütun varsa (örn. 30 gün) sayfaya sığması için 15'er günlük parçalara böl
     const maksimumGunSutunu = 15;
@@ -71,7 +77,7 @@ class PdfDisaAktarmaServisi {
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
                 pw.Text(
-                  _pdfMetniTemizle('Günlük Egzersiz Takip Raporu'),
+                  _pdfMetniTemizle(raporBasligi),
                   style: pw.TextStyle(
                     fontSize: 18,
                     fontWeight: pw.FontWeight.bold,
@@ -131,7 +137,7 @@ class PdfDisaAktarmaServisi {
                 padding: const pw.EdgeInsets.all(20),
                 child: pw.Text(
                   _pdfMetniTemizle(
-                    'Seçilen tarih aralığında kayıtlı hareket bulunmamaktadır.',
+                    'Seçilen tarih aralığında kayıtlı görev bulunmamaktadır.',
                   ),
                 ),
               ),
@@ -140,7 +146,7 @@ class PdfDisaAktarmaServisi {
 
           return gunBloklari.map((blokGunleri) {
             final basliklar = <String>[
-              _pdfMetniTemizle('Hareket Adı'),
+              _pdfMetniTemizle('Görev Adı'),
               ...blokGunleri.map(_kisaTarihBasligi),
               '%',
             ];
@@ -184,11 +190,22 @@ class PdfDisaAktarmaServisi {
   }
 
   // Raporu PDF olarak oluşturur ve sistem paylaşım penceresini açar.
-  Future<void> raporuPdfOlarakPaylas(RaporTablosu tablo) async {
+  Future<void> raporuPdfOlarakPaylas(
+    RaporTablosu tablo, {
+    String? rutinAdi,
+  }) async {
     try {
-      final baytlar = await pdfBaytlariniOlustur(tablo);
+      final baytlar = await pdfBaytlariniOlustur(tablo, rutinAdi: rutinAdi);
+      final temizRutinAdi = rutinAdi
+          ?.trim()
+          .toLowerCase()
+          .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
+          .replaceAll(RegExp(r'^_+|_+$'), '');
+      final dosyaOnEki = (temizRutinAdi != null && temizRutinAdi.isNotEmpty)
+          ? '${temizRutinAdi}_raporu'
+          : 'rutin_raporu';
       final dosyaAdi =
-          'egzersiz_raporu_${tablo.baslangicTarihi}_${tablo.bitisTarihi}.pdf';
+          '${dosyaOnEki}_${tablo.baslangicTarihi}_${tablo.bitisTarihi}.pdf';
       await Printing.sharePdf(bytes: baytlar, filename: dosyaAdi);
     } catch (hata, iz) {
       MerkeziKaydedici.hataYaz(

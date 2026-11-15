@@ -214,11 +214,18 @@ class RaporKontrolcusu extends AsyncNotifier<RaporDurumu> {
     state = await AsyncValue.guard(_raporuHesapla);
   }
 
-  Future<bool> pdfOlarakPaylas() async {
+  Future<bool> pdfOlarakPaylas({RutinRaporGrubu? grup}) async {
     final mevcut = state.value;
-    if (mevcut == null) return false;
+    if (mevcut == null && grup == null) return false;
     try {
-      await _pdfServisi.raporuPdfOlarakPaylas(mevcut.tablo);
+      if (grup != null) {
+        await _pdfServisi.raporuPdfOlarakPaylas(
+          grup.tablo,
+          rutinAdi: grup.rutinAdi,
+        );
+      } else {
+        await _pdfServisi.raporuPdfOlarakPaylas(mevcut!.tablo);
+      }
       return true;
     } catch (_) {
       return false;

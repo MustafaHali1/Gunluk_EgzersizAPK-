@@ -33,9 +33,10 @@ class RaporEkrani extends ConsumerWidget {
 
   Future<void> _pdfPaylas(
     BuildContext context,
-    RaporKontrolcusu kontrolcu,
-  ) async {
-    final basarili = await kontrolcu.pdfOlarakPaylas();
+    RaporKontrolcusu kontrolcu, {
+    RutinRaporGrubu? grup,
+  }) async {
+    final basarili = await kontrolcu.pdfOlarakPaylas(grup: grup);
     if (!basarili && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('PDF paylaşılırken bir sorun oluştu.')),
@@ -53,13 +54,6 @@ class RaporEkrani extends ConsumerWidget {
       child: Scaffold(
         appBar: AppBar(
           title: const Text(UygulamaSabitleri.sekmeRapor),
-          actions: [
-            IconButton(
-              tooltip: 'PDF Olarak Paylaş',
-              onPressed: () => _pdfPaylas(context, kontrolcu),
-              icon: const Icon(Icons.picture_as_pdf),
-            ),
-          ],
           bottom: const TabBar(
             tabs: [
               Tab(
@@ -92,15 +86,14 @@ class RaporEkrani extends ConsumerWidget {
                     },
                   ),
                   const SizedBox(height: 12),
-                  _RaporOzetKarti(
-                    tablo: durum.tablo,
-                    pdfPaylasTiklandiginda: () => _pdfPaylas(context, kontrolcu),
-                  ),
+                  _RaporOzetKarti(tablo: durum.tablo),
                   const SizedBox(height: 12),
                   if (durum.rutinGruplari.isEmpty)
                     _RaporMatrisKarti(
                       baslik: 'Günlük Takip Tablosu',
                       tablo: durum.tablo,
+                      pdfPaylasTiklandiginda: () =>
+                          _pdfPaylas(context, kontrolcu),
                     )
                   else
                     ...durum.rutinGruplari.map(
@@ -110,6 +103,8 @@ class RaporEkrani extends ConsumerWidget {
                           baslik:
                               '${grup.rutinAdi} (%${grup.tablo.genelTamamlanmaYuzdesi})',
                           tablo: grup.tablo,
+                          pdfPaylasTiklandiginda: () =>
+                              _pdfPaylas(context, kontrolcu, grup: grup),
                         ),
                       ),
                     ),
@@ -168,12 +163,8 @@ class _AralikSeciciSatiri extends StatelessWidget {
 // Genel tamamlanma yüzdesini, en uzun seriyi ve açılır-kapanır özeti gösteren kart.
 class _RaporOzetKarti extends StatelessWidget {
   final RaporTablosu tablo;
-  final VoidCallback pdfPaylasTiklandiginda;
 
-  const _RaporOzetKarti({
-    required this.tablo,
-    required this.pdfPaylasTiklandiginda,
-  });
+  const _RaporOzetKarti({required this.tablo});
 
   @override
   Widget build(BuildContext context) {
@@ -191,22 +182,13 @@ class _RaporOzetKarti extends StatelessWidget {
           'Genel Tamamlanma: %${tablo.genelTamamlanmaYuzdesi} • En Uzun Seri: ${tablo.enUzunSeri} Gün',
         ),
         childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Expanded(
-                child: Text(
-                  '✅ Yaptım   ❌ Yapmadım   ➖ Planlı Değil',
-                  style: TextStyle(fontSize: 12),
-                ),
-              ),
-              FilledButton.tonalIcon(
-                onPressed: pdfPaylasTiklandiginda,
-                icon: const Icon(Icons.share, size: 18),
-                label: const Text('PDF Paylaş'),
-              ),
-            ],
+        children: const [
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              '✅ Yaptım   ❌ Yapmadım   ➖ Planlı Değil',
+              style: TextStyle(fontSize: 12),
+            ),
           ),
         ],
       ),
@@ -214,14 +196,16 @@ class _RaporOzetKarti extends StatelessWidget {
   }
 }
 
-// Her rutin için ayrı açılıp kapanabilir tırnağa sahip yatay kaydırılabilir rapor tablosu kartı.
+// Her rutin için ayrı açılıp kapanabilir tırnağa ve PDF paylaşma butonuna sahip rapor tablosu kartı.
 class _RaporMatrisKarti extends StatelessWidget {
   final String baslik;
   final RaporTablosu tablo;
+  final VoidCallback pdfPaylasTiklandiginda;
 
   const _RaporMatrisKarti({
     required this.baslik,
     required this.tablo,
+    required this.pdfPaylasTiklandiginda,
   });
 
   String _kisaGunBasligi(String tarihMetni) {
@@ -235,8 +219,19 @@ class _RaporMatrisKarti extends StatelessWidget {
     if (tablo.satirlar.isEmpty) {
       return Card(
         child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Text('$baslik: Bu aralıkta kayıtlı görev yok.'),
+          padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text('$baslik: Bu aralıkta kayıtlı görev yok.'),
+              ),
+              TextButton.icon(
+                onPressed: pdfPaylasTiklandiginda,
+                icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
+                label: const Text('PDF Paylaş'),
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -245,11 +240,26 @@ class _RaporMatrisKarti extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: ExpansionTile(
         initiallyExpanded: true,
-        title: Text(
-          baslik,
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.bold,
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                baslik,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
               ),
+            ),
+            TextButton.icon(
+              onPressed: pdfPaylasTiklandiginda,
+              icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
+              label: const Text('PDF Paylaş'),
+              style: TextButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+              ),
+            ),
+          ],
         ),
         subtitle: Text('${tablo.satirlar.length} görev'),
         children: [
