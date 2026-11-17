@@ -25,6 +25,7 @@ class RutinAlarmAktivitesi : Activity() {
     private var rutinId: Int = 0
     private var rutinAdi: String = "Rutin"
     private var muzikYolu: String? = null
+    private var tetiklenmeMilis: Long = 0L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -43,6 +44,8 @@ class RutinAlarmAktivitesi : Activity() {
         rutinId = intent?.getIntExtra("rutinId", 0) ?: 0
         rutinAdi = intent?.getStringExtra("rutinAdi") ?: "Rutin"
         muzikYolu = intent?.getStringExtra("muzikYolu")
+        tetiklenmeMilis = intent?.getLongExtra("tetiklenmeMilis", System.currentTimeMillis())
+            ?: System.currentTimeMillis()
 
         arayuzuKur()
     }
@@ -98,6 +101,7 @@ class RutinAlarmAktivitesi : Activity() {
             val acilis = Intent(this, MainActivity::class.java).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
                 putExtra("acilis_rutin_id", rutinId)
+                putExtra("acilis_tetiklenme_milis", tetiklenmeMilis)
             }
             startActivity(acilis)
             finish()

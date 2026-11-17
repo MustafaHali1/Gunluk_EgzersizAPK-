@@ -308,8 +308,8 @@ class _BugunRutinKarti extends StatelessWidget {
             alignment: Alignment.centerRight,
             child: FilledButton.tonalIcon(
               onPressed: tiklandiginda,
-              icon: const Icon(Icons.open_in_new, size: 18),
-              label: const Text('Rutini Aç ve İşaretle'),
+              icon: const Icon(Icons.visibility_outlined, size: 18),
+              label: const Text('Rutini Görüntüle'),
             ),
           ),
         ],

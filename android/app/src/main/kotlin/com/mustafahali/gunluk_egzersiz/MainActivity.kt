@@ -13,6 +13,7 @@ class MainActivity : FlutterActivity() {
 
     private var alarmKanali: MethodChannel? = null
     private var bekleyenRutinId: Int? = null
+    private var bekleyenTetiklenmeMilis: Long? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -20,6 +21,8 @@ class MainActivity : FlutterActivity() {
         val rutinIdExtra = intent?.getIntExtra("acilis_rutin_id", -1) ?: -1
         if (rutinIdExtra > 0) {
             bekleyenRutinId = rutinIdExtra
+            val tetikExtra = intent?.getLongExtra("acilis_tetiklenme_milis", 0L) ?: 0L
+            bekleyenTetiklenmeMilis = if (tetikExtra > 0L) tetikExtra else System.currentTimeMillis()
         }
 
         alarmKanali = MethodChannel(
@@ -59,6 +62,7 @@ class MainActivity : FlutterActivity() {
                             putExtra("rutinId", rutinId)
                             putExtra("rutinAdi", rutinAdi)
                             putExtra("muzikYolu", muzikYolu)
+                            putExtra("tetiklenmeMilis", System.currentTimeMillis())
                         }
                         startActivity(aktiviteIntent)
                         result.success(true)
@@ -81,7 +85,24 @@ class MainActivity : FlutterActivity() {
                     "acilisRutinIdGetir" -> {
                         val id = bekleyenRutinId
                         bekleyenRutinId = null
+                        bekleyenTetiklenmeMilis = null
                         result.success(id)
+                    }
+                    "acilisRutinBilgisiGetir" -> {
+                        val id = bekleyenRutinId
+                        val tetik = bekleyenTetiklenmeMilis
+                        bekleyenRutinId = null
+                        bekleyenTetiklenmeMilis = null
+                        if (id != null && id > 0) {
+                            result.success(
+                                mapOf(
+                                    "rutinId" to id,
+                                    "tetiklenmeMilis" to (tetik ?: System.currentTimeMillis()),
+                                ),
+                            )
+                        } else {
+                            result.success(null)
+                        }
                     }
                     else -> result.notImplemented()
                 }
@@ -94,8 +115,14 @@ class MainActivity : FlutterActivity() {
         setIntent(intent)
         val rutinId = intent.getIntExtra("acilis_rutin_id", -1)
         if (rutinId > 0) {
+            val tetikExtra = intent.getLongExtra("acilis_tetiklenme_milis", 0L)
+            val tetik = if (tetikExtra > 0L) tetikExtra else System.currentTimeMillis()
             bekleyenRutinId = rutinId
-            alarmKanali?.invokeMethod("rutinAc", rutinId)
+            bekleyenTetiklenmeMilis = tetik
+            alarmKanali?.invokeMethod(
+                "rutinAc",
+                mapOf("rutinId" to rutinId, "tetiklenmeMilis" to tetik),
+            )
         }
     }
 }

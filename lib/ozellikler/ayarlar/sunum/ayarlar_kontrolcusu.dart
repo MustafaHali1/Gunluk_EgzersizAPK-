@@ -69,6 +69,9 @@ class AyarlarKontrolcusu extends Notifier<AsyncValue<void>> {
   Future<void> _bildirimYanitiniIsle(NotificationResponse yanit) async {
     try {
       final rutinId = BildirimServisi.payloaddanRutinIdCoz(yanit.payload);
+      final tetikMilis = BildirimServisi.payloaddanTetiklenmeMilisCoz(
+        yanit.payload,
+      );
 
       if (yanit.actionId == BildirimServisi.aksiyonYaptimId) {
         final simdi = DateTime.now();
@@ -82,8 +85,9 @@ class AyarlarKontrolcusu extends Notifier<AsyncValue<void>> {
 
       final rota = ref.read(uygulamaRotasiSaglayici);
       if (rutinId != null) {
+        final tetikParam = tetikMilis != null ? '&tetik=$tetikMilis' : '';
         rota.go(UygulamaSabitleri.rotaBugun);
-        rota.push('/rutin/$rutinId');
+        rota.push('/rutin/$rutinId?bildirim=1$tetikParam');
       } else {
         rota.go(UygulamaSabitleri.rotaBugun);
       }

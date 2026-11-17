@@ -10,6 +10,8 @@ class BugunHareketKarti extends StatelessWidget {
   final EgzersizlerData? egzersizDetayi;
   final ValueChanged<String> durumDegistirildiginde;
   final ValueChanged<String> notKaydedildiginde;
+  final bool isaretlemeAcikMi;
+  final String? kilitMesaji;
 
   const BugunHareketKarti({
     super.key,
@@ -17,6 +19,8 @@ class BugunHareketKarti extends StatelessWidget {
     required this.egzersizDetayi,
     required this.durumDegistirildiginde,
     required this.notKaydedildiginde,
+    this.isaretlemeAcikMi = true,
+    this.kilitMesaji,
   });
 
   String _hedefBilgisiOlustur() {
@@ -121,9 +125,32 @@ class BugunHareketKarti extends StatelessWidget {
               ),
             ],
             const SizedBox(height: 12),
+            if (!isaretlemeAcikMi && kilitMesaji != null) ...[
+              Row(
+                children: [
+                  Icon(
+                    yapildiMi ? Icons.lock_outline : Icons.notifications_paused,
+                    size: 15,
+                    color: Theme.of(context).colorScheme.outline,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      kilitMesaji!,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.outline,
+                            fontWeight: FontWeight.w500,
+                          ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+            ],
             _DurumButonlariSatiri(
               yapildiMi: yapildiMi,
               atlandiMi: atlandiMi,
+              etkinMi: isaretlemeAcikMi,
               yapildiTiklandiginda: () => durumDegistirildiginde('yapildi'),
               atlandiTiklandiginda: () => durumDegistirildiginde('atlandi'),
             ),
@@ -208,12 +235,14 @@ class _HareketBaslikSatiri extends StatelessWidget {
 class _DurumButonlariSatiri extends StatelessWidget {
   final bool yapildiMi;
   final bool atlandiMi;
+  final bool etkinMi;
   final VoidCallback yapildiTiklandiginda;
   final VoidCallback atlandiTiklandiginda;
 
   const _DurumButonlariSatiri({
     required this.yapildiMi,
     required this.atlandiMi,
+    required this.etkinMi,
     required this.yapildiTiklandiginda,
     required this.atlandiTiklandiginda,
   });
@@ -226,8 +255,7 @@ class _DurumButonlariSatiri extends StatelessWidget {
           child: Semantics(
             button: true,
             selected: yapildiMi,
-            label:
-                yapildiMi ? 'Yapıldı işaretini geri al' : 'Yaptım olarak işaretle',
+            label: yapildiMi ? 'Yapıldı (Kilitli)' : 'Yaptım olarak işaretle',
             child: SizedBox(
               height: UygulamaBoyutlari.dokunmaHedefiMin,
               child: yapildiMi
@@ -235,13 +263,16 @@ class _DurumButonlariSatiri extends StatelessWidget {
                       style: FilledButton.styleFrom(
                         backgroundColor: UygulamaRenkleri.basariYesili,
                         foregroundColor: Colors.white,
+                        disabledBackgroundColor: UygulamaRenkleri.basariYesili
+                            .withValues(alpha: 0.85),
+                        disabledForegroundColor: Colors.white,
                       ),
-                      onPressed: yapildiTiklandiginda,
-                      icon: const Icon(Icons.check),
-                      label: const Text('Yapıldı (Geri Al)'),
+                      onPressed: null,
+                      icon: const Icon(Icons.lock),
+                      label: const Text('Yapıldı (Kilitli)'),
                     )
                   : OutlinedButton.icon(
-                      onPressed: yapildiTiklandiginda,
+                      onPressed: etkinMi ? yapildiTiklandiginda : null,
                       icon: const Icon(Icons.check_circle_outline),
                       label: const Text(UygulamaMetinleri.yaptim),
                     ),
@@ -254,7 +285,7 @@ class _DurumButonlariSatiri extends StatelessWidget {
             button: true,
             selected: atlandiMi,
             label: atlandiMi
-                ? 'Yapmadım işaretini geri al'
+                ? 'Yapmadım olarak işaretli'
                 : 'Yapmadım olarak işaretle',
             child: SizedBox(
               height: UygulamaBoyutlari.dokunmaHedefiMin,
@@ -264,12 +295,12 @@ class _DurumButonlariSatiri extends StatelessWidget {
                         backgroundColor: UygulamaRenkleri.hataKirmizisi,
                         foregroundColor: Colors.white,
                       ),
-                      onPressed: atlandiTiklandiginda,
+                      onPressed: etkinMi ? atlandiTiklandiginda : null,
                       icon: const Icon(Icons.close),
-                      label: const Text('Yapmadım (Geri Al)'),
+                      label: const Text('Yapmadım'),
                     )
                   : OutlinedButton.icon(
-                      onPressed: atlandiTiklandiginda,
+                      onPressed: etkinMi ? atlandiTiklandiginda : null,
                       icon: const Icon(Icons.cancel_outlined),
                       label: const Text(UygulamaMetinleri.atladim),
                     ),

@@ -14,6 +14,7 @@ class AyarlarEkrani extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final temaModu = ref.watch(temaModuKontrolcusuSaglayici);
     final ertelemeDk = ref.watch(ertelemeSuresiKontrolcusuSaglayici);
+    final gecerlilikDk = ref.watch(gecerlilikSuresiKontrolcusuSaglayici);
 
     return Scaffold(
       appBar: AppBar(title: const Text(UygulamaSabitleri.sekmeAyarlar)),
@@ -35,6 +36,12 @@ class AyarlarEkrani extends ConsumerWidget {
               ref
                   .read(ertelemeSuresiKontrolcusuSaglayici.notifier)
                   .ertelemeSuresiniDegistir(dk);
+            },
+            gecerlilikDakika: gecerlilikDk,
+            gecerlilikDegistiginde: (dk) {
+              ref
+                  .read(gecerlilikSuresiKontrolcusuSaglayici.notifier)
+                  .gecerlilikSuresiniDegistir(dk);
             },
           ),
           const SizedBox(height: 16),
@@ -113,10 +120,14 @@ class _TemaSecimKarti extends StatelessWidget {
 class _ErtelemeSuresiKarti extends StatelessWidget {
   final int seciliDakika;
   final ValueChanged<int> degistiginde;
+  final int gecerlilikDakika;
+  final ValueChanged<int> gecerlilikDegistiginde;
 
   const _ErtelemeSuresiKarti({
     required this.seciliDakika,
     required this.degistiginde,
+    required this.gecerlilikDakika,
+    required this.gecerlilikDegistiginde,
   });
 
   static const _secenekler = <(int, String)>[
@@ -205,6 +216,32 @@ class _ErtelemeSuresiKarti extends StatelessWidget {
                   onSelected: (_) => _ozelSureSor(context),
                 ),
               ],
+            ),
+            const Divider(height: 24),
+            Text(
+              'İşaretleme Geçerlilik Süresi',
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Alarm çaldıktan sonra kaç dakika içinde bildirimle açılırsa görevler işaretlenebilir olsun.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [15, 30, 60]
+                  .map(
+                    (dk) => ChoiceChip(
+                      label: Text('$dk dk'),
+                      selected: gecerlilikDakika == dk,
+                      onSelected: (_) => gecerlilikDegistiginde(dk),
+                    ),
+                  )
+                  .toList(),
             ),
           ],
         ),

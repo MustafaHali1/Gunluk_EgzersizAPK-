@@ -48,7 +48,16 @@ final uygulamaRotasiSaglayici = Provider<GoRouter>((ref) {
         path: '/rutin/:id',
         builder: (context, durum) {
           final id = int.tryParse(durum.pathParameters['id'] ?? '') ?? 0;
-          return RutinDetayEkrani(rutinId: id);
+          final bildirimdenGeldi =
+              durum.uri.queryParameters['bildirim'] == '1';
+          final tetik = int.tryParse(
+            durum.uri.queryParameters['tetik'] ?? '',
+          );
+          return RutinDetayEkrani(
+            rutinId: id,
+            bildirimdenGeldi: bildirimdenGeldi,
+            bildirimTetikMilis: tetik,
+          );
         },
       ),
       StatefulShellRoute.indexedStack(

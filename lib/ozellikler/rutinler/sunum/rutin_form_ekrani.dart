@@ -30,7 +30,6 @@ class _RutinFormEkraniState extends ConsumerState<RutinFormEkrani> {
   final Set<int> _seciliGunler = {1, 2, 3, 4, 5, 6, 7};
   final List<EgzersizlerData> _seciliGorevler = [];
   bool _sadeceBugunMu = false;
-  bool _alarmAcikMi = false;
   final List<TimeOfDay> _alarmSaatleri = [const TimeOfDay(hour: 9, minute: 0)];
   String? _alarmMuzikYolu;
   String? _alarmMuzikAdi;
@@ -43,7 +42,6 @@ class _RutinFormEkraniState extends ConsumerState<RutinFormEkrani> {
     _adDenetleyici = TextEditingController(text: r?.ad ?? '');
     if (r != null) {
       _sadeceBugunMu = r.sadeceTarih != null;
-      _alarmAcikMi = r.alarmAcikMi;
       final cozulen = TarihYardimcisi.alarmSaatleriniCoz(
         alarmSaatleriMetni: r.alarmSaatleri,
         varsayilanSaat: r.alarmSaati,
@@ -270,7 +268,7 @@ class _RutinFormEkraniState extends ConsumerState<RutinFormEkrani> {
           sadeceTarih: _sadeceBugunMu
               ? (widget.duzenlenecekRutin?.sadeceTarih ?? bugun)
               : null,
-          alarmAcikMi: _alarmAcikMi,
+          alarmAcikMi: true,
           alarmSaati: ilkSaat.$1,
           alarmDakikasi: ilkSaat.$2,
           alarmSaatleri: alarmSaatleriMetni,
@@ -369,12 +367,9 @@ class _RutinFormEkraniState extends ConsumerState<RutinFormEkrani> {
                   ],
                   const Divider(height: 24),
                   _RutinAlarmAyarKarti(
-                    alarmAcikMi: _alarmAcikMi,
                     saatMetinleri: saatMetinleri,
                     muzikAdi: _alarmMuzikAdi ?? 'Varsayılan Sistem Alarmı',
                     ozelMuzikVarMi: _alarmMuzikYolu != null,
-                    alarmAcikDegistiginde: (deger) =>
-                        setState(() => _alarmAcikMi = deger),
                     saatEkleTiklandiginda: _alarmSaatiEkle,
                     saatDuzenleTiklandiginda: _alarmSaatiDuzenle,
                     saatSilTiklandiginda: _alarmSaatiSil,
@@ -466,13 +461,11 @@ class _RutinFormEkraniState extends ConsumerState<RutinFormEkrani> {
   }
 }
 
-// Rutine özel birden fazla alarm saati, MP3 müzik seçimi ve test kartı.
+// Rutine özel birden fazla alarm saati, MP3 müzik seçimi ve test kartı (her rutin alarmlıdır).
 class _RutinAlarmAyarKarti extends StatelessWidget {
-  final bool alarmAcikMi;
   final List<String> saatMetinleri;
   final String muzikAdi;
   final bool ozelMuzikVarMi;
-  final ValueChanged<bool> alarmAcikDegistiginde;
   final VoidCallback saatEkleTiklandiginda;
   final ValueChanged<int> saatDuzenleTiklandiginda;
   final ValueChanged<int> saatSilTiklandiginda;
@@ -482,11 +475,9 @@ class _RutinAlarmAyarKarti extends StatelessWidget {
   final VoidCallback susturTiklandiginda;
 
   const _RutinAlarmAyarKarti({
-    required this.alarmAcikMi,
     required this.saatMetinleri,
     required this.muzikAdi,
     required this.ozelMuzikVarMi,
-    required this.alarmAcikDegistiginde,
     required this.saatEkleTiklandiginda,
     required this.saatDuzenleTiklandiginda,
     required this.saatSilTiklandiginda,
@@ -504,43 +495,26 @@ class _RutinAlarmAyarKarti extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              secondary: Icon(
-                alarmAcikMi ? Icons.alarm_on : Icons.alarm_off_outlined,
-              ),
-              title: const Text(
-                'Bu Rutin İçin Alarm Çalsın',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              subtitle: const Text(
-                'Günde bir veya birden çok saat ve kendi müziğinizi seçebilirsiniz.',
-              ),
-              value: alarmAcikMi,
-              onChanged: alarmAcikDegistiginde,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.alarm_on, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Alarm Saatleri (${saatMetinleri.length})',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+                FilledButton.tonalIcon(
+                  onPressed: saatEkleTiklandiginda,
+                  icon: const Icon(Icons.add_alarm, size: 18),
+                  label: const Text('+ Alarm Ekle'),
+                ),
+              ],
             ),
-            if (alarmAcikMi) ...[
-              const Divider(),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.schedule, size: 20),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Alarm Saatleri (${saatMetinleri.length})',
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                    ],
-                  ),
-                  FilledButton.tonalIcon(
-                    onPressed: saatEkleTiklandiginda,
-                    icon: const Icon(Icons.add_alarm, size: 18),
-                    label: const Text('+ Alarm Ekle'),
-                  ),
-                ],
-              ),
               const SizedBox(height: 8),
               Wrap(
                 spacing: 8,
@@ -597,7 +571,6 @@ class _RutinAlarmAyarKarti extends StatelessWidget {
                   ),
                 ],
               ),
-            ],
           ],
         ),
       ),

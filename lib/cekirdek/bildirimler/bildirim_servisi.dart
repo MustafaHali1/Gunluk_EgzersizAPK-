@@ -63,7 +63,18 @@ class BildirimServisi {
 
   static int? payloaddanRutinIdCoz(String? payload) {
     if (payload == null || !payload.startsWith('/rutin/')) return null;
+    final uri = Uri.tryParse(payload);
+    if (uri != null && uri.pathSegments.length >= 2) {
+      return int.tryParse(uri.pathSegments[1]);
+    }
     return int.tryParse(payload.replaceFirst('/rutin/', ''));
+  }
+
+  static int? payloaddanTetiklenmeMilisCoz(String? payload) {
+    if (payload == null || !payload.startsWith('/rutin/')) return null;
+    final uri = Uri.tryParse(payload);
+    final tetik = uri?.queryParameters['tetik'];
+    return tetik != null ? int.tryParse(tetik) : null;
   }
 
   // Bildirim servisini ve yerel saat dilimini başlatır.
@@ -124,13 +135,22 @@ class BildirimServisi {
       if (Platform.isAndroid) {
         _alarmKanali.setMethodCallHandler((cagri) async {
           if (cagri.method == 'rutinAc') {
-            final rutinId = (cagri.arguments as num?)?.toInt();
+            int? rutinId;
+            int? tetik;
+            if (cagri.arguments is Map) {
+              final args = cagri.arguments as Map;
+              rutinId = (args['rutinId'] as num?)?.toInt();
+              tetik = (args['tetiklenmeMilis'] as num?)?.toInt();
+            } else {
+              rutinId = (cagri.arguments as num?)?.toInt();
+            }
             if (rutinId != null && rutinId > 0) {
+              final tetikSorgu = tetik != null ? '?tetik=$tetik' : '';
               _onTepkiVerildiginde?.call(
                 NotificationResponse(
                   notificationResponseType:
                       NotificationResponseType.selectedNotification,
-                  payload: '/rutin/$rutinId',
+                  payload: '/rutin/$rutinId$tetikSorgu',
                 ),
               );
             }
@@ -235,14 +255,16 @@ class BildirimServisi {
   Future<NotificationResponse?> acilisBildirimYanitiniGetir() async {
     try {
       if (Platform.isAndroid) {
-        final acilisRutinId = await _alarmKanali.invokeMethod<int?>(
-          'acilisRutinIdGetir',
-        );
+        final acilisBilgisi = await _alarmKanali
+            .invokeMethod<Map<Object?, Object?>?>('acilisRutinBilgisiGetir');
+        final acilisRutinId = (acilisBilgisi?['rutinId'] as num?)?.toInt();
+        final tetik = (acilisBilgisi?['tetiklenmeMilis'] as num?)?.toInt();
         if (acilisRutinId != null && acilisRutinId > 0) {
+          final tetikSorgu = tetik != null ? '?tetik=$tetik' : '';
           return NotificationResponse(
             notificationResponseType:
                 NotificationResponseType.selectedNotification,
-            payload: '/rutin/$acilisRutinId',
+            payload: '/rutin/$acilisRutinId$tetikSorgu',
           );
         }
       }
@@ -347,7 +369,7 @@ class BildirimServisi {
               'rutinAdi': r.ad,
               'saat': saat,
               'dakika': dakika,
-              'alarmAcikMi': r.alarmAcikMi,
+              'alarmAcikMi': true,
               'sadeceTarih': r.sadeceTarih,
               'haftaninGunleri': r.haftaninGunleri,
               'muzikYolu': r.alarmMuzikYolu,

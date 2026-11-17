@@ -16,6 +16,8 @@ class UygulamaTercihleriServisi {
   static const String _anahtarAlarmMuzikAdi = 'tercih_alarm_muzik_adi';
   static const String _anahtarVarsayilanErtelemeDk =
       'tercih_varsayilan_erteleme_dakika';
+  static const String _anahtarIsaretlemeGecerlilikDk =
+      'tercih_isaretleme_gecerlilik_dakika';
 
   Future<ThemeMode> temaModunuGetir() async {
     final tercihler = await SharedPreferences.getInstance();
@@ -92,6 +94,22 @@ class UygulamaTercihleriServisi {
     await tercihler.setInt(
       _anahtarVarsayilanErtelemeDk,
       dakika.clamp(1, 720),
+    );
+  }
+
+  Future<int> isaretlemeGecerlilikDakikasiGetir() async {
+    final tercihler = await SharedPreferences.getInstance();
+    return (tercihler.getInt(_anahtarIsaretlemeGecerlilikDk) ?? 30).clamp(
+      5,
+      180,
+    );
+  }
+
+  Future<void> isaretlemeGecerlilikDakikasiKaydet(int dakika) async {
+    final tercihler = await SharedPreferences.getInstance();
+    await tercihler.setInt(
+      _anahtarIsaretlemeGecerlilikDk,
+      dakika.clamp(5, 180),
     );
   }
 
@@ -182,4 +200,31 @@ class ErtelemeSuresiKontrolcusu extends Notifier<int> {
 final ertelemeSuresiKontrolcusuSaglayici =
     NotifierProvider<ErtelemeSuresiKontrolcusu, int>(
       ErtelemeSuresiKontrolcusu.new,
+    );
+
+// Bildirim geldikten sonra işaretlemenin ne kadar süre (dakika) açık kalacağını yöneten kontrolcü.
+class GecerlilikSuresiKontrolcusu extends Notifier<int> {
+  @override
+  int build() {
+    _yukle();
+    return 30;
+  }
+
+  Future<void> _yukle() async {
+    final servis = ref.read(uygulamaTercihleriServisiSaglayici);
+    state = await servis.isaretlemeGecerlilikDakikasiGetir();
+  }
+
+  Future<void> gecerlilikSuresiniDegistir(int yeniDakika) async {
+    final guvenli = yeniDakika.clamp(5, 180);
+    state = guvenli;
+    final servis = ref.read(uygulamaTercihleriServisiSaglayici);
+    await servis.isaretlemeGecerlilikDakikasiKaydet(guvenli);
+  }
+}
+
+// GecerlilikSuresiKontrolcusu sağlayıcısı.
+final gecerlilikSuresiKontrolcusuSaglayici =
+    NotifierProvider<GecerlilikSuresiKontrolcusu, int>(
+      GecerlilikSuresiKontrolcusu.new,
     );

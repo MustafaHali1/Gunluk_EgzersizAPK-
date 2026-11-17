@@ -9,6 +9,7 @@ import 'package:gunluk_egzersiz/cekirdek/sabitler/uygulama_sabitleri.dart';
 import 'package:gunluk_egzersiz/cekirdek/veritabani/uygulama_veritabani.dart';
 import 'package:gunluk_egzersiz/main.dart';
 import 'package:gunluk_egzersiz/ozellikler/egzersizler/sunum/egzersiz_form_alt_sayfasi.dart';
+import 'package:gunluk_egzersiz/ozellikler/rutinler/sunum/rutin_detay_ekrani.dart';
 
 void main() {
   testWidgets('Ana iskelet ve 4 alt sekme ekranda görünür', (
@@ -71,21 +72,82 @@ void main() {
 
     expect(find.text('Sabah Rutinim'), findsOneWidget);
 
-    // Rutin kartına basınca rutin içi açılır
+    // Rutin kartına basınca rutin içi görüntüleme (kilitli) modunda açılır
     await testci.tap(find.text('Sabah Rutinim'));
     await testci.pump();
     await testci.pump(const Duration(milliseconds: 300));
 
     expect(find.text('Boyun Esnetme'), findsOneWidget);
     expect(find.text('Yaptım'), findsOneWidget);
+    expect(find.text('Bildirim gelene kadar kilitli'), findsOneWidget);
 
-    // "Yaptım" butonuna dokun
+    // Bildirim gelmeden önce Yaptım butonu kilitli olduğu için durum değişmez
     await testci.tap(find.text('Yaptım'));
     await testci.pump();
     await testci.pump(const Duration(milliseconds: 200));
+    expect(find.text('%0'), findsOneWidget);
 
-    expect(find.text('Yapıldı (Geri Al)'), findsOneWidget);
-    expect(find.text('%100'), findsOneWidget);
+    await testci.pumpWidget(const SizedBox.shrink());
+    await testVeritabani.close();
+  });
+
+  testWidgets('Bildirimden açılan rutinde Yapıldı kilitlenir, Yapılmadı açık kalır', (
+    WidgetTester testci,
+  ) async {
+    final testVeritabani = UygulamaVeritabani(NativeDatabase.memory());
+    final egzId1 = await testVeritabani.egzersizDao.egzersizEkle(
+      EgzersizlerCompanion.insert(
+        ad: 'Sabah İlaci',
+        tur: 'tekrarli',
+        kategori: const Value('Sağlık'),
+      ),
+    );
+    final egzId2 = await testVeritabani.egzersizDao.egzersizEkle(
+      EgzersizlerCompanion.insert(
+        ad: 'Esneme',
+        tur: 'tekrarli',
+        kategori: const Value('Spor'),
+      ),
+    );
+    final rutinId = await testVeritabani.rutinDao.rutinOlusturVeEgzersizleriKaydet(
+      ad: 'Sağlık Rutini',
+      haftaninGunleri: '1,2,3,4,5,6,7',
+      aktifMi: true,
+      alarmAcikMi: true,
+      egzersizIdListesi: [egzId1, egzId2],
+    );
+
+    final gecerliTetik = DateTime.now().millisecondsSinceEpoch;
+    await testci.pumpWidget(
+      ProviderScope(
+        overrides: [
+          veritabaniSaglayici.overrideWithValue(testVeritabani),
+        ],
+        child: MaterialApp(
+          home: RutinDetayEkrani(
+            rutinId: rutinId,
+            bildirimdenGeldi: true,
+            bildirimTetikMilis: gecerliTetik,
+          ),
+        ),
+      ),
+    );
+    await testci.pump();
+    await testci.pump(const Duration(milliseconds: 300));
+
+    // İlk görevi Yaptım işaretle -> kilitlenir
+    await testci.tap(find.text('Yaptım').first);
+    await testci.pump();
+    await testci.pump(const Duration(milliseconds: 200));
+
+    expect(find.text('Yapıldı (Kilitli)'), findsOneWidget);
+
+    // İkinci görevi Yapmadım işaretle -> kilitlenmez, Yaptım butonu kalır
+    await testci.tap(find.text('Yapmadım').last);
+    await testci.pump();
+    await testci.pump(const Duration(milliseconds: 200));
+
+    expect(find.text('Yaptım'), findsOneWidget);
 
     await testci.pumpWidget(const SizedBox.shrink());
     await testVeritabani.close();

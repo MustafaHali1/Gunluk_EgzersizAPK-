@@ -43,6 +43,7 @@ class RutinAlarmServisi : Service() {
     private var mevcutRutinId: Int = 0
     private var mevcutRutinAdi: String = "Rutin"
     private var mevcutMuzikYolu: String? = null
+    private var mevcutTetiklenmeMilis: Long = 0L
 
     private val otomatikDurdurGorevi = Runnable {
         alarmiKapatVeDurdur()
@@ -60,10 +61,13 @@ class RutinAlarmServisi : Service() {
             }
             ACTION_DURDUR_VE_AC -> {
                 val rutinId = intent?.getIntExtra("rutinId", mevcutRutinId) ?: mevcutRutinId
+                val tetik = intent?.getLongExtra("tetiklenmeMilis", mevcutTetiklenmeMilis)
+                    ?: mevcutTetiklenmeMilis
                 alarmiKapatVeDurdur()
                 val acilis = Intent(this, MainActivity::class.java).apply {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
                     putExtra("acilis_rutin_id", rutinId)
+                    putExtra("acilis_tetiklenme_milis", tetik)
                 }
                 startActivity(acilis)
                 return START_NOT_STICKY
@@ -96,12 +100,14 @@ class RutinAlarmServisi : Service() {
                 mevcutRutinId = intent?.getIntExtra("rutinId", 0) ?: 0
                 mevcutRutinAdi = intent?.getStringExtra("rutinAdi") ?: "Rutin"
                 mevcutMuzikYolu = intent?.getStringExtra("muzikYolu")
+                mevcutTetiklenmeMilis = System.currentTimeMillis()
 
                 kanaliOlustur()
                 val bildirim = alarmBildirimiOlustur(
                     rutinId = mevcutRutinId,
                     rutinAdi = mevcutRutinAdi,
                     muzikYolu = mevcutMuzikYolu,
+                    tetiklenmeMilis = mevcutTetiklenmeMilis,
                 )
                 startForeground(BILDIRIM_ID, bildirim)
 
@@ -116,6 +122,7 @@ class RutinAlarmServisi : Service() {
                             putExtra("rutinId", mevcutRutinId)
                             putExtra("rutinAdi", mevcutRutinAdi)
                             putExtra("muzikYolu", mevcutMuzikYolu)
+                            putExtra("tetiklenmeMilis", mevcutTetiklenmeMilis)
                         }
                         startActivity(aktiviteIntent)
                     } catch (_: Exception) {
@@ -153,19 +160,14 @@ class RutinAlarmServisi : Service() {
         rutinId: Int,
         rutinAdi: String,
         muzikYolu: String?,
+        tetiklenmeMilis: Long,
     ): Notification {
-        val varsayilanErteleme = RutinAlarmYoneticisi.varsayilanErtelemeDakikasıGetir(this)
-        val ertelemeEtiketi = if (varsayilanErteleme >= 60 && varsayilanErteleme % 60 == 0) {
-            "${varsayilanErteleme / 60} sa Ertele"
-        } else {
-            "$varsayilanErteleme dk Ertele"
-        }
-
         val aktiviteIntent = Intent(this, RutinAlarmAktivitesi::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
             putExtra("rutinId", rutinId)
             putExtra("rutinAdi", rutinAdi)
             putExtra("muzikYolu", muzikYolu)
+            putExtra("tetiklenmeMilis", tetiklenmeMilis)
         }
         val tamEkranPendingIntent = PendingIntent.getActivity(
             this,
@@ -184,23 +186,10 @@ class RutinAlarmServisi : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
-        val hizliErteleIntent = Intent(this, RutinAlarmServisi::class.java).apply {
-            action = ACTION_HIZLI_ERTELE
-            putExtra("rutinId", rutinId)
-            putExtra("rutinAdi", rutinAdi)
-            putExtra("muzikYolu", muzikYolu)
-            putExtra("ertelemeDakika", varsayilanErteleme)
-        }
-        val hizliErtelePendingIntent = PendingIntent.getService(
-            this,
-            30003,
-            hizliErteleIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-        )
-
         val durdurVeAcIntent = Intent(this, RutinAlarmServisi::class.java).apply {
             action = ACTION_DURDUR_VE_AC
             putExtra("rutinId", rutinId)
+            putExtra("tetiklenmeMilis", tetiklenmeMilis)
         }
         val durdurVeAcPendingIntent = PendingIntent.getService(
             this,

@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../cekirdek/ayarlar/uygulama_tercihleri_servisi.dart';
 import '../../../cekirdek/sabitler/uygulama_sabitleri.dart';
 import '../../../cekirdek/veritabani/uygulama_veritabani.dart';
 import '../../../cekirdek/yardimcilar/tarih_yardimcisi.dart';
@@ -66,13 +67,17 @@ final rutinDetayDurumuSaglayici =
       );
     });
 
-// Kullanıcının yalnızca görevleri "Yaptım" / "Yapmadım" işaretleyip Kaydet'e bastığı ekran.
+// Kullanıcının görevleri bildirim geldiğinde Yaptım / Yapmadım işaretlediği, normal zamanlarda görüntüleyebildiği ekran.
 class RutinDetayEkrani extends ConsumerWidget {
   final int rutinId;
+  final bool bildirimdenGeldi;
+  final int? bildirimTetikMilis;
 
   const RutinDetayEkrani({
     super.key,
     required this.rutinId,
+    this.bildirimdenGeldi = false,
+    this.bildirimTetikMilis,
   });
 
   void _tumEkranlariTazele(WidgetRef ref) {
@@ -139,6 +144,12 @@ class RutinDetayEkrani extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final detayDurumu = ref.watch(rutinDetayDurumuSaglayici(rutinId));
+    final gecerlilikDk = ref.watch(gecerlilikSuresiKontrolcusuSaglayici);
+    final simdiMilis = DateTime.now().millisecondsSinceEpoch;
+    final suresiGectiMi = bildirimdenGeldi &&
+        bildirimTetikMilis != null &&
+        (simdiMilis - bildirimTetikMilis!) > (gecerlilikDk * 60 * 1000);
+    final bildirimAktifMi = bildirimdenGeldi && !suresiGectiMi;
 
     return detayDurumu.when(
       loading: () => Scaffold(
@@ -158,21 +169,58 @@ class RutinDetayEkrani extends ConsumerWidget {
         }
 
         final yuzde = (durum.oran * 100).round();
+        final enAzBirKilitsizGorevVar = durum.gorevKayitlari.any(
+          (k) =>
+              k.durum == 'atlandi' ||
+              (k.durum == 'bekliyor' && bildirimAktifMi),
+        );
+
         return Scaffold(
           appBar: AppBar(
             title: Text(durum.rutin.ad),
             actions: [
-              FilledButton.icon(
-                onPressed: () => _kaydetVeKapat(context, ref),
-                icon: const Icon(Icons.check),
-                label: const Text('Kaydet'),
-              ),
+              if (enAzBirKilitsizGorevVar)
+                FilledButton.icon(
+                  onPressed: () => _kaydetVeKapat(context, ref),
+                  icon: const Icon(Icons.check),
+                  label: const Text('Kaydet'),
+                ),
               const SizedBox(width: 12),
             ],
           ),
           body: ListView(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
             children: [
+              if (!bildirimAktifMi)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Card(
+                    color: suresiGectiMi
+                        ? Theme.of(context).colorScheme.errorContainer
+                        : Theme.of(context).colorScheme.surfaceContainerHighest,
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Row(
+                        children: [
+                          Icon(
+                            suresiGectiMi
+                                ? Icons.timer_off_outlined
+                                : Icons.lock_clock_outlined,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              suresiGectiMi
+                                  ? 'Bu görevin süresi ($gecerlilikDk dk) geçtiği için bekleyen görevler işaretlenemez. Daha önce "Yapılmadı" dediğiniz görevleri ise hâlâ "Yaptım" yapabilirsiniz.'
+                                  : 'Görüntüleme modu: Bekleyen görevleri işaretlemek için alarm bildiriminin gelmesi gerekir. Daha önce "Yapılmadı" dediğiniz görevleri dilediğiniz zaman "Yaptım" yapabilirsiniz.',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
               Card(
                 color: Theme.of(context).colorScheme.primaryContainer,
                 child: Padding(
@@ -214,7 +262,7 @@ class RutinDetayEkrani extends ConsumerWidget {
                             '${durum.yapilanSayisi}/${durum.toplamSayisi} yapıldı • ${durum.yapilmayanSayisi} yapılmadı',
                             style: Theme.of(context).textTheme.bodySmall,
                           ),
-                          if (durum.bekleyenSayisi > 0)
+                          if (bildirimAktifMi && durum.bekleyenSayisi > 0)
                             TextButton.icon(
                               onPressed: () => _tumunuYaptim(ref),
                               icon: const Icon(Icons.done_all, size: 18),
@@ -238,26 +286,37 @@ class RutinDetayEkrani extends ConsumerWidget {
                   ),
                 )
               else
-                ...durum.gorevKayitlari.map(
-                  (kayit) => BugunHareketKarti(
+                ...durum.gorevKayitlari.map((kayit) {
+                  final yapildiMi = kayit.durum == 'yapildi';
+                  final atlandiMi = kayit.durum == 'atlandi';
+                  final gorevAcikMi = !yapildiMi && (atlandiMi || bildirimAktifMi);
+                  final kilitMesaji = yapildiMi
+                      ? 'Tamamlandı (Kilitli)'
+                      : suresiGectiMi
+                          ? 'Süresi geçtiği için kilitli'
+                          : 'Bildirim gelene kadar kilitli';
+                  return BugunHareketKarti(
                     kayit: kayit,
                     egzersizDetayi:
                         durum.gorevDetayHaritasi[kayit.egzersizId],
+                    isaretlemeAcikMi: gorevAcikMi,
+                    kilitMesaji: gorevAcikMi ? null : kilitMesaji,
                     durumDegistirildiginde: (hedefDurum) =>
                         _durumDegistir(ref, kayit, hedefDurum),
                     notKaydedildiginde: (notMetni) =>
                         _notKaydet(ref, kayit, notMetni),
+                  );
+                }),
+              const SizedBox(height: 16),
+              if (enAzBirKilitsizGorevVar)
+                SizedBox(
+                  height: 48,
+                  child: FilledButton.icon(
+                    onPressed: () => _kaydetVeKapat(context, ref),
+                    icon: const Icon(Icons.save),
+                    label: const Text('Kaydet'),
                   ),
                 ),
-              const SizedBox(height: 16),
-              SizedBox(
-                height: 48,
-                child: FilledButton.icon(
-                  onPressed: () => _kaydetVeKapat(context, ref),
-                  icon: const Icon(Icons.save),
-                  label: const Text('Kaydet'),
-                ),
-              ),
             ],
           ),
         );
