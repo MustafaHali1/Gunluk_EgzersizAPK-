@@ -194,6 +194,26 @@ void main() {
       durum: 'yapildi',
     );
 
+    // İlk alarmdan sonra rutine ikinci görev eklense bile ikinci alarmda her iki görev de açılır
+    final egzId2 = await testVeritabani.egzersizDao.egzersizEkle(
+      EgzersizlerCompanion.insert(
+        ad: 'Test 2',
+        tur: 'tekrarli',
+        kategori: const Value('Sağlık'),
+      ),
+    );
+    await testVeritabani.rutinDao.rutinVeEgzersizleriGuncelle(
+      rutinId: rutinId,
+      ad: 'İlaç Rutini',
+      haftaninGunleri: '1,2,3,4,5,6,7',
+      aktifMi: true,
+      alarmAcikMi: true,
+      alarmSaati: 11,
+      alarmDakikasi: 41,
+      alarmSaatleri: '11:41,11:43',
+      egzersizIdListesi: [egzId, egzId2],
+    );
+
     final gecerliTetik = DateTime.now().millisecondsSinceEpoch;
     await testci.pumpWidget(
       ProviderScope(
@@ -213,9 +233,11 @@ void main() {
     await testci.pump();
     await testci.pump(const Duration(milliseconds: 300));
 
-    // İkinci alarm (11:43) ilk seansın (11:41) Yapıldı kilidinden etkilenmeden taze açılır
+    // İkinci alarmda hem ilk görev (İlaç İç) hem yeni görev (Test 2) taze işaretlenebilir açılır
     expect(find.text('İlaç Rutini • 11:43'), findsOneWidget);
-    expect(find.text('Yaptım'), findsOneWidget);
+    expect(find.text('İlaç İç'), findsOneWidget);
+    expect(find.text('Test 2'), findsOneWidget);
+    expect(find.text('Yaptım'), findsNWidgets(2));
     expect(find.text('Yapıldı (Kilitli)'), findsNothing);
 
     await testci.pumpWidget(const SizedBox.shrink());

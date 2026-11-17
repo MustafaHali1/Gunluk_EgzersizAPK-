@@ -161,6 +161,17 @@ class RaporKontrolcusu extends AsyncNotifier<RaporDurumu> {
           )
           .toList();
 
+      final seansSaatleri = TarihYardimcisi.alarmSaatleriniCoz(
+        alarmSaatleriMetni: rutin.alarmSaatleri,
+        varsayilanSaat: rutin.alarmSaati,
+        varsayilanDakika: rutin.alarmDakikasi,
+      )
+          .map(
+            (e) =>
+                '${e.$1.toString().padLeft(2, '0')}:${e.$2.toString().padLeft(2, '0')}',
+          )
+          .toList();
+
       final rutinTablosu = RaporOlusturucu.olustur(
         baslangic: baslangic,
         bitis: bitis,
@@ -168,6 +179,7 @@ class RaporKontrolcusu extends AsyncNotifier<RaporDurumu> {
         planliHaftaninGunleri: rutinGunleri,
         rutinEgzersizleri: rutinGorevleri,
         bugunReferansi: temizBugun,
+        seansSaatleri: seansSaatleri,
       );
 
       rutinGruplari.add(

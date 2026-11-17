@@ -95,4 +95,73 @@ void main() {
       expect(pdfBaytlari.isNotEmpty, true);
     },
   );
+
+  test(
+    'RaporOlusturucu birden fazla alarm saatini ayrı satırlar olarak raporlar',
+    () {
+      const hareket = EgzersizlerData(
+        id: 1,
+        ad: 'İlaç',
+        aciklama: '',
+        tur: 'tekrarli',
+        sureSaniye: null,
+        setSayisi: null,
+        tekrarSayisi: null,
+        kategori: 'Sağlık',
+        arsivlendiMi: false,
+      );
+
+      final rapor = RaporOlusturucu.olustur(
+        baslangic: DateTime(2026, 11, 17),
+        bitis: DateTime(2026, 11, 17),
+        planliHaftaninGunleri: {2}, // Salı
+        rutinEgzersizleri: const [hareket],
+        seansSaatleri: const ['11:41', '11:43'],
+        antrenmanKayitlari: const [
+          GunlukAntrenmanDetayi(
+            antrenmanKaydi: AntrenmanKayitlariData(
+              id: 1,
+              tarih: '2026-11-17',
+              rutinId: 1,
+            ),
+            egzersizKayitlari: [
+              EgzersizKayitlariData(
+                id: 1,
+                antrenmanKaydiId: 1,
+                egzersizId: 1,
+                rutinId: 1,
+                egzersizAdiKopyasi: 'İlaç',
+                durum: 'yapildi',
+                notMetni: null,
+                seansSaati: '11:41',
+              ),
+              EgzersizKayitlariData(
+                id: 2,
+                antrenmanKaydiId: 1,
+                egzersizId: 1,
+                rutinId: 1,
+                egzersizAdiKopyasi: 'İlaç',
+                durum: 'bekliyor',
+                notMetni: null,
+                seansSaati: '11:43',
+              ),
+            ],
+          ),
+        ],
+      );
+
+      expect(rapor.satirlar.length, 2);
+      expect(rapor.satirlar[0].egzersizAdi, 'İlaç (11:41)');
+      expect(
+        rapor.satirlar[0].gunlukDurumlar['2026-11-17'],
+        RaporHucreDurumu.yapildi,
+      );
+      expect(rapor.satirlar[1].egzersizAdi, 'İlaç (11:43)');
+      expect(
+        rapor.satirlar[1].gunlukDurumlar['2026-11-17'],
+        RaporHucreDurumu.yapilmadi,
+      );
+      expect(rapor.genelTamamlanmaYuzdesi, 50);
+    },
+  );
 }

@@ -67,6 +67,7 @@ class RaporOlusturucu {
     required Set<int> planliHaftaninGunleri,
     required List<EgzersizlerData> rutinEgzersizleri,
     DateTime? bugunReferansi,
+    List<String> seansSaatleri = const [],
   }) {
     final temizBaslangic = DateTime(
       baslangic.year,
@@ -112,71 +113,83 @@ class RaporOlusturucu {
     int toplamYapilan = 0;
     int toplamPlanlanan = 0;
 
+    final cokluSeans = seansSaatleri.length > 1;
+    final seansListesi = cokluSeans ? seansSaatleri : const [''];
+
     for (final giris in egzersizAdHaritasi.entries) {
       final egzId = giris.key;
       final egzAdi = giris.value;
-      final hucreler = <String, RaporHucreDurumu>{};
-      int satirYapilan = 0;
-      int satirPlanlanan = 0;
 
-      for (final gunMetni in gunler) {
-        final gunTarihi = TarihYardimcisi.metindenTarihe(gunMetni);
-        // Gelecek günler henüz gelmediği için 'planliDegil' (➖) olarak gösterilir
-        if (temizBugun != null && gunTarihi.isAfter(temizBugun)) {
-          hucreler[gunMetni] = RaporHucreDurumu.planliDegil;
-          continue;
-        }
+      for (final seansSaati in seansListesi) {
+        final satirBasligi = cokluSeans ? '$egzAdi ($seansSaati)' : egzAdi;
+        final hucreler = <String, RaporHucreDurumu>{};
+        int satirYapilan = 0;
+        int satirPlanlanan = 0;
 
-        final gunDetayi = gunlukKayitHaritasi[gunMetni];
-        EgzersizKayitlariData? ilgiliKayit;
-        if (gunDetayi != null) {
-          for (final k in gunDetayi.egzersizKayitlari) {
-            if (k.egzersizId == egzId) {
+        for (final gunMetni in gunler) {
+          final gunTarihi = TarihYardimcisi.metindenTarihe(gunMetni);
+          // Gelecek günler henüz gelmediği için 'planliDegil' (➖) olarak gösterilir
+          if (temizBugun != null && gunTarihi.isAfter(temizBugun)) {
+            hucreler[gunMetni] = RaporHucreDurumu.planliDegil;
+            continue;
+          }
+
+          final gunDetayi = gunlukKayitHaritasi[gunMetni];
+          EgzersizKayitlariData? ilgiliKayit;
+          if (gunDetayi != null) {
+            for (final k in gunDetayi.egzersizKayitlari) {
+              if (k.egzersizId != egzId) continue;
+              if (cokluSeans) {
+                final eslesenSeans =
+                    k.seansSaati == seansSaati ||
+                    (k.seansSaati.isEmpty && seansSaati == seansListesi.first);
+                if (!eslesenSeans) continue;
+              }
               if (ilgiliKayit == null || k.durum == 'yapildi') {
                 ilgiliKayit = k;
                 if (k.durum == 'yapildi') break;
               }
             }
           }
-        }
 
-        if (ilgiliKayit != null) {
-          satirPlanlanan += 1;
-          if (ilgiliKayit.durum == 'yapildi') {
-            hucreler[gunMetni] = RaporHucreDurumu.yapildi;
-            satirYapilan += 1;
-          } else {
-            hucreler[gunMetni] = RaporHucreDurumu.yapilmadi;
-          }
-        } else {
-          final buGunPlanliMi =
-              planliHaftaninGunleri.contains(gunTarihi.weekday) &&
-              rutinEgzersizIdSeti.contains(egzId);
-          if (buGunPlanliMi) {
+          if (ilgiliKayit != null) {
             satirPlanlanan += 1;
-            hucreler[gunMetni] = RaporHucreDurumu.yapilmadi;
+            if (ilgiliKayit.durum == 'yapildi') {
+              hucreler[gunMetni] = RaporHucreDurumu.yapildi;
+              satirYapilan += 1;
+            } else {
+              hucreler[gunMetni] = RaporHucreDurumu.yapilmadi;
+            }
           } else {
-            hucreler[gunMetni] = RaporHucreDurumu.planliDegil;
+            final buGunPlanliMi =
+                planliHaftaninGunleri.contains(gunTarihi.weekday) &&
+                rutinEgzersizIdSeti.contains(egzId);
+            if (buGunPlanliMi) {
+              satirPlanlanan += 1;
+              hucreler[gunMetni] = RaporHucreDurumu.yapilmadi;
+            } else {
+              hucreler[gunMetni] = RaporHucreDurumu.planliDegil;
+            }
           }
         }
+
+        toplamYapilan += satirYapilan;
+        toplamPlanlanan += satirPlanlanan;
+        final yuzde = satirPlanlanan == 0
+            ? 0
+            : ((satirYapilan / satirPlanlanan) * 100).round();
+
+        satirlar.add(
+          RaporSatiri(
+            egzersizId: egzId,
+            egzersizAdi: satirBasligi,
+            gunlukDurumlar: hucreler,
+            yapilanSayisi: satirYapilan,
+            planlananSayisi: satirPlanlanan,
+            tamamlanmaYuzdesi: yuzde,
+          ),
+        );
       }
-
-      toplamYapilan += satirYapilan;
-      toplamPlanlanan += satirPlanlanan;
-      final yuzde = satirPlanlanan == 0
-          ? 0
-          : ((satirYapilan / satirPlanlanan) * 100).round();
-
-      satirlar.add(
-        RaporSatiri(
-          egzersizId: egzId,
-          egzersizAdi: egzAdi,
-          gunlukDurumlar: hucreler,
-          yapilanSayisi: satirYapilan,
-          planlananSayisi: satirPlanlanan,
-          tamamlanmaYuzdesi: yuzde,
-        ),
-      );
     }
 
     final genelYuzde = toplamPlanlanan == 0

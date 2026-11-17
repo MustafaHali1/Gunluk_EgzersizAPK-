@@ -171,18 +171,25 @@ class AntrenmanDao extends DatabaseAccessor<UygulamaVeritabani>
           .get();
       final mevcutGorevIdleri = kalanKayitlar.map((k) => k.egzersizId).toSet();
 
-      for (final gorev in rutinGorevleri) {
-        if (!mevcutGorevIdleri.contains(gorev.id)) {
-          await into(egzersizKayitlari).insert(
-            EgzersizKayitlariCompanion.insert(
-              antrenmanKaydiId: antrenman.id,
-              egzersizId: gorev.id,
-              rutinId: Value(rutinId),
-              egzersizAdiKopyasi: gorev.ad,
-              durum: const Value('bekliyor'),
-              seansSaati: Value(hedefSeans),
-            ),
-          );
+      // Zaten tamamen bitmiş ve saati geçmiş bir seansa sonradan eklenen görevleri geriye dönük ekleme
+      final bitmisGecmisSeansMi = kalanKayitlar.isNotEmpty &&
+          kalanKayitlar.every((k) => k.durum != 'bekliyor') &&
+          _seansSaatiGectiMi(tarih: tarih, seansSaati: hedefSeans);
+
+      if (!bitmisGecmisSeansMi) {
+        for (final gorev in rutinGorevleri) {
+          if (!mevcutGorevIdleri.contains(gorev.id)) {
+            await into(egzersizKayitlari).insert(
+              EgzersizKayitlariCompanion.insert(
+                antrenmanKaydiId: antrenman.id,
+                egzersizId: gorev.id,
+                rutinId: Value(rutinId),
+                egzersizAdiKopyasi: gorev.ad,
+                durum: const Value('bekliyor'),
+                seansSaati: Value(hedefSeans),
+              ),
+            );
+          }
         }
       }
 
@@ -197,6 +204,26 @@ class AntrenmanDao extends DatabaseAccessor<UygulamaVeritabani>
           .get();
       return guncelKayitlar;
     });
+  }
+
+  bool _seansSaatiGectiMi({
+    required String tarih,
+    required String seansSaati,
+  }) {
+    if (seansSaati.isEmpty) return false;
+    final parcalar = seansSaati.split(':');
+    if (parcalar.length != 2) return false;
+    final saat = int.tryParse(parcalar[0]);
+    final dakika = int.tryParse(parcalar[1]);
+    if (saat == null || dakika == null) return false;
+    final simdi = DateTime.now();
+    final bugun = TarihYardimcisi.tarihiFormatla(simdi);
+    if (tarih != bugun) {
+      return TarihYardimcisi.metindenTarihe(tarih).isBefore(
+        DateTime(simdi.year, simdi.month, simdi.day),
+      );
+    }
+    return (simdi.hour * 60 + simdi.minute) > (saat * 60 + dakika);
   }
 
   // Belirli bir tarih için bugüne ait tüm planlı rutinlerin görev kayıtlarını hazırlar.
