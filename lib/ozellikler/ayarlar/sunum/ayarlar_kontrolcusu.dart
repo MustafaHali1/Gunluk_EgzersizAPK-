@@ -74,12 +74,24 @@ class AyarlarKontrolcusu extends Notifier<AsyncValue<void>> {
       );
       final saatMetni = BildirimServisi.payloaddanSaatMetniCoz(yanit.payload);
 
+      if (yanit.actionId == BildirimServisi.aksiyonErteleId &&
+          rutinId != null) {
+        final ertelemeDk = ref.read(ertelemeSuresiKontrolcusuSaglayici);
+        await _bildirimServisi.iosErtelemePlanla(
+          rutinId: rutinId,
+          saatMetni: saatMetni,
+          ertelemeDakika: ertelemeDk,
+        );
+        return;
+      }
+
       if (yanit.actionId == BildirimServisi.aksiyonYaptimId) {
         final simdi = DateTime.now();
         await _antrenmanDeposu.gununTumHareketleriniYapildiIsaretle(
           tarih: TarihYardimcisi.tarihiFormatla(simdi),
           haftaninGunu: simdi.weekday,
           rutinId: rutinId,
+          seansSaati: saatMetni,
         );
         ref.invalidate(bugunKontrolcusuSaglayici);
       }
@@ -87,7 +99,26 @@ class AyarlarKontrolcusu extends Notifier<AsyncValue<void>> {
       final rota = ref.read(uygulamaRotasiSaglayici);
       if (rutinId != null) {
         final sorgu = <String, String>{'bildirim': '1'};
-        if (tetikMilis != null) sorgu['tetik'] = '$tetikMilis';
+        if (tetikMilis != null) {
+          sorgu['tetik'] = '$tetikMilis';
+        } else if (saatMetni != null) {
+          final parcalar = saatMetni.split(':');
+          if (parcalar.length == 2) {
+            final s = int.tryParse(parcalar[0]);
+            final d = int.tryParse(parcalar[1]);
+            if (s != null && d != null) {
+              final simdi = DateTime.now();
+              final seansZamani = DateTime(
+                simdi.year,
+                simdi.month,
+                simdi.day,
+                s,
+                d,
+              );
+              sorgu['tetik'] = '${seansZamani.millisecondsSinceEpoch}';
+            }
+          }
+        }
         if (saatMetni != null) sorgu['saat'] = saatMetni;
         final uri = Uri(path: '/rutin/$rutinId', queryParameters: sorgu);
         rota.go(UygulamaSabitleri.rotaBugun);

@@ -49,6 +49,7 @@ class BildirimServisi {
       'Rutin vakti geldiğinde seçilen müzik veya alarm sesiyle hatırlatan bildirimler';
   static const String aksiyonBaslaId = 'aksiyon_rutine_basla';
   static const String aksiyonYaptimId = 'aksiyon_yaptim';
+  static const String aksiyonErteleId = 'aksiyon_ertele';
   static const String iosKategoriId = 'rutin_hatirlatici_kategori';
   static const String sistemAlarmSesiUri =
       'content://settings/system/alarm_alert';
@@ -112,6 +113,10 @@ class BildirimServisi {
                 options: <DarwinNotificationActionOption>{
                   DarwinNotificationActionOption.foreground,
                 },
+              ),
+              DarwinNotificationAction.plain(
+                aksiyonErteleId,
+                'Ertele',
               ),
               DarwinNotificationAction.plain(
                 aksiyonYaptimId,
@@ -373,6 +378,52 @@ class BildirimServisi {
     }
   }
 
+  // iOS üzerinde "Ertele" aksiyonuna basıldığında varsayılan erteleme süresi kadar sonraya tek seferlik bildirim kurar.
+  Future<void> iosErtelemePlanla({
+    required int rutinId,
+    String? saatMetni,
+    int ertelemeDakika = 15,
+  }) async {
+    try {
+      await _saatDiliminiYapilandir();
+      final simdi = tz.TZDateTime.now(tz.local);
+      final gunSonu = tz.TZDateTime(
+        tz.local,
+        simdi.year,
+        simdi.month,
+        simdi.day,
+        23,
+        59,
+      );
+      var hedef = simdi.add(Duration(minutes: ertelemeDakika.clamp(1, 720)));
+      if (hedef.isAfter(gunSonu) && gunSonu.isAfter(simdi)) {
+        hedef = gunSonu;
+      }
+      final sorgu = <String, String>{
+        'tetik': '${hedef.millisecondsSinceEpoch}',
+      };
+      if (saatMetni != null && saatMetni.isNotEmpty) {
+        sorgu['saat'] = saatMetni;
+      }
+      final uri = Uri(path: '/rutin/$rutinId', queryParameters: sorgu);
+      await _eklenti.zonedSchedule(
+        id: 80000 + rutinId,
+        title: '⏰ Ertelenen Rutin Hatırlatıcısı',
+        body: 'Ertelenen rutin saatiniz geldi! Dokunarak görevleri işaretleyin.',
+        scheduledDate: hedef,
+        notificationDetails: _alarmDetaylariniOlustur(),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        payload: uri.toString(),
+      );
+    } catch (hata, iz) {
+      MerkeziKaydedici.hataYaz(
+        'iOS erteleme bildirimi planlanırken hata oluştu',
+        hata: hata,
+        yiginIzi: iz,
+      );
+    }
+  }
+
   // Her rutinin kendi alarm saati ve müziğine göre tüm alarmları yeniden kurar.
   Future<void> rutinAlarmlariniYenidenKur(List<RutinlerData> rutinler) async {
     try {
@@ -408,64 +459,73 @@ class BildirimServisi {
       }
 
       for (final rutin in rutinler) {
-        if (!rutin.alarmAcikMi) continue;
-
         final detaylar = _alarmDetaylariniOlustur(
           ozelMuzikYolu: rutin.alarmMuzikYolu,
         );
-        final tabanId = 1000 + (rutin.id * 10);
+        final saatler = TarihYardimcisi.alarmSaatleriniCoz(
+          alarmSaatleriMetni: rutin.alarmSaatleri,
+          varsayilanSaat: rutin.alarmSaati,
+          varsayilanDakika: rutin.alarmDakikasi,
+        );
         final baslik = '⏰ ${rutin.ad}';
         const icerik =
             'Rutin vakti geldi! Dokunarak görevleri Yaptım / Yapmadım işaretleyin.';
-        final payload = '/rutin/${rutin.id}';
 
-        if (rutin.sadeceTarih != null) {
-          final tarih = TarihYardimcisi.metindenTarihe(rutin.sadeceTarih!);
-          final hedef = tz.TZDateTime(
-            tz.local,
-            tarih.year,
-            tarih.month,
-            tarih.day,
-            rutin.alarmSaati,
-            rutin.alarmDakikasi,
-          );
-          if (hedef.isAfter(tz.TZDateTime.now(tz.local))) {
+        for (var i = 0; i < saatler.length; i++) {
+          final (saat, dakika) = saatler[i];
+          final saatStr =
+              '${saat.toString().padLeft(2, '0')}:${dakika.toString().padLeft(2, '0')}';
+          final tabanId = 1000 + (rutin.id * 100) + (i * 10);
+          final payload = '/rutin/${rutin.id}?saat=$saatStr';
+
+          if (rutin.sadeceTarih != null) {
+            final tarih = TarihYardimcisi.metindenTarihe(rutin.sadeceTarih!);
+            final hedef = tz.TZDateTime(
+              tz.local,
+              tarih.year,
+              tarih.month,
+              tarih.day,
+              saat,
+              dakika,
+            );
+            if (hedef.isAfter(tz.TZDateTime.now(tz.local))) {
+              await _eklenti.zonedSchedule(
+                id: tabanId,
+                title: baslik,
+                body: icerik,
+                scheduledDate: hedef,
+                notificationDetails: detaylar,
+                androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+                payload: payload,
+              );
+            }
+            continue;
+          }
+
+          final gunler = rutin.haftaninGunleri
+              .split(',')
+              .map((e) => int.tryParse(e.trim()))
+              .whereType<int>()
+              .toSet();
+
+          for (final gun in gunler) {
+            final planlananZaman = _sonrakiGunVeSaatHesapla(
+              haftaninGunu: gun,
+              saat: saat,
+              dakika: dakika,
+            );
+
             await _eklenti.zonedSchedule(
-              id: tabanId,
+              id: tabanId + gun,
               title: baslik,
               body: icerik,
-              scheduledDate: hedef,
+              scheduledDate: planlananZaman,
               notificationDetails: detaylar,
               androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+              matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
               payload: payload,
             );
           }
-          continue;
-        }
-
-        final gunler = rutin.haftaninGunleri
-            .split(',')
-            .map((e) => int.tryParse(e.trim()))
-            .whereType<int>()
-            .toSet();
-
-        for (final gun in gunler) {
-          final planlananZaman = _sonrakiGunVeSaatHesapla(
-            haftaninGunu: gun,
-            saat: rutin.alarmSaati,
-            dakika: rutin.alarmDakikasi,
-          );
-
-          await _eklenti.zonedSchedule(
-            id: tabanId + gun,
-            title: baslik,
-            body: icerik,
-            scheduledDate: planlananZaman,
-            notificationDetails: detaylar,
-            androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-            matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
-            payload: payload,
-          );
         }
       }
       MerkeziKaydedici.bilgiYaz('Rutin alarmları yeniden kuruldu.');
