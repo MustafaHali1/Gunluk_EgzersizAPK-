@@ -41,9 +41,13 @@ class RutinDetayDurumu {
   double get oran => toplamSayisi == 0 ? 0.0 : yapilanSayisi / toplamSayisi;
 }
 
-// Belirli bir rutinin bugünkü görev durumunu yöneten sağlayıcı.
+// Belirli bir rutinin ve seans saatinin bugünkü görev durumunu yöneten sağlayıcı.
 final rutinDetayDurumuSaglayici =
-    FutureProvider.family<RutinDetayDurumu?, int>((ref, rutinId) async {
+    FutureProvider.family<RutinDetayDurumu?, (int, String)>((
+      ref,
+      anahtar,
+    ) async {
+      final (rutinId, seansSaati) = anahtar;
       final rutin = await ref
           .read(rutinDeposuSaglayici)
           .idIleRutinGetir(rutinId);
@@ -55,6 +59,7 @@ final rutinDetayDurumuSaglayici =
           .rutinIcinGunlukKayitlariGetirVeyaOlustur(
             rutinId: rutinId,
             tarih: bugun,
+            seansSaati: seansSaati,
           );
       final tumGorevler = await ref
           .read(egzersizDeposuSaglayici)
@@ -72,16 +77,20 @@ class RutinDetayEkrani extends ConsumerWidget {
   final int rutinId;
   final bool bildirimdenGeldi;
   final int? bildirimTetikMilis;
+  final String? seansSaati;
 
   const RutinDetayEkrani({
     super.key,
     required this.rutinId,
     this.bildirimdenGeldi = false,
     this.bildirimTetikMilis,
+    this.seansSaati,
   });
 
+  (int, String) get _saglayiciAnahtari => (rutinId, seansSaati?.trim() ?? '');
+
   void _tumEkranlariTazele(WidgetRef ref) {
-    ref.invalidate(rutinDetayDurumuSaglayici(rutinId));
+    ref.invalidate(rutinDetayDurumuSaglayici(_saglayiciAnahtari));
     ref.invalidate(bugunKontrolcusuSaglayici);
     ref.invalidate(raporKontrolcusuSaglayici);
     ref.invalidate(gecmisKontrolcusuSaglayici);
@@ -163,6 +172,7 @@ class RutinDetayEkrani extends ConsumerWidget {
           tarih: TarihYardimcisi.tarihiFormatla(simdi),
           haftaninGunu: simdi.weekday,
           rutinId: rutinId,
+          seansSaati: seansSaati,
         );
     _tumEkranlariTazele(ref);
   }
@@ -181,7 +191,7 @@ class RutinDetayEkrani extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final detayDurumu = ref.watch(rutinDetayDurumuSaglayici(rutinId));
+    final detayDurumu = ref.watch(rutinDetayDurumuSaglayici(_saglayiciAnahtari));
     final gecerlilikDk = ref.watch(gecerlilikSuresiKontrolcusuSaglayici);
     final simdiMilis = DateTime.now().millisecondsSinceEpoch;
     final suresiGectiMi = bildirimdenGeldi &&
@@ -207,6 +217,9 @@ class RutinDetayEkrani extends ConsumerWidget {
         }
 
         final yuzde = (durum.oran * 100).round();
+        final baslikSaat = (seansSaati != null && seansSaati!.isNotEmpty)
+            ? ' • $seansSaati'
+            : '';
         final enAzBirKilitsizGorevVar = durum.gorevKayitlari.any(
           (k) =>
               k.durum == 'atlandi' ||
@@ -215,7 +228,7 @@ class RutinDetayEkrani extends ConsumerWidget {
 
         return Scaffold(
           appBar: AppBar(
-            title: Text(durum.rutin.ad),
+            title: Text('${durum.rutin.ad}$baslikSaat'),
             actions: [
               if (enAzBirKilitsizGorevVar)
                 FilledButton.icon(

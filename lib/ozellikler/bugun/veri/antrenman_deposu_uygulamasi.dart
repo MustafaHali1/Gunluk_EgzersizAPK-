@@ -52,11 +52,13 @@ class AntrenmanDeposuUygulamasi implements AntrenmanDeposu {
   Future<List<EgzersizKayitlariData>> rutinIcinGunlukKayitlariGetirVeyaOlustur({
     required int rutinId,
     required String tarih,
+    String seansSaati = '',
   }) async {
     try {
       return await _dao.rutinIcinGunlukKayitlariGetirVeyaOlustur(
         rutinId: rutinId,
         tarih: tarih,
+        seansSaati: seansSaati,
       );
     } catch (hata, iz) {
       MerkeziKaydedici.hataYaz(
@@ -119,12 +121,14 @@ class AntrenmanDeposuUygulamasi implements AntrenmanDeposu {
     required String tarih,
     required int haftaninGunu,
     int? rutinId,
+    String? seansSaati,
   }) async {
     try {
       await _dao.gununTumHareketleriniYapildiIsaretle(
         tarih: tarih,
         haftaninGunu: haftaninGunu,
         rutinId: rutinId,
+        seansSaati: seansSaati,
       );
     } catch (hata, iz) {
       MerkeziKaydedici.hataYaz(

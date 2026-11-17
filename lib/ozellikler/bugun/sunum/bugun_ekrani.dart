@@ -37,10 +37,13 @@ class _BugunEkraniDurumu extends ConsumerState<BugunEkrani> {
     super.dispose();
   }
 
-  void _rutinDetayAc(int rutinId) {
+  void _rutinDetayAc(int rutinId, {String? seansSaati}) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => RutinDetayEkrani(rutinId: rutinId),
+        builder: (_) => RutinDetayEkrani(
+          rutinId: rutinId,
+          seansSaati: seansSaati,
+        ),
       ),
     );
   }
@@ -86,7 +89,10 @@ class _BugunEkraniDurumu extends ConsumerState<BugunEkrani> {
                 durum: durum,
                 siradakiTiklandiginda: durum.siradakiRutin == null
                     ? null
-                    : () => _rutinDetayAc(durum.siradakiRutin!.rutin.id),
+                    : () => _rutinDetayAc(
+                          durum.siradakiRutin!.rutin.id,
+                          seansSaati: durum.siradakiRutin!.seansSaati,
+                        ),
               ),
               const SizedBox(height: 16),
               if (durum.bugunRutinleri.isEmpty)
@@ -104,7 +110,10 @@ class _BugunEkraniDurumu extends ConsumerState<BugunEkrani> {
                 ...durum.bugunRutinleri.map(
                   (ozet) => _BugunRutinKarti(
                     ozet: ozet,
-                    tiklandiginda: () => _rutinDetayAc(ozet.rutin.id),
+                    tiklandiginda: () => _rutinDetayAc(
+                      ozet.rutin.id,
+                      seansSaati: ozet.seansSaati,
+                    ),
                   ),
                 ),
               ],
@@ -139,14 +148,13 @@ class _BugunUstOzetKarti extends StatelessWidget {
       siradakiMetni = durum.bugunRutinleri.isEmpty
           ? 'Bugün için planlı rutin yok'
           : 'Bugünkü tüm rutinler tamamlandı!';
-    } else if (siradaki.rutin.alarmAcikMi) {
-      final s = siradaki.rutin.alarmSaati.toString().padLeft(2, '0');
-      final d = siradaki.rutin.alarmDakikasi.toString().padLeft(2, '0');
-      siradakiMetni = siradaki.suresiGectiMi
-          ? 'Süresi Geçti: ${siradaki.rutin.ad} ($s:$d)'
-          : 'Sıradaki: ${siradaki.rutin.ad} • Saat $s:$d';
     } else {
-      siradakiMetni = 'Sıradaki: ${siradaki.rutin.ad}';
+      final saatEtiketi = siradaki.seansSaati.isNotEmpty
+          ? siradaki.seansSaati
+          : '${siradaki.rutin.alarmSaati.toString().padLeft(2, '0')}:${siradaki.rutin.alarmDakikasi.toString().padLeft(2, '0')}';
+      siradakiMetni = siradaki.suresiGectiMi
+          ? 'Süresi Geçti: ${siradaki.rutin.ad} ($saatEtiketi)'
+          : 'Sıradaki: ${siradaki.rutin.ad} • Saat $saatEtiketi';
     }
 
     return Card(
@@ -223,14 +231,9 @@ class _BugunRutinKarti extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final r = ozet.rutin;
-    final saatler = TarihYardimcisi.alarmSaatleriniCoz(
-      alarmSaatleriMetni: r.alarmSaatleri,
-      varsayilanSaat: r.alarmSaati,
-      varsayilanDakika: r.alarmDakikasi,
-    );
-    final saatBilgisi = r.alarmAcikMi
-        ? '⏰ ${saatler.map((e) => '${e.$1.toString().padLeft(2, '0')}:${e.$2.toString().padLeft(2, '0')}').join(', ')}'
-        : 'Alarmsız';
+    final saatBilgisi = ozet.seansSaati.isNotEmpty
+        ? '⏰ ${ozet.seansSaati}'
+        : '⏰ ${r.alarmSaati.toString().padLeft(2, '0')}:${r.alarmDakikasi.toString().padLeft(2, '0')}';
 
     if (ozet.gorevKayitlari.isEmpty) {
       return Card(

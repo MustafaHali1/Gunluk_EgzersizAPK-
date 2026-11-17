@@ -14,6 +14,7 @@ class MainActivity : FlutterActivity() {
     private var alarmKanali: MethodChannel? = null
     private var bekleyenRutinId: Int? = null
     private var bekleyenTetiklenmeMilis: Long? = null
+    private var bekleyenSaatMetni: String? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -23,6 +24,7 @@ class MainActivity : FlutterActivity() {
             bekleyenRutinId = rutinIdExtra
             val tetikExtra = intent?.getLongExtra("acilis_tetiklenme_milis", 0L) ?: 0L
             bekleyenTetiklenmeMilis = if (tetikExtra > 0L) tetikExtra else System.currentTimeMillis()
+            bekleyenSaatMetni = intent?.getStringExtra("acilis_saat_metni")
         }
 
         alarmKanali = MethodChannel(
@@ -91,13 +93,16 @@ class MainActivity : FlutterActivity() {
                     "acilisRutinBilgisiGetir" -> {
                         val id = bekleyenRutinId
                         val tetik = bekleyenTetiklenmeMilis
+                        val saat = bekleyenSaatMetni ?: ""
                         bekleyenRutinId = null
                         bekleyenTetiklenmeMilis = null
+                        bekleyenSaatMetni = null
                         if (id != null && id > 0) {
                             result.success(
                                 mapOf(
                                     "rutinId" to id,
                                     "tetiklenmeMilis" to (tetik ?: System.currentTimeMillis()),
+                                    "saatMetni" to saat,
                                 ),
                             )
                         } else {
@@ -117,11 +122,17 @@ class MainActivity : FlutterActivity() {
         if (rutinId > 0) {
             val tetikExtra = intent.getLongExtra("acilis_tetiklenme_milis", 0L)
             val tetik = if (tetikExtra > 0L) tetikExtra else System.currentTimeMillis()
+            val saat = intent.getStringExtra("acilis_saat_metni") ?: ""
             bekleyenRutinId = rutinId
             bekleyenTetiklenmeMilis = tetik
+            bekleyenSaatMetni = saat
             alarmKanali?.invokeMethod(
                 "rutinAc",
-                mapOf("rutinId" to rutinId, "tetiklenmeMilis" to tetik),
+                mapOf(
+                    "rutinId" to rutinId,
+                    "tetiklenmeMilis" to tetik,
+                    "saatMetni" to saat,
+                ),
             )
         }
     }

@@ -8,12 +8,25 @@ class BugunRutinOzeti {
   final RutinlerData rutin;
   final List<EgzersizKayitlariData> gorevKayitlari;
   final bool suresiGectiMi;
+  final String seansSaati;
 
   const BugunRutinOzeti({
     required this.rutin,
     required this.gorevKayitlari,
     required this.suresiGectiMi,
+    this.seansSaati = '',
   });
+
+  // Seans saatini günün toplam dakikasına çevirir (sıralama ve yaklaşan kontrolü için).
+  int get seansDakika {
+    final parcalar = seansSaati.split(':');
+    if (parcalar.length == 2) {
+      final s = int.tryParse(parcalar[0]);
+      final d = int.tryParse(parcalar[1]);
+      if (s != null && d != null) return (s * 60) + d;
+    }
+    return (rutin.alarmSaati * 60) + rutin.alarmDakikasi;
+  }
 
   int get toplamSayisi => gorevKayitlari.length;
 

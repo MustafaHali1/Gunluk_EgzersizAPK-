@@ -3,6 +3,7 @@
 import 'package:drift/drift.dart';
 import '../../../cekirdek/veritabani/tablolar.dart';
 import '../../../cekirdek/veritabani/uygulama_veritabani.dart';
+import '../../../cekirdek/yardimcilar/tarih_yardimcisi.dart';
 
 part 'antrenman_dao.g.dart';
 
@@ -60,10 +61,11 @@ class AntrenmanDao extends DatabaseAccessor<UygulamaVeritabani>
     );
   }
 
-  // Belirli bir rutin ve tarih için günlük görev kayıtlarını oluşturur veya eşitler.
+  // Belirli bir rutin, tarih ve seans saati için günlük görev kayıtlarını oluşturur veya eşitler.
   Future<List<EgzersizKayitlariData>> rutinIcinGunlukKayitlariGetirVeyaOlustur({
     required int rutinId,
     required String tarih,
+    String seansSaati = '',
   }) async {
     return transaction(() async {
       var antrenman = await tariheGoreAntrenmanGetir(tarih);
@@ -73,6 +75,23 @@ class AntrenmanDao extends DatabaseAccessor<UygulamaVeritabani>
           rutinId: Value(rutinId),
         ),
       );
+
+      final rutin = await (select(rutinler)
+            ..where((t) => t.id.equals(rutinId)))
+          .getSingleOrNull();
+      final saatler = rutin != null
+          ? TarihYardimcisi.alarmSaatleriniCoz(
+              alarmSaatleriMetni: rutin.alarmSaatleri,
+              varsayilanSaat: rutin.alarmSaati,
+              varsayilanDakika: rutin.alarmDakikasi,
+            )
+          : <(int, int)>[];
+      final ilkSaatStr = saatler.isNotEmpty
+          ? '${saatler.first.$1.toString().padLeft(2, '0')}:${saatler.first.$2.toString().padLeft(2, '0')}'
+          : '';
+      final hedefSeans = seansSaati.trim().isNotEmpty
+          ? seansSaati.trim()
+          : ilkSaatStr;
 
       final birlesikSorgu = select(rutinEgzersizleri).join([
         innerJoin(
@@ -89,15 +108,6 @@ class AntrenmanDao extends DatabaseAccessor<UygulamaVeritabani>
           rutinGorevSatirlari.map((s) => s.readTable(egzersizler)).toList();
       final aktifGorevIdleri = rutinGorevleri.map((g) => g.id).toSet();
 
-      final mevcutKayitlar = await (select(egzersizKayitlari)
-            ..where(
-              (t) =>
-                  t.antrenmanKaydiId.equals(antrenman!.id) &
-                  t.rutinId.equals(rutinId),
-            )
-            ..orderBy([(t) => OrderingTerm.asc(t.id)]))
-          .get();
-
       // Eski sürümden kalan rutinId=null kayıtları bu rutine bağla ki rapor çakışmasın
       final sahipsizKayitlar = await (select(egzersizKayitlari)
             ..where(
@@ -110,9 +120,36 @@ class AntrenmanDao extends DatabaseAccessor<UygulamaVeritabani>
         if (aktifGorevIdleri.contains(sahipsiz.egzersizId)) {
           await (update(egzersizKayitlari)
                 ..where((t) => t.id.equals(sahipsiz.id)))
-              .write(EgzersizKayitlariCompanion(rutinId: Value(rutinId)));
+              .write(
+                EgzersizKayitlariCompanion(
+                  rutinId: Value(rutinId),
+                  seansSaati: Value(ilkSaatStr),
+                ),
+              );
         }
       }
+
+      // Eski sürümden kalan seansSaati='' kayıtlarını ilk seansa bağla
+      if (hedefSeans.isNotEmpty && hedefSeans == ilkSaatStr) {
+        await (update(egzersizKayitlari)
+              ..where(
+                (t) =>
+                    t.antrenmanKaydiId.equals(antrenman!.id) &
+                    t.rutinId.equals(rutinId) &
+                    t.seansSaati.equals(''),
+              ))
+            .write(EgzersizKayitlariCompanion(seansSaati: Value(hedefSeans)));
+      }
+
+      final mevcutKayitlar = await (select(egzersizKayitlari)
+            ..where(
+              (t) =>
+                  t.antrenmanKaydiId.equals(antrenman!.id) &
+                  t.rutinId.equals(rutinId) &
+                  t.seansSaati.equals(hedefSeans),
+            )
+            ..orderBy([(t) => OrderingTerm.asc(t.id)]))
+          .get();
 
       // Rutinden çıkarılmış ve hâlâ 'bekliyor' durumunda olan görevleri temizle
       for (final kayit in mevcutKayitlar) {
@@ -128,7 +165,8 @@ class AntrenmanDao extends DatabaseAccessor<UygulamaVeritabani>
             ..where(
               (t) =>
                   t.antrenmanKaydiId.equals(antrenman!.id) &
-                  t.rutinId.equals(rutinId),
+                  t.rutinId.equals(rutinId) &
+                  t.seansSaati.equals(hedefSeans),
             ))
           .get();
       final mevcutGorevIdleri = kalanKayitlar.map((k) => k.egzersizId).toSet();
@@ -142,6 +180,7 @@ class AntrenmanDao extends DatabaseAccessor<UygulamaVeritabani>
               rutinId: Value(rutinId),
               egzersizAdiKopyasi: gorev.ad,
               durum: const Value('bekliyor'),
+              seansSaati: Value(hedefSeans),
             ),
           );
         }
@@ -151,7 +190,8 @@ class AntrenmanDao extends DatabaseAccessor<UygulamaVeritabani>
             ..where(
               (t) =>
                   t.antrenmanKaydiId.equals(antrenman!.id) &
-                  t.rutinId.equals(rutinId),
+                  t.rutinId.equals(rutinId) &
+                  t.seansSaati.equals(hedefSeans),
             )
             ..orderBy([(t) => OrderingTerm.asc(t.id)]))
           .get();
@@ -190,10 +230,20 @@ class AntrenmanDao extends DatabaseAccessor<UygulamaVeritabani>
       );
 
       for (final rutin in bugununRutinleri) {
-        await rutinIcinGunlukKayitlariGetirVeyaOlustur(
-          rutinId: rutin.id,
-          tarih: tarih,
+        final saatler = TarihYardimcisi.alarmSaatleriniCoz(
+          alarmSaatleriMetni: rutin.alarmSaatleri,
+          varsayilanSaat: rutin.alarmSaati,
+          varsayilanDakika: rutin.alarmDakikasi,
         );
+        for (final (s, d) in saatler) {
+          final saatStr =
+              '${s.toString().padLeft(2, '0')}:${d.toString().padLeft(2, '0')}';
+          await rutinIcinGunlukKayitlariGetirVeyaOlustur(
+            rutinId: rutin.id,
+            tarih: tarih,
+            seansSaati: saatStr,
+          );
+        }
       }
 
       final olusanDetay = await gunlukAntrenmanDetayiGetir(tarih);
@@ -235,11 +285,12 @@ class AntrenmanDao extends DatabaseAccessor<UygulamaVeritabani>
     );
   }
 
-  // Belirli bir günün (veya belirli bir rutinin) tüm görevlerini 'yapildi' olarak işaretler.
+  // Belirli bir günün (veya belirli bir rutinin/seansın) tüm görevlerini 'yapildi' olarak işaretler.
   Future<void> gununTumHareketleriniYapildiIsaretle({
     required String tarih,
     required int haftaninGunu,
     int? rutinId,
+    String? seansSaati,
   }) async {
     final detay = await gunlukAntrenmanOlusturVeyaGetir(
       tarih: tarih,
@@ -249,6 +300,9 @@ class AntrenmanDao extends DatabaseAccessor<UygulamaVeritabani>
       ..where((t) => t.antrenmanKaydiId.equals(detay.antrenmanKaydi.id));
     if (rutinId != null) {
       sorgu.where((t) => t.rutinId.equals(rutinId));
+    }
+    if (seansSaati != null && seansSaati.isNotEmpty) {
+      sorgu.where((t) => t.seansSaati.equals(seansSaati));
     }
     await sorgu.write(const EgzersizKayitlariCompanion(durum: Value('yapildi')));
   }

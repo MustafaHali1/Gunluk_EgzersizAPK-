@@ -89,38 +89,46 @@ class BugunKontrolcusu extends AsyncNotifier<BugunDurumu> {
     final ozetler = <BugunRutinOzeti>[];
 
     for (final r in buguneAitRutinler) {
-      final rutinKayitlari = detay.egzersizKayitlari
-          .where((k) => k.rutinId == r.id)
-          .toList();
-      final alarmDakika = r.alarmSaati * 60 + r.alarmDakikasi;
-      final bekliyorVar = rutinKayitlari.any((k) => k.durum == 'bekliyor');
-      final suresiGecti = r.alarmAcikMi && bekliyorVar && simdiDakika > alarmDakika;
-
-      ozetler.add(
-        BugunRutinOzeti(
-          rutin: r,
-          gorevKayitlari: rutinKayitlari,
-          suresiGectiMi: suresiGecti,
-        ),
+      final saatler = TarihYardimcisi.alarmSaatleriniCoz(
+        alarmSaatleriMetni: r.alarmSaatleri,
+        varsayilanSaat: r.alarmSaati,
+        varsayilanDakika: r.alarmDakikasi,
       );
+      for (final (saat, dakika) in saatler) {
+        final saatStr =
+            '${saat.toString().padLeft(2, '0')}:${dakika.toString().padLeft(2, '0')}';
+        final seansKayitlari = detay.egzersizKayitlari
+            .where(
+              (k) =>
+                  k.rutinId == r.id &&
+                  (k.seansSaati == saatStr ||
+                      (k.seansSaati.isEmpty && saatStr == '${saatler.first.$1.toString().padLeft(2, '0')}:${saatler.first.$2.toString().padLeft(2, '0')}')),
+            )
+            .toList();
+        final alarmDakika = (saat * 60) + dakika;
+        final bekliyorVar = seansKayitlari.any((k) => k.durum == 'bekliyor');
+        final suresiGecti = bekliyorVar && simdiDakika > alarmDakika;
+
+        ozetler.add(
+          BugunRutinOzeti(
+            rutin: r,
+            gorevKayitlari: seansKayitlari,
+            suresiGectiMi: suresiGecti,
+            seansSaati: saatStr,
+          ),
+        );
+      }
     }
 
-    // Yaklaşan sıradaki rutin: tamamlanmamış ve saati henüz gelmemiş en yakın alarmlı rutin;
-    // yoksa tamamlanmamış ilk rutin.
+    // Seansları saat sırasına göre diz
+    ozetler.sort((a, b) => a.seansDakika.compareTo(b.seansDakika));
+
+    // Yaklaşan sıradaki rutin: tamamlanmamış ve saati henüz gelmemiş en yakın seans;
+    // yoksa tamamlanmamış ilk seans.
     BugunRutinOzeti? siradaki;
-    final tamamlanmamisAlarmlilar = ozetler
-        .where((o) => !o.tamamlandiMi && o.rutin.alarmAcikMi)
+    final yaklasanlar = ozetler
+        .where((o) => !o.tamamlandiMi && o.seansDakika >= simdiDakika)
         .toList();
-    final yaklasanlar = tamamlanmamisAlarmlilar
-        .where(
-          (o) => (o.rutin.alarmSaati * 60 + o.rutin.alarmDakikasi) >= simdiDakika,
-        )
-        .toList()
-      ..sort((a, b) {
-        final da = a.rutin.alarmSaati * 60 + a.rutin.alarmDakikasi;
-        final db = b.rutin.alarmSaati * 60 + b.rutin.alarmDakikasi;
-        return da.compareTo(db);
-      });
 
     if (yaklasanlar.isNotEmpty) {
       siradaki = yaklasanlar.first;

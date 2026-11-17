@@ -72,6 +72,7 @@ class AyarlarKontrolcusu extends Notifier<AsyncValue<void>> {
       final tetikMilis = BildirimServisi.payloaddanTetiklenmeMilisCoz(
         yanit.payload,
       );
+      final saatMetni = BildirimServisi.payloaddanSaatMetniCoz(yanit.payload);
 
       if (yanit.actionId == BildirimServisi.aksiyonYaptimId) {
         final simdi = DateTime.now();
@@ -85,9 +86,12 @@ class AyarlarKontrolcusu extends Notifier<AsyncValue<void>> {
 
       final rota = ref.read(uygulamaRotasiSaglayici);
       if (rutinId != null) {
-        final tetikParam = tetikMilis != null ? '&tetik=$tetikMilis' : '';
+        final sorgu = <String, String>{'bildirim': '1'};
+        if (tetikMilis != null) sorgu['tetik'] = '$tetikMilis';
+        if (saatMetni != null) sorgu['saat'] = saatMetni;
+        final uri = Uri(path: '/rutin/$rutinId', queryParameters: sorgu);
         rota.go(UygulamaSabitleri.rotaBugun);
-        rota.push('/rutin/$rutinId?bildirim=1$tetikParam');
+        rota.push(uri.toString());
       } else {
         rota.go(UygulamaSabitleri.rotaBugun);
       }

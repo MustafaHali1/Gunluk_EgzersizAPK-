@@ -109,6 +109,7 @@ object RutinAlarmYoneticisi {
         rutinAdi: String,
         muzikYolu: String?,
         ertelemeDakika: Int,
+        saatMetni: String? = null,
     ): Long {
         val simdi = System.currentTimeMillis()
         val gunSonu = bugununSonuMilis()
@@ -124,6 +125,7 @@ object RutinAlarmYoneticisi {
             putExtra("rutinId", rutinId)
             putExtra("rutinAdi", rutinAdi)
             putExtra("muzikYolu", muzikYolu)
+            putExtra("saatMetni", saatMetni ?: "")
             putExtra("ertelemeMi", true)
         }
 
@@ -165,12 +167,14 @@ object RutinAlarmYoneticisi {
             sonrakiHaftalikTetiklemeHesapla(haftaninGunleri, saat, dakika)
         } ?: return
 
+        val saatMetni = String.format(java.util.Locale.US, "%02d:%02d", saat, dakika)
         val intent = Intent(context, RutinAlarmAlicisi::class.java).apply {
             action = RutinAlarmAlicisi.ACTION_ALARM_TETIKLENDI
             putExtra("alarmId", alarmId)
             putExtra("rutinId", rutinId)
             putExtra("rutinAdi", rutinAdi)
             putExtra("muzikYolu", muzikYolu)
+            putExtra("saatMetni", saatMetni)
             putExtra("ertelemeMi", false)
         }
 

@@ -78,6 +78,8 @@ class EgzersizKayitlari extends Table {
   // 'yapildi', 'atlandi' (yapılmadı), 'bekliyor'
   TextColumn get durum => text().withDefault(const Constant('bekliyor'))();
   TextColumn get notMetni => text().nullable()();
+  // Aynı günde birden çok alarmı olan rutinler için seans saati (örn: "11:41", "11:43")
+  TextColumn get seansSaati => text().withDefault(const Constant(''))();
 }
 
 // Sabah ve akşam bildirim hatırlatıcı ayarlarını tutan tablo.

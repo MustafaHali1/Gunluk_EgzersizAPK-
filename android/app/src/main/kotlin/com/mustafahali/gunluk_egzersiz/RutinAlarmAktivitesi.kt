@@ -25,6 +25,7 @@ class RutinAlarmAktivitesi : Activity() {
     private var rutinId: Int = 0
     private var rutinAdi: String = "Rutin"
     private var muzikYolu: String? = null
+    private var saatMetni: String = ""
     private var tetiklenmeMilis: Long = 0L
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -44,6 +45,7 @@ class RutinAlarmAktivitesi : Activity() {
         rutinId = intent?.getIntExtra("rutinId", 0) ?: 0
         rutinAdi = intent?.getStringExtra("rutinAdi") ?: "Rutin"
         muzikYolu = intent?.getStringExtra("muzikYolu")
+        saatMetni = intent?.getStringExtra("saatMetni") ?: ""
         tetiklenmeMilis = intent?.getLongExtra("tetiklenmeMilis", System.currentTimeMillis())
             ?: System.currentTimeMillis()
 
@@ -102,6 +104,7 @@ class RutinAlarmAktivitesi : Activity() {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
                 putExtra("acilis_rutin_id", rutinId)
                 putExtra("acilis_tetiklenme_milis", tetiklenmeMilis)
+                putExtra("acilis_saat_metni", saatMetni)
             }
             startActivity(acilis)
             finish()
@@ -246,6 +249,7 @@ class RutinAlarmAktivitesi : Activity() {
             rutinAdi = rutinAdi,
             muzikYolu = muzikYolu,
             ertelemeDakika = ertelemeDakika,
+            saatMetni = saatMetni,
         )
         val saatMetni = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(hedefMilis))
         Toast.makeText(

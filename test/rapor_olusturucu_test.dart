@@ -39,6 +39,7 @@ void main() {
               egzersizAdiKopyasi: 'Squat',
               durum: 'yapildi',
               notMetni: null,
+              seansSaati: '',
             ),
             EgzersizKayitlariData(
               id: 11,
@@ -47,6 +48,7 @@ void main() {
               egzersizAdiKopyasi: 'Eski Arşivlenmiş Plank',
               durum: 'atlandi',
               notMetni: 'Bel ağrısı',
+              seansSaati: '',
             ),
           ],
         ),

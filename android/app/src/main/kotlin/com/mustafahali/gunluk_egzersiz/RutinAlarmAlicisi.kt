@@ -34,6 +34,7 @@ class RutinAlarmAlicisi : BroadcastReceiver() {
             val alarmId = intent.getIntExtra("alarmId", rutinId)
             val rutinAdi = intent.getStringExtra("rutinAdi") ?: "Rutin"
             val muzikYolu = intent.getStringExtra("muzikYolu")
+            val saatMetni = intent.getStringExtra("saatMetni") ?: ""
             val ertelemeMi = intent.getBooleanExtra("ertelemeMi", false)
 
             val servisIntent = Intent(context, RutinAlarmServisi::class.java).apply {
@@ -41,6 +42,7 @@ class RutinAlarmAlicisi : BroadcastReceiver() {
                 putExtra("rutinId", rutinId)
                 putExtra("rutinAdi", rutinAdi)
                 putExtra("muzikYolu", muzikYolu)
+                putExtra("saatMetni", saatMetni)
             }
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

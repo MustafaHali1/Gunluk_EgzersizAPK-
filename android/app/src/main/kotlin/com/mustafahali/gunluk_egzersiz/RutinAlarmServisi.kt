@@ -43,6 +43,7 @@ class RutinAlarmServisi : Service() {
     private var mevcutRutinId: Int = 0
     private var mevcutRutinAdi: String = "Rutin"
     private var mevcutMuzikYolu: String? = null
+    private var mevcutSaatMetni: String = ""
     private var mevcutTetiklenmeMilis: Long = 0L
 
     private val otomatikDurdurGorevi = Runnable {
@@ -63,11 +64,13 @@ class RutinAlarmServisi : Service() {
                 val rutinId = intent?.getIntExtra("rutinId", mevcutRutinId) ?: mevcutRutinId
                 val tetik = intent?.getLongExtra("tetiklenmeMilis", mevcutTetiklenmeMilis)
                     ?: mevcutTetiklenmeMilis
+                val saatMetni = intent?.getStringExtra("saatMetni") ?: mevcutSaatMetni
                 alarmiKapatVeDurdur()
                 val acilis = Intent(this, MainActivity::class.java).apply {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
                     putExtra("acilis_rutin_id", rutinId)
                     putExtra("acilis_tetiklenme_milis", tetik)
+                    putExtra("acilis_saat_metni", saatMetni)
                 }
                 startActivity(acilis)
                 return START_NOT_STICKY
@@ -100,6 +103,7 @@ class RutinAlarmServisi : Service() {
                 mevcutRutinId = intent?.getIntExtra("rutinId", 0) ?: 0
                 mevcutRutinAdi = intent?.getStringExtra("rutinAdi") ?: "Rutin"
                 mevcutMuzikYolu = intent?.getStringExtra("muzikYolu")
+                mevcutSaatMetni = intent?.getStringExtra("saatMetni") ?: ""
                 mevcutTetiklenmeMilis = System.currentTimeMillis()
 
                 kanaliOlustur()
@@ -107,6 +111,7 @@ class RutinAlarmServisi : Service() {
                     rutinId = mevcutRutinId,
                     rutinAdi = mevcutRutinAdi,
                     muzikYolu = mevcutMuzikYolu,
+                    saatMetni = mevcutSaatMetni,
                     tetiklenmeMilis = mevcutTetiklenmeMilis,
                 )
                 startForeground(BILDIRIM_ID, bildirim)
@@ -122,6 +127,7 @@ class RutinAlarmServisi : Service() {
                             putExtra("rutinId", mevcutRutinId)
                             putExtra("rutinAdi", mevcutRutinAdi)
                             putExtra("muzikYolu", mevcutMuzikYolu)
+                            putExtra("saatMetni", mevcutSaatMetni)
                             putExtra("tetiklenmeMilis", mevcutTetiklenmeMilis)
                         }
                         startActivity(aktiviteIntent)
@@ -160,6 +166,7 @@ class RutinAlarmServisi : Service() {
         rutinId: Int,
         rutinAdi: String,
         muzikYolu: String?,
+        saatMetni: String,
         tetiklenmeMilis: Long,
     ): Notification {
         val aktiviteIntent = Intent(this, RutinAlarmAktivitesi::class.java).apply {
@@ -167,6 +174,7 @@ class RutinAlarmServisi : Service() {
             putExtra("rutinId", rutinId)
             putExtra("rutinAdi", rutinAdi)
             putExtra("muzikYolu", muzikYolu)
+            putExtra("saatMetni", saatMetni)
             putExtra("tetiklenmeMilis", tetiklenmeMilis)
         }
         val tamEkranPendingIntent = PendingIntent.getActivity(
@@ -189,6 +197,7 @@ class RutinAlarmServisi : Service() {
         val durdurVeAcIntent = Intent(this, RutinAlarmServisi::class.java).apply {
             action = ACTION_DURDUR_VE_AC
             putExtra("rutinId", rutinId)
+            putExtra("saatMetni", saatMetni)
             putExtra("tetiklenmeMilis", tetiklenmeMilis)
         }
         val durdurVeAcPendingIntent = PendingIntent.getService(

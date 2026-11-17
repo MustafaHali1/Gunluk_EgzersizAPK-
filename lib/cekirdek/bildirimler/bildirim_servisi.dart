@@ -77,6 +77,13 @@ class BildirimServisi {
     return tetik != null ? int.tryParse(tetik) : null;
   }
 
+  static String? payloaddanSaatMetniCoz(String? payload) {
+    if (payload == null || !payload.startsWith('/rutin/')) return null;
+    final uri = Uri.tryParse(payload);
+    final saat = uri?.queryParameters['saat'];
+    return (saat != null && saat.trim().isNotEmpty) ? saat.trim() : null;
+  }
+
   // Bildirim servisini ve yerel saat dilimini başlatır.
   Future<void> baslat({
     void Function(NotificationResponse)? bildirimTiklandiginda,
@@ -137,20 +144,30 @@ class BildirimServisi {
           if (cagri.method == 'rutinAc') {
             int? rutinId;
             int? tetik;
+            String? saatMetni;
             if (cagri.arguments is Map) {
               final args = cagri.arguments as Map;
               rutinId = (args['rutinId'] as num?)?.toInt();
               tetik = (args['tetiklenmeMilis'] as num?)?.toInt();
+              saatMetni = args['saatMetni'] as String?;
             } else {
               rutinId = (cagri.arguments as num?)?.toInt();
             }
             if (rutinId != null && rutinId > 0) {
-              final tetikSorgu = tetik != null ? '?tetik=$tetik' : '';
+              final sorgu = <String, String>{};
+              if (tetik != null) sorgu['tetik'] = '$tetik';
+              if (saatMetni != null && saatMetni.isNotEmpty) {
+                sorgu['saat'] = saatMetni;
+              }
+              final uri = Uri(
+                path: '/rutin/$rutinId',
+                queryParameters: sorgu.isEmpty ? null : sorgu,
+              );
               _onTepkiVerildiginde?.call(
                 NotificationResponse(
                   notificationResponseType:
                       NotificationResponseType.selectedNotification,
-                  payload: '/rutin/$rutinId$tetikSorgu',
+                  payload: uri.toString(),
                 ),
               );
             }
@@ -259,12 +276,21 @@ class BildirimServisi {
             .invokeMethod<Map<Object?, Object?>?>('acilisRutinBilgisiGetir');
         final acilisRutinId = (acilisBilgisi?['rutinId'] as num?)?.toInt();
         final tetik = (acilisBilgisi?['tetiklenmeMilis'] as num?)?.toInt();
+        final saatMetni = acilisBilgisi?['saatMetni'] as String?;
         if (acilisRutinId != null && acilisRutinId > 0) {
-          final tetikSorgu = tetik != null ? '?tetik=$tetik' : '';
+          final sorgu = <String, String>{};
+          if (tetik != null) sorgu['tetik'] = '$tetik';
+          if (saatMetni != null && saatMetni.isNotEmpty) {
+            sorgu['saat'] = saatMetni;
+          }
+          final uri = Uri(
+            path: '/rutin/$acilisRutinId',
+            queryParameters: sorgu.isEmpty ? null : sorgu,
+          );
           return NotificationResponse(
             notificationResponseType:
                 NotificationResponseType.selectedNotification,
-            payload: '/rutin/$acilisRutinId$tetikSorgu',
+            payload: uri.toString(),
           );
         }
       }

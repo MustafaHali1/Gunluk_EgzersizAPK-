@@ -13,6 +13,7 @@ abstract class AntrenmanDeposu {
   Future<List<EgzersizKayitlariData>> rutinIcinGunlukKayitlariGetirVeyaOlustur({
     required int rutinId,
     required String tarih,
+    String seansSaati = '',
   });
   Future<void> egzersizDurumunuGuncelle({
     required int egzersizKaydiId,
@@ -29,6 +30,7 @@ abstract class AntrenmanDeposu {
     required String tarih,
     required int haftaninGunu,
     int? rutinId,
+    String? seansSaati,
   });
   Future<List<GunlukAntrenmanDetayi>> tarihAraligindakiAntrenmanlariGetir({
     required String baslangicTarihi,

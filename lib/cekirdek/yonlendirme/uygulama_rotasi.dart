@@ -53,10 +53,12 @@ final uygulamaRotasiSaglayici = Provider<GoRouter>((ref) {
           final tetik = int.tryParse(
             durum.uri.queryParameters['tetik'] ?? '',
           );
+          final saat = durum.uri.queryParameters['saat'];
           return RutinDetayEkrani(
             rutinId: id,
             bildirimdenGeldi: bildirimdenGeldi,
             bildirimTetikMilis: tetik,
+            seansSaati: saat,
           );
         },
       ),

@@ -1916,6 +1916,18 @@ class $EgzersizKayitlariTable extends EgzersizKayitlari
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _seansSaatiMeta = const VerificationMeta(
+    'seansSaati',
+  );
+  @override
+  late final GeneratedColumn<String> seansSaati = GeneratedColumn<String>(
+    'seans_saati',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1925,6 +1937,7 @@ class $EgzersizKayitlariTable extends EgzersizKayitlari
     egzersizAdiKopyasi,
     durum,
     notMetni,
+    seansSaati,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1989,6 +2002,12 @@ class $EgzersizKayitlariTable extends EgzersizKayitlari
         notMetni.isAcceptableOrUnknown(data['not_metni']!, _notMetniMeta),
       );
     }
+    if (data.containsKey('seans_saati')) {
+      context.handle(
+        _seansSaatiMeta,
+        seansSaati.isAcceptableOrUnknown(data['seans_saati']!, _seansSaatiMeta),
+      );
+    }
     return context;
   }
 
@@ -2026,6 +2045,10 @@ class $EgzersizKayitlariTable extends EgzersizKayitlari
         DriftSqlType.string,
         data['${effectivePrefix}not_metni'],
       ),
+      seansSaati: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}seans_saati'],
+      )!,
     );
   }
 
@@ -2044,6 +2067,7 @@ class EgzersizKayitlariData extends DataClass
   final String egzersizAdiKopyasi;
   final String durum;
   final String? notMetni;
+  final String seansSaati;
   const EgzersizKayitlariData({
     required this.id,
     required this.antrenmanKaydiId,
@@ -2052,6 +2076,7 @@ class EgzersizKayitlariData extends DataClass
     required this.egzersizAdiKopyasi,
     required this.durum,
     this.notMetni,
+    required this.seansSaati,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2067,6 +2092,7 @@ class EgzersizKayitlariData extends DataClass
     if (!nullToAbsent || notMetni != null) {
       map['not_metni'] = Variable<String>(notMetni);
     }
+    map['seans_saati'] = Variable<String>(seansSaati);
     return map;
   }
 
@@ -2083,6 +2109,7 @@ class EgzersizKayitlariData extends DataClass
       notMetni: notMetni == null && nullToAbsent
           ? const Value.absent()
           : Value(notMetni),
+      seansSaati: Value(seansSaati),
     );
   }
 
@@ -2101,6 +2128,7 @@ class EgzersizKayitlariData extends DataClass
       ),
       durum: serializer.fromJson<String>(json['durum']),
       notMetni: serializer.fromJson<String?>(json['notMetni']),
+      seansSaati: serializer.fromJson<String>(json['seansSaati']),
     );
   }
   @override
@@ -2114,6 +2142,7 @@ class EgzersizKayitlariData extends DataClass
       'egzersizAdiKopyasi': serializer.toJson<String>(egzersizAdiKopyasi),
       'durum': serializer.toJson<String>(durum),
       'notMetni': serializer.toJson<String?>(notMetni),
+      'seansSaati': serializer.toJson<String>(seansSaati),
     };
   }
 
@@ -2125,6 +2154,7 @@ class EgzersizKayitlariData extends DataClass
     String? egzersizAdiKopyasi,
     String? durum,
     Value<String?> notMetni = const Value.absent(),
+    String? seansSaati,
   }) => EgzersizKayitlariData(
     id: id ?? this.id,
     antrenmanKaydiId: antrenmanKaydiId ?? this.antrenmanKaydiId,
@@ -2133,6 +2163,7 @@ class EgzersizKayitlariData extends DataClass
     egzersizAdiKopyasi: egzersizAdiKopyasi ?? this.egzersizAdiKopyasi,
     durum: durum ?? this.durum,
     notMetni: notMetni.present ? notMetni.value : this.notMetni,
+    seansSaati: seansSaati ?? this.seansSaati,
   );
   EgzersizKayitlariData copyWithCompanion(EgzersizKayitlariCompanion data) {
     return EgzersizKayitlariData(
@@ -2149,6 +2180,9 @@ class EgzersizKayitlariData extends DataClass
           : this.egzersizAdiKopyasi,
       durum: data.durum.present ? data.durum.value : this.durum,
       notMetni: data.notMetni.present ? data.notMetni.value : this.notMetni,
+      seansSaati: data.seansSaati.present
+          ? data.seansSaati.value
+          : this.seansSaati,
     );
   }
 
@@ -2161,7 +2195,8 @@ class EgzersizKayitlariData extends DataClass
           ..write('rutinId: $rutinId, ')
           ..write('egzersizAdiKopyasi: $egzersizAdiKopyasi, ')
           ..write('durum: $durum, ')
-          ..write('notMetni: $notMetni')
+          ..write('notMetni: $notMetni, ')
+          ..write('seansSaati: $seansSaati')
           ..write(')'))
         .toString();
   }
@@ -2175,6 +2210,7 @@ class EgzersizKayitlariData extends DataClass
     egzersizAdiKopyasi,
     durum,
     notMetni,
+    seansSaati,
   );
   @override
   bool operator ==(Object other) =>
@@ -2186,7 +2222,8 @@ class EgzersizKayitlariData extends DataClass
           other.rutinId == this.rutinId &&
           other.egzersizAdiKopyasi == this.egzersizAdiKopyasi &&
           other.durum == this.durum &&
-          other.notMetni == this.notMetni);
+          other.notMetni == this.notMetni &&
+          other.seansSaati == this.seansSaati);
 }
 
 class EgzersizKayitlariCompanion
@@ -2198,6 +2235,7 @@ class EgzersizKayitlariCompanion
   final Value<String> egzersizAdiKopyasi;
   final Value<String> durum;
   final Value<String?> notMetni;
+  final Value<String> seansSaati;
   const EgzersizKayitlariCompanion({
     this.id = const Value.absent(),
     this.antrenmanKaydiId = const Value.absent(),
@@ -2206,6 +2244,7 @@ class EgzersizKayitlariCompanion
     this.egzersizAdiKopyasi = const Value.absent(),
     this.durum = const Value.absent(),
     this.notMetni = const Value.absent(),
+    this.seansSaati = const Value.absent(),
   });
   EgzersizKayitlariCompanion.insert({
     this.id = const Value.absent(),
@@ -2215,6 +2254,7 @@ class EgzersizKayitlariCompanion
     required String egzersizAdiKopyasi,
     this.durum = const Value.absent(),
     this.notMetni = const Value.absent(),
+    this.seansSaati = const Value.absent(),
   }) : antrenmanKaydiId = Value(antrenmanKaydiId),
        egzersizId = Value(egzersizId),
        egzersizAdiKopyasi = Value(egzersizAdiKopyasi);
@@ -2226,6 +2266,7 @@ class EgzersizKayitlariCompanion
     Expression<String>? egzersizAdiKopyasi,
     Expression<String>? durum,
     Expression<String>? notMetni,
+    Expression<String>? seansSaati,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -2236,6 +2277,7 @@ class EgzersizKayitlariCompanion
         'egzersiz_adi_kopyasi': egzersizAdiKopyasi,
       if (durum != null) 'durum': durum,
       if (notMetni != null) 'not_metni': notMetni,
+      if (seansSaati != null) 'seans_saati': seansSaati,
     });
   }
 
@@ -2247,6 +2289,7 @@ class EgzersizKayitlariCompanion
     Value<String>? egzersizAdiKopyasi,
     Value<String>? durum,
     Value<String?>? notMetni,
+    Value<String>? seansSaati,
   }) {
     return EgzersizKayitlariCompanion(
       id: id ?? this.id,
@@ -2256,6 +2299,7 @@ class EgzersizKayitlariCompanion
       egzersizAdiKopyasi: egzersizAdiKopyasi ?? this.egzersizAdiKopyasi,
       durum: durum ?? this.durum,
       notMetni: notMetni ?? this.notMetni,
+      seansSaati: seansSaati ?? this.seansSaati,
     );
   }
 
@@ -2283,6 +2327,9 @@ class EgzersizKayitlariCompanion
     if (notMetni.present) {
       map['not_metni'] = Variable<String>(notMetni.value);
     }
+    if (seansSaati.present) {
+      map['seans_saati'] = Variable<String>(seansSaati.value);
+    }
     return map;
   }
 
@@ -2295,7 +2342,8 @@ class EgzersizKayitlariCompanion
           ..write('rutinId: $rutinId, ')
           ..write('egzersizAdiKopyasi: $egzersizAdiKopyasi, ')
           ..write('durum: $durum, ')
-          ..write('notMetni: $notMetni')
+          ..write('notMetni: $notMetni, ')
+          ..write('seansSaati: $seansSaati')
           ..write(')'))
         .toString();
   }
@@ -4691,6 +4739,7 @@ typedef $$EgzersizKayitlariTableCreateCompanionBuilder =
       required String egzersizAdiKopyasi,
       Value<String> durum,
       Value<String?> notMetni,
+      Value<String> seansSaati,
     });
 typedef $$EgzersizKayitlariTableUpdateCompanionBuilder =
     EgzersizKayitlariCompanion Function({
@@ -4701,6 +4750,7 @@ typedef $$EgzersizKayitlariTableUpdateCompanionBuilder =
       Value<String> egzersizAdiKopyasi,
       Value<String> durum,
       Value<String?> notMetni,
+      Value<String> seansSaati,
     });
 
 final class $$EgzersizKayitlariTableReferences
@@ -4798,6 +4848,11 @@ class $$EgzersizKayitlariTableFilterComposer
 
   ColumnFilters<String> get notMetni => $composableBuilder(
     column: $table.notMetni,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get seansSaati => $composableBuilder(
+    column: $table.seansSaati,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4900,6 +4955,11 @@ class $$EgzersizKayitlariTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get seansSaati => $composableBuilder(
+    column: $table.seansSaati,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$AntrenmanKayitlariTableOrderingComposer get antrenmanKaydiId {
     final $$AntrenmanKayitlariTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -4992,6 +5052,11 @@ class $$EgzersizKayitlariTableAnnotationComposer
 
   GeneratedColumn<String> get notMetni =>
       $composableBuilder(column: $table.notMetni, builder: (column) => column);
+
+  GeneratedColumn<String> get seansSaati => $composableBuilder(
+    column: $table.seansSaati,
+    builder: (column) => column,
+  );
 
   $$AntrenmanKayitlariTableAnnotationComposer get antrenmanKaydiId {
     final $$AntrenmanKayitlariTableAnnotationComposer composer =
@@ -5108,6 +5173,7 @@ class $$EgzersizKayitlariTableTableManager
                 Value<String> egzersizAdiKopyasi = const Value.absent(),
                 Value<String> durum = const Value.absent(),
                 Value<String?> notMetni = const Value.absent(),
+                Value<String> seansSaati = const Value.absent(),
               }) => EgzersizKayitlariCompanion(
                 id: id,
                 antrenmanKaydiId: antrenmanKaydiId,
@@ -5116,6 +5182,7 @@ class $$EgzersizKayitlariTableTableManager
                 egzersizAdiKopyasi: egzersizAdiKopyasi,
                 durum: durum,
                 notMetni: notMetni,
+                seansSaati: seansSaati,
               ),
           createCompanionCallback:
               ({
@@ -5126,6 +5193,7 @@ class $$EgzersizKayitlariTableTableManager
                 required String egzersizAdiKopyasi,
                 Value<String> durum = const Value.absent(),
                 Value<String?> notMetni = const Value.absent(),
+                Value<String> seansSaati = const Value.absent(),
               }) => EgzersizKayitlariCompanion.insert(
                 id: id,
                 antrenmanKaydiId: antrenmanKaydiId,
@@ -5134,6 +5202,7 @@ class $$EgzersizKayitlariTableTableManager
                 egzersizAdiKopyasi: egzersizAdiKopyasi,
                 durum: durum,
                 notMetni: notMetni,
+                seansSaati: seansSaati,
               ),
           withReferenceMapper: (p0) => p0
               .map(

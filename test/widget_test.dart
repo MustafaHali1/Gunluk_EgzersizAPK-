@@ -158,6 +158,70 @@ void main() {
     await testVeritabani.close();
   });
 
+  testWidgets('Aynı rutinde iki farklı alarm saati birbirinden bağımsız seans açar', (
+    WidgetTester testci,
+  ) async {
+    final testVeritabani = UygulamaVeritabani(NativeDatabase.memory());
+    final egzId = await testVeritabani.egzersizDao.egzersizEkle(
+      EgzersizlerCompanion.insert(
+        ad: 'İlaç İç',
+        tur: 'tekrarli',
+        kategori: const Value('Sağlık'),
+      ),
+    );
+    final rutinId = await testVeritabani.rutinDao.rutinOlusturVeEgzersizleriKaydet(
+      ad: 'İlaç Rutini',
+      haftaninGunleri: '1,2,3,4,5,6,7',
+      aktifMi: true,
+      alarmAcikMi: true,
+      alarmSaati: 11,
+      alarmDakikasi: 41,
+      alarmSaatleri: '11:41,11:43',
+      egzersizIdListesi: [egzId],
+    );
+
+    final bugun = DateTime.now();
+    final tarih =
+        '${bugun.year.toString().padLeft(4, '0')}-${bugun.month.toString().padLeft(2, '0')}-${bugun.day.toString().padLeft(2, '0')}';
+    final ilkSeansKayitlari = await testVeritabani.antrenmanDao
+        .rutinIcinGunlukKayitlariGetirVeyaOlustur(
+          rutinId: rutinId,
+          tarih: tarih,
+          seansSaati: '11:41',
+        );
+    await testVeritabani.antrenmanDao.egzersizKaydiDurumunuGuncelle(
+      egzersizKaydiId: ilkSeansKayitlari.first.id,
+      durum: 'yapildi',
+    );
+
+    final gecerliTetik = DateTime.now().millisecondsSinceEpoch;
+    await testci.pumpWidget(
+      ProviderScope(
+        overrides: [
+          veritabaniSaglayici.overrideWithValue(testVeritabani),
+        ],
+        child: MaterialApp(
+          home: RutinDetayEkrani(
+            rutinId: rutinId,
+            bildirimdenGeldi: true,
+            bildirimTetikMilis: gecerliTetik,
+            seansSaati: '11:43',
+          ),
+        ),
+      ),
+    );
+    await testci.pump();
+    await testci.pump(const Duration(milliseconds: 300));
+
+    // İkinci alarm (11:43) ilk seansın (11:41) Yapıldı kilidinden etkilenmeden taze açılır
+    expect(find.text('İlaç Rutini • 11:43'), findsOneWidget);
+    expect(find.text('Yaptım'), findsOneWidget);
+    expect(find.text('Yapıldı (Kilitli)'), findsNothing);
+
+    await testci.pumpWidget(const SizedBox.shrink());
+    await testVeritabani.close();
+  });
+
   testWidgets('Görev ekleme formu boş ad doğrulamasını çalıştırır', (
     WidgetTester testci,
   ) async {

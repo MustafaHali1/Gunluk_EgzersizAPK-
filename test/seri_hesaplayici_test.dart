@@ -21,6 +21,7 @@ GunlukAntrenmanDetayi _ornekGunOlustur({
         egzersizAdiKopyasi: 'Hareket ${i + 1}',
         durum: durumlar[i],
         notMetni: null,
+        seansSaati: '',
       ),
     ),
   );
