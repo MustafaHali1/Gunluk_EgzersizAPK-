@@ -114,6 +114,10 @@ class _BugunEkraniDurumu extends ConsumerState<BugunEkrani> {
                       ozet.rutin.id,
                       seansSaati: ozet.seansSaati,
                     ),
+                    seansTiklandiginda: (saat) => _rutinDetayAc(
+                      ozet.rutin.id,
+                      seansSaati: saat,
+                    ),
                   ),
                 ),
               ],
@@ -222,18 +226,23 @@ class _BugunUstOzetKarti extends StatelessWidget {
 class _BugunRutinKarti extends StatelessWidget {
   final BugunRutinOzeti ozet;
   final VoidCallback tiklandiginda;
+  final ValueChanged<String> seansTiklandiginda;
 
   const _BugunRutinKarti({
     required this.ozet,
     required this.tiklandiginda,
+    required this.seansTiklandiginda,
   });
 
   @override
   Widget build(BuildContext context) {
     final r = ozet.rutin;
-    final saatBilgisi = ozet.seansSaati.isNotEmpty
-        ? '⏰ ${ozet.seansSaati}'
-        : '⏰ ${r.alarmSaati.toString().padLeft(2, '0')}:${r.alarmDakikasi.toString().padLeft(2, '0')}';
+    final saatListesi = ozet.seanslar.isNotEmpty
+        ? ozet.seanslar.map((s) => s.seansSaati).join(', ')
+        : (ozet.seansSaati.isNotEmpty
+            ? ozet.seansSaati
+            : '${r.alarmSaati.toString().padLeft(2, '0')}:${r.alarmDakikasi.toString().padLeft(2, '0')}');
+    final saatBilgisi = '⏰ $saatListesi';
 
     if (ozet.gorevKayitlari.isEmpty) {
       return Card(
@@ -289,32 +298,62 @@ class _BugunRutinKarti extends StatelessWidget {
         ),
         childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
         children: [
-          ...ozet.gorevKayitlari.map((k) {
-            final ikon = k.durum == 'yapildi'
-                ? '✅'
-                : k.durum == 'atlandi'
-                    ? '❌'
-                    : '⏳';
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 3),
-              child: Row(
-                children: [
-                  Text(ikon),
-                  const SizedBox(width: 8),
-                  Expanded(child: Text(k.egzersizAdiKopyasi)),
-                ],
+          if (ozet.seanslar.length > 1)
+            ...ozet.seanslar.map((seans) {
+              final durumMetni = seans.tamamlandiMi
+                  ? '✅'
+                  : seans.suresiGectiMi
+                      ? '⚠️'
+                      : '⏳';
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    Text(durumMetni),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Saat ${seans.seansSaati} • ${seans.yapilanSayisi}/${seans.toplamSayisi} yapıldı',
+                        style: const TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                    TextButton.icon(
+                      onPressed: () => seansTiklandiginda(seans.seansSaati),
+                      icon: const Icon(Icons.visibility_outlined, size: 16),
+                      label: const Text('Görüntüle'),
+                    ),
+                  ],
+                ),
+              );
+            })
+          else ...[
+            ...ozet.gorevKayitlari.map((k) {
+              final ikon = k.durum == 'yapildi'
+                  ? '✅'
+                  : k.durum == 'atlandi'
+                      ? '❌'
+                      : '⏳';
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 3),
+                child: Row(
+                  children: [
+                    Text(ikon),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(k.egzersizAdiKopyasi)),
+                  ],
+                ),
+              );
+            }),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: FilledButton.tonalIcon(
+                onPressed: tiklandiginda,
+                icon: const Icon(Icons.visibility_outlined, size: 18),
+                label: const Text('Rutini Görüntüle'),
               ),
-            );
-          }),
-          const SizedBox(height: 8),
-          Align(
-            alignment: Alignment.centerRight,
-            child: FilledButton.tonalIcon(
-              onPressed: tiklandiginda,
-              icon: const Icon(Icons.visibility_outlined, size: 18),
-              label: const Text('Rutini Görüntüle'),
             ),
-          ),
+          ],
         ],
       ),
     );

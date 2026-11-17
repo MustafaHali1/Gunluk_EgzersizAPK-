@@ -94,6 +94,12 @@ class BugunKontrolcusu extends AsyncNotifier<BugunDurumu> {
         varsayilanSaat: r.alarmSaati,
         varsayilanDakika: r.alarmDakikasi,
       );
+      final ilkSaatStr =
+          '${saatler.first.$1.toString().padLeft(2, '0')}:${saatler.first.$2.toString().padLeft(2, '0')}';
+
+      final seanslar = <BugunSeansOzeti>[];
+      final tumRutinKayitlari = <EgzersizKayitlariData>[];
+
       for (final (saat, dakika) in saatler) {
         final saatStr =
             '${saat.toString().padLeft(2, '0')}:${dakika.toString().padLeft(2, '0')}';
@@ -102,29 +108,49 @@ class BugunKontrolcusu extends AsyncNotifier<BugunDurumu> {
               (k) =>
                   k.rutinId == r.id &&
                   (k.seansSaati == saatStr ||
-                      (k.seansSaati.isEmpty && saatStr == '${saatler.first.$1.toString().padLeft(2, '0')}:${saatler.first.$2.toString().padLeft(2, '0')}')),
+                      (k.seansSaati.isEmpty && saatStr == ilkSaatStr)),
             )
             .toList();
+        tumRutinKayitlari.addAll(seansKayitlari);
+
         final alarmDakika = (saat * 60) + dakika;
         final bekliyorVar = seansKayitlari.any((k) => k.durum == 'bekliyor');
         final suresiGecti = bekliyorVar && simdiDakika > alarmDakika;
 
-        ozetler.add(
-          BugunRutinOzeti(
-            rutin: r,
+        seanslar.add(
+          BugunSeansOzeti(
+            seansSaati: saatStr,
             gorevKayitlari: seansKayitlari,
             suresiGectiMi: suresiGecti,
-            seansSaati: saatStr,
           ),
         );
       }
+
+      // Sıradaki veya en son aktif seansı belirle (üst özet kartı için)
+      final bekleyenSeanslar = seanslar.where((s) => !s.tamamlandiMi).toList();
+      final yaklasanSeans = bekleyenSeanslar
+          .where((s) => s.seansDakika >= simdiDakika)
+          .firstOrNull;
+      final hedefSeans =
+          yaklasanSeans ??
+          (bekleyenSeanslar.isNotEmpty ? bekleyenSeanslar.first : seanslar.first);
+
+      ozetler.add(
+        BugunRutinOzeti(
+          rutin: r,
+          gorevKayitlari: tumRutinKayitlari,
+          suresiGectiMi: hedefSeans.suresiGectiMi,
+          seansSaati: hedefSeans.seansSaati,
+          seanslar: seanslar,
+        ),
+      );
     }
 
-    // Seansları saat sırasına göre diz
+    // Rutinleri hedef seans saatine göre sırala
     ozetler.sort((a, b) => a.seansDakika.compareTo(b.seansDakika));
 
-    // Yaklaşan sıradaki rutin: tamamlanmamış ve saati henüz gelmemiş en yakın seans;
-    // yoksa tamamlanmamış ilk seans.
+    // Yaklaşan sıradaki rutin: tamamlanmamış ve saati henüz gelmemiş en yakın seansa sahip rutin;
+    // yoksa tamamlanmamış ilk rutin.
     BugunRutinOzeti? siradaki;
     final yaklasanlar = ozetler
         .where((o) => !o.tamamlandiMi && o.seansDakika >= simdiDakika)

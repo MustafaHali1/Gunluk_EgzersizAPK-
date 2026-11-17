@@ -58,7 +58,7 @@ class RaporEkrani extends ConsumerWidget {
             tabs: [
               Tab(
                 icon: Icon(Icons.table_chart_outlined),
-                text: 'Doktor Raporu (PDF)',
+                text: 'Rapor',
               ),
               Tab(
                 icon: Icon(Icons.calendar_month_outlined),
@@ -87,7 +87,14 @@ class RaporEkrani extends ConsumerWidget {
                   ),
                   const SizedBox(height: 12),
                   _RaporOzetKarti(tablo: durum.tablo),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
+                  Text(
+                    'Rutin Tabloları',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  const SizedBox(height: 8),
                   if (durum.rutinGruplari.isEmpty)
                     _RaporMatrisKarti(
                       baslik: 'Günlük Takip Tablosu',
