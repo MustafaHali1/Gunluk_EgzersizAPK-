@@ -87,12 +87,45 @@ class RutinDetayEkrani extends ConsumerWidget {
     ref.invalidate(gecmisKontrolcusuSaglayici);
   }
 
+  Future<bool> _yapildiOnayDialoguGoster(
+    BuildContext context,
+    String mesaj,
+  ) async {
+    final onaylandi = await showDialog<bool>(
+      context: context,
+      builder: (baglam) => AlertDialog(
+        icon: const Icon(Icons.lock_outline),
+        title: const Text('Yapıldı Olarak Onayla'),
+        content: Text(mesaj),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(baglam).pop(false),
+            child: const Text('Vazgeç'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(baglam).pop(true),
+            child: const Text('Evet, Kilitle'),
+          ),
+        ],
+      ),
+    );
+    return onaylandi ?? false;
+  }
+
   Future<void> _durumDegistir(
+    BuildContext context,
     WidgetRef ref,
     EgzersizKayitlariData kayit,
     String hedefDurum,
   ) async {
     final yeniDurum = kayit.durum == hedefDurum ? 'bekliyor' : hedefDurum;
+    if (yeniDurum == 'yapildi') {
+      final onay = await _yapildiOnayDialoguGoster(
+        context,
+        '"${kayit.egzersizAdiKopyasi}" görevini yapıldı olarak işaretlerseniz kilitlenecek ve geri alınamayacaktır. Emin misiniz?',
+      );
+      if (!onay) return;
+    }
     await ref
         .read(antrenmanDeposuSaglayici)
         .egzersizDurumunuGuncelle(
@@ -117,7 +150,12 @@ class RutinDetayEkrani extends ConsumerWidget {
     _tumEkranlariTazele(ref);
   }
 
-  Future<void> _tumunuYaptim(WidgetRef ref) async {
+  Future<void> _tumunuYaptim(BuildContext context, WidgetRef ref) async {
+    final onay = await _yapildiOnayDialoguGoster(
+      context,
+      'Bekleyen tüm görevleri yapıldı olarak işaretlerseniz kilitlenecek ve geri alınamayacaktır. Emin misiniz?',
+    );
+    if (!onay) return;
     final simdi = DateTime.now();
     await ref
         .read(antrenmanDeposuSaglayici)
@@ -264,7 +302,7 @@ class RutinDetayEkrani extends ConsumerWidget {
                           ),
                           if (bildirimAktifMi && durum.bekleyenSayisi > 0)
                             TextButton.icon(
-                              onPressed: () => _tumunuYaptim(ref),
+                              onPressed: () => _tumunuYaptim(context, ref),
                               icon: const Icon(Icons.done_all, size: 18),
                               label: const Text('Tümünü Yaptım'),
                             ),
@@ -302,7 +340,7 @@ class RutinDetayEkrani extends ConsumerWidget {
                     isaretlemeAcikMi: gorevAcikMi,
                     kilitMesaji: gorevAcikMi ? null : kilitMesaji,
                     durumDegistirildiginde: (hedefDurum) =>
-                        _durumDegistir(ref, kayit, hedefDurum),
+                        _durumDegistir(context, ref, kayit, hedefDurum),
                     notKaydedildiginde: (notMetni) =>
                         _notKaydet(ref, kayit, notMetni),
                   );

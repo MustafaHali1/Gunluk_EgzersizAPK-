@@ -135,8 +135,13 @@ void main() {
     await testci.pump();
     await testci.pump(const Duration(milliseconds: 300));
 
-    // İlk görevi Yaptım işaretle -> kilitlenir
+    // İlk görevi Yaptım işaretle -> önce onay penceresi açılır
     await testci.tap(find.text('Yaptım').first);
+    await testci.pump();
+    await testci.pump(const Duration(milliseconds: 200));
+
+    expect(find.text('Yapıldı Olarak Onayla'), findsOneWidget);
+    await testci.tap(find.text('Evet, Kilitle'));
     await testci.pump();
     await testci.pump(const Duration(milliseconds: 200));
 
