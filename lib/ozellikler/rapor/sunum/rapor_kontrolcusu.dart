@@ -64,6 +64,34 @@ class RaporKontrolcusu extends AsyncNotifier<RaporDurumu> {
     return _raporuHesapla();
   }
 
+  (DateTime, DateTime) _aralikHesapla(
+    DateTime ilkBaslangicGunu,
+    DateTime temizBugun,
+  ) {
+    if (_seciliTur == RaporAralikTuru.son7Gun) {
+      final gecenGun = temizBugun.difference(ilkBaslangicGunu).inDays;
+      final blokIndeksi = gecenGun >= 0 ? (gecenGun ~/ 7) : 0;
+      final b = DateTime(
+        ilkBaslangicGunu.year,
+        ilkBaslangicGunu.month,
+        ilkBaslangicGunu.day + (blokIndeksi * 7),
+      );
+      return (b, DateTime(b.year, b.month, b.day + 6));
+    } else if (_seciliTur == RaporAralikTuru.son30Gun) {
+      final gecenGun = temizBugun.difference(ilkBaslangicGunu).inDays;
+      final blokIndeksi = gecenGun >= 0 ? (gecenGun ~/ 30) : 0;
+      final b = DateTime(
+        ilkBaslangicGunu.year,
+        ilkBaslangicGunu.month,
+        ilkBaslangicGunu.day + (blokIndeksi * 30),
+      );
+      return (b, DateTime(b.year, b.month, b.day + 29));
+    } else {
+      final b = _ozelBaslangic ?? ilkBaslangicGunu;
+      return (b, _ozelBitis ?? DateTime(b.year, b.month, b.day + 6));
+    }
+  }
+
   Future<RaporDurumu> _raporuHesapla() async {
     final bugun = DateTime.now();
     final temizBugun = DateTime(bugun.year, bugun.month, bugun.day);
@@ -75,47 +103,16 @@ class RaporKontrolcusu extends AsyncNotifier<RaporDurumu> {
           bitisTarihi: TarihYardimcisi.tarihiFormatla(temizBugun),
         );
 
-    final ilkBaslangicGunu = gecmisKayitlar.isNotEmpty
+    final doluKayitlar = gecmisKayitlar
+        .where((d) => d.egzersizKayitlari.isNotEmpty)
+        .toList();
+    final ilkBaslangicGunu = doluKayitlar.isNotEmpty
         ? TarihYardimcisi.metindenTarihe(
-            gecmisKayitlar.first.antrenmanKaydi.tarih,
+            doluKayitlar.first.antrenmanKaydi.tarih,
           )
         : temizBugun;
 
-    late final DateTime baslangic;
-    late final DateTime bitis;
-
-    if (_seciliTur == RaporAralikTuru.son7Gun) {
-      final gecenGun = temizBugun.difference(ilkBaslangicGunu).inDays;
-      final blokIndeksi = gecenGun >= 0 ? (gecenGun ~/ 7) : 0;
-      baslangic = DateTime(
-        ilkBaslangicGunu.year,
-        ilkBaslangicGunu.month,
-        ilkBaslangicGunu.day + (blokIndeksi * 7),
-      );
-      bitis = DateTime(
-        baslangic.year,
-        baslangic.month,
-        baslangic.day + 6,
-      );
-    } else if (_seciliTur == RaporAralikTuru.son30Gun) {
-      final gecenGun = temizBugun.difference(ilkBaslangicGunu).inDays;
-      final blokIndeksi = gecenGun >= 0 ? (gecenGun ~/ 30) : 0;
-      baslangic = DateTime(
-        ilkBaslangicGunu.year,
-        ilkBaslangicGunu.month,
-        ilkBaslangicGunu.day + (blokIndeksi * 30),
-      );
-      bitis = DateTime(
-        baslangic.year,
-        baslangic.month,
-        baslangic.day + 29,
-      );
-    } else {
-      baslangic = _ozelBaslangic ?? ilkBaslangicGunu;
-      bitis =
-          _ozelBitis ??
-          DateTime(baslangic.year, baslangic.month, baslangic.day + 6);
-    }
+    final (baslangic, bitis) = _aralikHesapla(ilkBaslangicGunu, temizBugun);
 
     final aralikKayitlari = await _antrenmanDeposu
         .tarihAraligindakiAntrenmanlariGetir(
@@ -149,8 +146,27 @@ class RaporKontrolcusu extends AsyncNotifier<RaporDurumu> {
         tumGorevHaritasi[g.id] = g;
       }
 
-      // Yalnızca bu rutine ait günlük kayıtları filtrele ki rutinler birbirine karışmasın
-      final rutineOzelKayitlar = aralikKayitlari
+      // Bu rutinin kendi ilk kayıt gününü bul (eski rutinlerin tarihlerinden etkilenmesin)
+      final rutinIlkDetay = gecmisKayitlar
+          .where((d) => d.egzersizKayitlari.any((k) => k.rutinId == rutin.id))
+          .firstOrNull;
+      final rutinIlkGunu = rutinIlkDetay != null
+          ? TarihYardimcisi.metindenTarihe(rutinIlkDetay.antrenmanKaydi.tarih)
+          : temizBugun;
+      final (rutinBaslangic, rutinBitis) = _aralikHesapla(
+        rutinIlkGunu,
+        temizBugun,
+      );
+      final rutinBaslangicStr = TarihYardimcisi.tarihiFormatla(rutinBaslangic);
+      final rutinBitisStr = TarihYardimcisi.tarihiFormatla(rutinBitis);
+
+      // Yalnızca bu rutine ve kendi tarih aralığına ait günlük kayıtları filtrele
+      final rutineOzelKayitlar = gecmisKayitlar
+          .where(
+            (detay) =>
+                detay.antrenmanKaydi.tarih.compareTo(rutinBaslangicStr) >= 0 &&
+                detay.antrenmanKaydi.tarih.compareTo(rutinBitisStr) <= 0,
+          )
           .map(
             (detay) => GunlukAntrenmanDetayi(
               antrenmanKaydi: detay.antrenmanKaydi,
@@ -173,8 +189,8 @@ class RaporKontrolcusu extends AsyncNotifier<RaporDurumu> {
           .toList();
 
       final rutinTablosu = RaporOlusturucu.olustur(
-        baslangic: baslangic,
-        bitis: bitis,
+        baslangic: rutinBaslangic,
+        bitis: rutinBitis,
         antrenmanKayitlari: rutineOzelKayitlar,
         planliHaftaninGunleri: rutinGunleri,
         rutinEgzersizleri: rutinGorevleri,
