@@ -30,6 +30,8 @@ class Rutinler extends Table {
   BoolColumn get alarmAcikMi => boolean().withDefault(const Constant(false))();
   IntColumn get alarmSaati => integer().withDefault(const Constant(9))();
   IntColumn get alarmDakikasi => integer().withDefault(const Constant(0))();
+  // Günde birden çok alarm için "09:00,14:30,21:00" formatında saat listesi
+  TextColumn get alarmSaatleri => text().withDefault(const Constant(''))();
   TextColumn get alarmMuzikYolu => text().nullable()();
   TextColumn get alarmMuzikAdi => text().nullable()();
 }

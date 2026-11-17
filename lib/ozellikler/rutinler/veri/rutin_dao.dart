@@ -76,6 +76,7 @@ class RutinDao extends DatabaseAccessor<UygulamaVeritabani>
     bool alarmAcikMi = false,
     int alarmSaati = 9,
     int alarmDakikasi = 0,
+    String alarmSaatleri = '',
     String? alarmMuzikYolu,
     String? alarmMuzikAdi,
   }) async {
@@ -95,6 +96,7 @@ class RutinDao extends DatabaseAccessor<UygulamaVeritabani>
           alarmAcikMi: Value(alarmAcikMi),
           alarmSaati: Value(alarmSaati),
           alarmDakikasi: Value(alarmDakikasi),
+          alarmSaatleri: Value(alarmSaatleri),
           alarmMuzikYolu: Value(alarmMuzikYolu),
           alarmMuzikAdi: Value(alarmMuzikAdi),
         ),
@@ -124,6 +126,7 @@ class RutinDao extends DatabaseAccessor<UygulamaVeritabani>
     bool alarmAcikMi = false,
     int alarmSaati = 9,
     int alarmDakikasi = 0,
+    String alarmSaatleri = '',
     String? alarmMuzikYolu,
     String? alarmMuzikAdi,
   }) async {
@@ -143,6 +146,7 @@ class RutinDao extends DatabaseAccessor<UygulamaVeritabani>
           alarmAcikMi: Value(alarmAcikMi),
           alarmSaati: Value(alarmSaati),
           alarmDakikasi: Value(alarmDakikasi),
+          alarmSaatleri: Value(alarmSaatleri),
           alarmMuzikYolu: Value(alarmMuzikYolu),
           alarmMuzikAdi: Value(alarmMuzikAdi),
         ),

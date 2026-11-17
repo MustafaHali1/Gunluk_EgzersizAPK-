@@ -223,8 +223,13 @@ class _BugunRutinKarti extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final r = ozet.rutin;
+    final saatler = TarihYardimcisi.alarmSaatleriniCoz(
+      alarmSaatleriMetni: r.alarmSaatleri,
+      varsayilanSaat: r.alarmSaati,
+      varsayilanDakika: r.alarmDakikasi,
+    );
     final saatBilgisi = r.alarmAcikMi
-        ? '⏰ ${r.alarmSaati.toString().padLeft(2, '0')}:${r.alarmDakikasi.toString().padLeft(2, '0')}'
+        ? '⏰ ${saatler.map((e) => '${e.$1.toString().padLeft(2, '0')}:${e.$2.toString().padLeft(2, '0')}').join(', ')}'
         : 'Alarmsız';
 
     if (ozet.gorevKayitlari.isEmpty) {

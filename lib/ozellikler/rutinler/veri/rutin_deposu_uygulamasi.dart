@@ -88,6 +88,7 @@ class RutinDeposuUygulamasi implements RutinDeposu {
     bool alarmAcikMi = false,
     int alarmSaati = 9,
     int alarmDakikasi = 0,
+    String alarmSaatleri = '',
     String? alarmMuzikYolu,
     String? alarmMuzikAdi,
   }) async {
@@ -101,6 +102,7 @@ class RutinDeposuUygulamasi implements RutinDeposu {
         alarmAcikMi: alarmAcikMi,
         alarmSaati: alarmSaati,
         alarmDakikasi: alarmDakikasi,
+        alarmSaatleri: alarmSaatleri,
         alarmMuzikYolu: alarmMuzikYolu,
         alarmMuzikAdi: alarmMuzikAdi,
       );
@@ -125,6 +127,7 @@ class RutinDeposuUygulamasi implements RutinDeposu {
     bool alarmAcikMi = false,
     int alarmSaati = 9,
     int alarmDakikasi = 0,
+    String alarmSaatleri = '',
     String? alarmMuzikYolu,
     String? alarmMuzikAdi,
   }) async {
@@ -139,6 +142,7 @@ class RutinDeposuUygulamasi implements RutinDeposu {
         alarmAcikMi: alarmAcikMi,
         alarmSaati: alarmSaati,
         alarmDakikasi: alarmDakikasi,
+        alarmSaatleri: alarmSaatleri,
         alarmMuzikYolu: alarmMuzikYolu,
         alarmMuzikAdi: alarmMuzikAdi,
       );

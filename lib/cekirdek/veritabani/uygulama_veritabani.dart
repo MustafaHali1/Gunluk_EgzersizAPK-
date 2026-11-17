@@ -35,7 +35,7 @@ class UygulamaVeritabani extends _$UygulamaVeritabani {
     : super(yurutucu ?? _baglantiAc());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -69,6 +69,9 @@ class UygulamaVeritabani extends _$UygulamaVeritabani {
         await m.addColumn(rutinler, rutinler.alarmMuzikYolu);
         await m.addColumn(rutinler, rutinler.alarmMuzikAdi);
         await m.addColumn(egzersizKayitlari, egzersizKayitlari.rutinId);
+      }
+      if (eskiSurum < 3) {
+        await m.addColumn(rutinler, rutinler.alarmSaatleri);
       }
     },
     beforeOpen: (details) async {

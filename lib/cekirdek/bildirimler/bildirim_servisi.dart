@@ -332,20 +332,28 @@ class BildirimServisi {
       await _eklenti.cancelAll();
 
       if (Platform.isAndroid) {
-        final alarmlar = rutinler
-            .map(
-              (r) => <String, dynamic>{
-                'rutinId': r.id,
-                'rutinAdi': r.ad,
-                'saat': r.alarmSaati,
-                'dakika': r.alarmDakikasi,
-                'alarmAcikMi': r.alarmAcikMi,
-                'sadeceTarih': r.sadeceTarih,
-                'haftaninGunleri': r.haftaninGunleri,
-                'muzikYolu': r.alarmMuzikYolu,
-              },
-            )
-            .toList();
+        final alarmlar = <Map<String, dynamic>>[];
+        for (final r in rutinler) {
+          final saatler = TarihYardimcisi.alarmSaatleriniCoz(
+            alarmSaatleriMetni: r.alarmSaatleri,
+            varsayilanSaat: r.alarmSaati,
+            varsayilanDakika: r.alarmDakikasi,
+          );
+          for (var i = 0; i < saatler.length; i++) {
+            final (saat, dakika) = saatler[i];
+            alarmlar.add(<String, dynamic>{
+              'alarmId': (r.id * 100) + i,
+              'rutinId': r.id,
+              'rutinAdi': r.ad,
+              'saat': saat,
+              'dakika': dakika,
+              'alarmAcikMi': r.alarmAcikMi,
+              'sadeceTarih': r.sadeceTarih,
+              'haftaninGunleri': r.haftaninGunleri,
+              'muzikYolu': r.alarmMuzikYolu,
+            });
+          }
+        }
         await _alarmKanali.invokeMethod('tumAlarmlariKur', alarmlar);
         MerkeziKaydedici.bilgiYaz('Yerel Android rutin alarmları kuruldu.');
         return;

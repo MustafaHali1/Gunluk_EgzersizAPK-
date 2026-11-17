@@ -31,7 +31,7 @@ class _RutinFormEkraniState extends ConsumerState<RutinFormEkrani> {
   final List<EgzersizlerData> _seciliGorevler = [];
   bool _sadeceBugunMu = false;
   bool _alarmAcikMi = false;
-  TimeOfDay _alarmSaati = const TimeOfDay(hour: 9, minute: 0);
+  final List<TimeOfDay> _alarmSaatleri = [const TimeOfDay(hour: 9, minute: 0)];
   String? _alarmMuzikYolu;
   String? _alarmMuzikAdi;
   bool _yukleniyor = false;
@@ -44,7 +44,14 @@ class _RutinFormEkraniState extends ConsumerState<RutinFormEkrani> {
     if (r != null) {
       _sadeceBugunMu = r.sadeceTarih != null;
       _alarmAcikMi = r.alarmAcikMi;
-      _alarmSaati = TimeOfDay(hour: r.alarmSaati, minute: r.alarmDakikasi);
+      final cozulen = TarihYardimcisi.alarmSaatleriniCoz(
+        alarmSaatleriMetni: r.alarmSaatleri,
+        varsayilanSaat: r.alarmSaati,
+        varsayilanDakika: r.alarmDakikasi,
+      );
+      _alarmSaatleri
+        ..clear()
+        ..addAll(cozulen.map((e) => TimeOfDay(hour: e.$1, minute: e.$2)));
       _alarmMuzikYolu = r.alarmMuzikYolu;
       _alarmMuzikAdi = r.alarmMuzikAdi;
       _seciliGunler
@@ -156,14 +163,50 @@ class _RutinFormEkraniState extends ConsumerState<RutinFormEkrani> {
     }
   }
 
-  Future<void> _alarmSaatiSec() async {
+  void _saatleriSiralaVeTekillestir() {
+    final harita = <int, TimeOfDay>{
+      for (final s in _alarmSaatleri) (s.hour * 60) + s.minute: s,
+    };
+    final anahtarlar = harita.keys.toList()..sort();
+    _alarmSaatleri
+      ..clear()
+      ..addAll(anahtarlar.map((k) => harita[k]!));
+  }
+
+  Future<void> _alarmSaatiEkle() async {
+    final son = _alarmSaatleri.isNotEmpty
+        ? _alarmSaatleri.last
+        : const TimeOfDay(hour: 9, minute: 0);
     final secilen = await showTimePicker(
       context: context,
-      initialTime: _alarmSaati,
+      initialTime: TimeOfDay(hour: (son.hour + 3) % 24, minute: son.minute),
     );
     if (secilen != null) {
-      setState(() => _alarmSaati = secilen);
+      setState(() {
+        _alarmSaatleri.add(secilen);
+        _saatleriSiralaVeTekillestir();
+      });
     }
+  }
+
+  Future<void> _alarmSaatiDuzenle(int indeks) async {
+    final secilen = await showTimePicker(
+      context: context,
+      initialTime: _alarmSaatleri[indeks],
+    );
+    if (secilen != null) {
+      setState(() {
+        _alarmSaatleri[indeks] = secilen;
+        _saatleriSiralaVeTekillestir();
+      });
+    }
+  }
+
+  void _alarmSaatiSil(int indeks) {
+    if (_alarmSaatleri.length <= 1) return;
+    setState(() {
+      _alarmSaatleri.removeAt(indeks);
+    });
   }
 
   Future<void> _telefondanMuzikSec() async {
@@ -206,6 +249,14 @@ class _RutinFormEkraniState extends ConsumerState<RutinFormEkrani> {
     }
 
     final bugun = TarihYardimcisi.bugununTarihi();
+    final siraliSaatler = _alarmSaatleri
+        .map((t) => (t.hour, t.minute))
+        .toList();
+    final ilkSaat = siraliSaatler.isNotEmpty ? siraliSaatler.first : (9, 0);
+    final alarmSaatleriMetni = TarihYardimcisi.alarmSaatleriniMetneCevir(
+      siraliSaatler.isNotEmpty ? siraliSaatler : [ilkSaat],
+    );
+
     final basarili = await ref
         .read(rutinKontrolcusuSaglayici.notifier)
         .rutinKaydet(
@@ -220,8 +271,9 @@ class _RutinFormEkraniState extends ConsumerState<RutinFormEkrani> {
               ? (widget.duzenlenecekRutin?.sadeceTarih ?? bugun)
               : null,
           alarmAcikMi: _alarmAcikMi,
-          alarmSaati: _alarmSaati.hour,
-          alarmDakikasi: _alarmSaati.minute,
+          alarmSaati: ilkSaat.$1,
+          alarmDakikasi: ilkSaat.$2,
+          alarmSaatleri: alarmSaatleriMetni,
           alarmMuzikYolu: _alarmMuzikYolu,
           alarmMuzikAdi: _alarmMuzikAdi,
         );
@@ -239,8 +291,12 @@ class _RutinFormEkraniState extends ConsumerState<RutinFormEkrani> {
   @override
   Widget build(BuildContext context) {
     final duzenlemeMi = widget.duzenlenecekRutin != null;
-    final saatMetni =
-        '${_alarmSaati.hour.toString().padLeft(2, '0')}:${_alarmSaati.minute.toString().padLeft(2, '0')}';
+    final saatMetinleri = _alarmSaatleri
+        .map(
+          (t) =>
+              '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}',
+        )
+        .toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -314,12 +370,14 @@ class _RutinFormEkraniState extends ConsumerState<RutinFormEkrani> {
                   const Divider(height: 24),
                   _RutinAlarmAyarKarti(
                     alarmAcikMi: _alarmAcikMi,
-                    saatMetni: saatMetni,
+                    saatMetinleri: saatMetinleri,
                     muzikAdi: _alarmMuzikAdi ?? 'Varsayılan Sistem Alarmı',
                     ozelMuzikVarMi: _alarmMuzikYolu != null,
                     alarmAcikDegistiginde: (deger) =>
                         setState(() => _alarmAcikMi = deger),
-                    saatSecTiklandiginda: _alarmSaatiSec,
+                    saatEkleTiklandiginda: _alarmSaatiEkle,
+                    saatDuzenleTiklandiginda: _alarmSaatiDuzenle,
+                    saatSilTiklandiginda: _alarmSaatiSil,
                     muzikSecTiklandiginda: _telefondanMuzikSec,
                     varsayilanMuzikTiklandiginda: () => setState(() {
                       _alarmMuzikYolu = null;
@@ -408,14 +466,16 @@ class _RutinFormEkraniState extends ConsumerState<RutinFormEkrani> {
   }
 }
 
-// Rutine özel alarm saati, MP3 müzik seçimi ve test kartı.
+// Rutine özel birden fazla alarm saati, MP3 müzik seçimi ve test kartı.
 class _RutinAlarmAyarKarti extends StatelessWidget {
   final bool alarmAcikMi;
-  final String saatMetni;
+  final List<String> saatMetinleri;
   final String muzikAdi;
   final bool ozelMuzikVarMi;
   final ValueChanged<bool> alarmAcikDegistiginde;
-  final VoidCallback saatSecTiklandiginda;
+  final VoidCallback saatEkleTiklandiginda;
+  final ValueChanged<int> saatDuzenleTiklandiginda;
+  final ValueChanged<int> saatSilTiklandiginda;
   final VoidCallback muzikSecTiklandiginda;
   final VoidCallback varsayilanMuzikTiklandiginda;
   final VoidCallback testTiklandiginda;
@@ -423,11 +483,13 @@ class _RutinAlarmAyarKarti extends StatelessWidget {
 
   const _RutinAlarmAyarKarti({
     required this.alarmAcikMi,
-    required this.saatMetni,
+    required this.saatMetinleri,
     required this.muzikAdi,
     required this.ozelMuzikVarMi,
     required this.alarmAcikDegistiginde,
-    required this.saatSecTiklandiginda,
+    required this.saatEkleTiklandiginda,
+    required this.saatDuzenleTiklandiginda,
+    required this.saatSilTiklandiginda,
     required this.muzikSecTiklandiginda,
     required this.varsayilanMuzikTiklandiginda,
     required this.testTiklandiginda,
@@ -440,6 +502,7 @@ class _RutinAlarmAyarKarti extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
@@ -451,21 +514,55 @@ class _RutinAlarmAyarKarti extends StatelessWidget {
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               subtitle: const Text(
-                'İsterseniz alarm saati ve kendi müziğinizi seçebilirsiniz.',
+                'Günde bir veya birden çok saat ve kendi müziğinizi seçebilirsiniz.',
               ),
               value: alarmAcikMi,
               onChanged: alarmAcikDegistiginde,
             ),
             if (alarmAcikMi) ...[
               const Divider(),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.schedule),
-                title: const Text('Alarm Saati'),
-                trailing: OutlinedButton(
-                  onPressed: saatSecTiklandiginda,
-                  child: Text(saatMetni),
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.schedule, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Alarm Saatleri (${saatMetinleri.length})',
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                  FilledButton.tonalIcon(
+                    onPressed: saatEkleTiklandiginda,
+                    icon: const Icon(Icons.add_alarm, size: 18),
+                    label: const Text('+ Alarm Ekle'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: List.generate(saatMetinleri.length, (indeks) {
+                  return InputChip(
+                    avatar: const Icon(Icons.alarm, size: 16),
+                    label: Text(
+                      saatMetinleri[indeks],
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    onPressed: () => saatDuzenleTiklandiginda(indeks),
+                    onDeleted: saatMetinleri.length > 1
+                        ? () => saatSilTiklandiginda(indeks)
+                        : null,
+                  );
+                }),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Seçilen müzik, günler ve erteleme ayarları listedeki tüm saatler için uygulanır.',
+                style: Theme.of(context).textTheme.bodySmall,
               ),
               ListTile(
                 contentPadding: EdgeInsets.zero,

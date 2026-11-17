@@ -73,4 +73,44 @@ class TarihYardimcisi {
     };
     return '${tarih.day} ${aylar[tarih.month] ?? ''} ${tarih.year}';
   }
+
+  // "09:00,13:30,21:00" metnini sıralı (saat, dakika) listesine çözer; boşsa varsayılan saati döndürür.
+  static List<(int, int)> alarmSaatleriniCoz({
+    required String alarmSaatleriMetni,
+    required int varsayilanSaat,
+    required int varsayilanDakika,
+  }) {
+    final benzersiz = <int, (int, int)>{};
+    for (final parca in alarmSaatleriMetni.split(',')) {
+      final temiz = parca.trim();
+      if (temiz.isEmpty) continue;
+      final ikiNokta = temiz.split(':');
+      if (ikiNokta.length != 2) continue;
+      final s = int.tryParse(ikiNokta[0].trim());
+      final d = int.tryParse(ikiNokta[1].trim());
+      if (s != null && d != null && s >= 0 && s <= 23 && d >= 0 && d <= 59) {
+        benzersiz[(s * 60) + d] = (s, d);
+      }
+    }
+    if (benzersiz.isEmpty) {
+      return [(varsayilanSaat, varsayilanDakika)];
+    }
+    final siraliAnahtarlar = benzersiz.keys.toList()..sort();
+    return [for (final k in siraliAnahtarlar) benzersiz[k]!];
+  }
+
+  // (saat, dakika) listesini sıralı "09:00,13:30" metnine dönüştürür.
+  static String alarmSaatleriniMetneCevir(List<(int, int)> saatler) {
+    final benzersiz = <int, (int, int)>{};
+    for (final (s, d) in saatler) {
+      benzersiz[(s * 60) + d] = (s, d);
+    }
+    final siraliAnahtarlar = benzersiz.keys.toList()..sort();
+    return siraliAnahtarlar
+        .map((k) {
+          final (s, d) = benzersiz[k]!;
+          return '${s.toString().padLeft(2, '0')}:${d.toString().padLeft(2, '0')}';
+        })
+        .join(',');
+  }
 }

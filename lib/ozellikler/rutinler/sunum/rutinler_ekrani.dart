@@ -36,9 +36,18 @@ class RutinlerEkrani extends ConsumerWidget {
         ? 'Sadece ${r.sadeceTarih}'
         : _gunleriFormatla(r.haftaninGunleri);
     if (!r.alarmAcikMi) return gunBilgisi;
-    final s = r.alarmSaati.toString().padLeft(2, '0');
-    final d = r.alarmDakikasi.toString().padLeft(2, '0');
-    return '$gunBilgisi • ⏰ $s:$d';
+    final saatler = TarihYardimcisi.alarmSaatleriniCoz(
+      alarmSaatleriMetni: r.alarmSaatleri,
+      varsayilanSaat: r.alarmSaati,
+      varsayilanDakika: r.alarmDakikasi,
+    );
+    final saatMetni = saatler
+        .map(
+          (e) =>
+              '${e.$1.toString().padLeft(2, '0')}:${e.$2.toString().padLeft(2, '0')}',
+        )
+        .join(', ');
+    return '$gunBilgisi • ⏰ $saatMetni';
   }
 
   String _gunleriFormatla(String haftaninGunleri) {

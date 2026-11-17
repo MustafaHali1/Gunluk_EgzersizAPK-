@@ -31,6 +31,7 @@ class RutinAlarmAlicisi : BroadcastReceiver() {
             wakeLock.acquire(15_000L)
 
             val rutinId = intent.getIntExtra("rutinId", 0)
+            val alarmId = intent.getIntExtra("alarmId", rutinId)
             val rutinAdi = intent.getStringExtra("rutinAdi") ?: "Rutin"
             val muzikYolu = intent.getStringExtra("muzikYolu")
             val ertelemeMi = intent.getBooleanExtra("ertelemeMi", false)
@@ -48,8 +49,8 @@ class RutinAlarmAlicisi : BroadcastReceiver() {
                 context.startService(servisIntent)
             }
 
-            if (!ertelemeMi && rutinId > 0) {
-                RutinAlarmYoneticisi.sonrakiHaftalikAlarmiPlanla(context, rutinId)
+            if (!ertelemeMi && alarmId > 0) {
+                RutinAlarmYoneticisi.sonrakiHaftalikAlarmiPlanla(context, alarmId)
             }
         }
     }

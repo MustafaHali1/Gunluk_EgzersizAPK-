@@ -31,8 +31,11 @@ object RutinAlarmYoneticisi {
 
         val jsonDizisi = JSONArray()
         for (alarm in alarmlar) {
+            val rutinId = (alarm["rutinId"] as? Number)?.toInt() ?: 0
+            val alarmId = (alarm["alarmId"] as? Number)?.toInt() ?: rutinId
             val obj = JSONObject()
-            obj.put("rutinId", (alarm["rutinId"] as? Number)?.toInt() ?: 0)
+            obj.put("alarmId", alarmId)
+            obj.put("rutinId", rutinId)
             obj.put("rutinAdi", alarm["rutinAdi"] as? String ?: "Rutin")
             obj.put("saat", (alarm["saat"] as? Number)?.toInt() ?: 9)
             obj.put("dakika", (alarm["dakika"] as? Number)?.toInt() ?: 0)
@@ -83,14 +86,15 @@ object RutinAlarmYoneticisi {
         context.startService(durdurIntent)
     }
 
-    fun sonrakiHaftalikAlarmiPlanla(context: Context, rutinId: Int) {
+    fun sonrakiHaftalikAlarmiPlanla(context: Context, alarmId: Int) {
         val prefs = context.getSharedPreferences(PREFS_ADI, Context.MODE_PRIVATE)
         val ham = prefs.getString(ANAHTAR_ALARMLAR, null) ?: return
         try {
             val dizi = JSONArray(ham)
             for (i in 0 until dizi.length()) {
                 val obj = dizi.getJSONObject(i)
-                if (obj.optInt("rutinId") == rutinId && obj.optBoolean("alarmAcikMi", false)) {
+                val kayitliAlarmId = obj.optInt("alarmId", obj.optInt("rutinId", 0))
+                if (kayitliAlarmId == alarmId && obj.optBoolean("alarmAcikMi", false)) {
                     tekRutinAlarmiPlanla(context, obj)
                     break
                 }
@@ -147,6 +151,7 @@ object RutinAlarmYoneticisi {
 
     private fun tekRutinAlarmiPlanla(context: Context, obj: JSONObject) {
         val rutinId = obj.optInt("rutinId", 0)
+        val alarmId = obj.optInt("alarmId", rutinId)
         val rutinAdi = obj.optString("rutinAdi", "Rutin")
         val saat = obj.optInt("saat", 9)
         val dakika = obj.optInt("dakika", 0)
@@ -162,13 +167,14 @@ object RutinAlarmYoneticisi {
 
         val intent = Intent(context, RutinAlarmAlicisi::class.java).apply {
             action = RutinAlarmAlicisi.ACTION_ALARM_TETIKLENDI
+            putExtra("alarmId", alarmId)
             putExtra("rutinId", rutinId)
             putExtra("rutinAdi", rutinAdi)
             putExtra("muzikYolu", muzikYolu)
             putExtra("ertelemeMi", false)
         }
 
-        val istekKodu = 10000 + rutinId
+        val istekKodu = 10000 + alarmId
         val pendingIntent = PendingIntent.getBroadcast(
             context,
             istekKodu,
@@ -225,10 +231,11 @@ object RutinAlarmYoneticisi {
         try {
             val dizi = JSONArray(ham)
             for (i in 0 until dizi.length()) {
-                val rutinId = dizi.getJSONObject(i).optInt("rutinId", 0)
+                val obj = dizi.getJSONObject(i)
+                val alarmId = obj.optInt("alarmId", obj.optInt("rutinId", 0))
                 val normalIntent = PendingIntent.getBroadcast(
                     context,
-                    10000 + rutinId,
+                    10000 + alarmId,
                     Intent(context, RutinAlarmAlicisi::class.java).apply {
                         action = RutinAlarmAlicisi.ACTION_ALARM_TETIKLENDI
                     },

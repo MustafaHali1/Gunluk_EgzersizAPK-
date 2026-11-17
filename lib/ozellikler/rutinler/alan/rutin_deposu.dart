@@ -19,6 +19,7 @@ abstract class RutinDeposu {
     bool alarmAcikMi = false,
     int alarmSaati = 9,
     int alarmDakikasi = 0,
+    String alarmSaatleri = '',
     String? alarmMuzikYolu,
     String? alarmMuzikAdi,
   });
@@ -32,6 +33,7 @@ abstract class RutinDeposu {
     bool alarmAcikMi = false,
     int alarmSaati = 9,
     int alarmDakikasi = 0,
+    String alarmSaatleri = '',
     String? alarmMuzikYolu,
     String? alarmMuzikAdi,
   });

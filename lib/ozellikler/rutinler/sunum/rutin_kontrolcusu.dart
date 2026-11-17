@@ -44,6 +44,7 @@ class RutinKontrolcusu extends Notifier<AsyncValue<void>> {
     bool alarmAcikMi = false,
     int alarmSaati = 9,
     int alarmDakikasi = 0,
+    String alarmSaatleri = '',
     String? alarmMuzikYolu,
     String? alarmMuzikAdi,
   }) async {
@@ -66,6 +67,7 @@ class RutinKontrolcusu extends Notifier<AsyncValue<void>> {
           alarmAcikMi: alarmAcikMi,
           alarmSaati: alarmSaati,
           alarmDakikasi: alarmDakikasi,
+          alarmSaatleri: alarmSaatleri,
           alarmMuzikYolu: alarmMuzikYolu,
           alarmMuzikAdi: alarmMuzikAdi,
         );
@@ -80,6 +82,7 @@ class RutinKontrolcusu extends Notifier<AsyncValue<void>> {
           alarmAcikMi: alarmAcikMi,
           alarmSaati: alarmSaati,
           alarmDakikasi: alarmDakikasi,
+          alarmSaatleri: alarmSaatleri,
           alarmMuzikYolu: alarmMuzikYolu,
           alarmMuzikAdi: alarmMuzikAdi,
         );

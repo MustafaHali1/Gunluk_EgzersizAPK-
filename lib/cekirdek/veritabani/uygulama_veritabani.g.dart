@@ -675,6 +675,18 @@ class $RutinlerTable extends Rutinler
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
   );
+  static const VerificationMeta _alarmSaatleriMeta = const VerificationMeta(
+    'alarmSaatleri',
+  );
+  @override
+  late final GeneratedColumn<String> alarmSaatleri = GeneratedColumn<String>(
+    'alarm_saatleri',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
   static const VerificationMeta _alarmMuzikYoluMeta = const VerificationMeta(
     'alarmMuzikYolu',
   );
@@ -707,6 +719,7 @@ class $RutinlerTable extends Rutinler
     alarmAcikMi,
     alarmSaati,
     alarmDakikasi,
+    alarmSaatleri,
     alarmMuzikYolu,
     alarmMuzikAdi,
   ];
@@ -778,6 +791,15 @@ class $RutinlerTable extends Rutinler
         ),
       );
     }
+    if (data.containsKey('alarm_saatleri')) {
+      context.handle(
+        _alarmSaatleriMeta,
+        alarmSaatleri.isAcceptableOrUnknown(
+          data['alarm_saatleri']!,
+          _alarmSaatleriMeta,
+        ),
+      );
+    }
     if (data.containsKey('alarm_muzik_yolu')) {
       context.handle(
         _alarmMuzikYoluMeta,
@@ -837,6 +859,10 @@ class $RutinlerTable extends Rutinler
         DriftSqlType.int,
         data['${effectivePrefix}alarm_dakikasi'],
       )!,
+      alarmSaatleri: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}alarm_saatleri'],
+      )!,
       alarmMuzikYolu: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}alarm_muzik_yolu'],
@@ -863,6 +889,7 @@ class RutinlerData extends DataClass implements Insertable<RutinlerData> {
   final bool alarmAcikMi;
   final int alarmSaati;
   final int alarmDakikasi;
+  final String alarmSaatleri;
   final String? alarmMuzikYolu;
   final String? alarmMuzikAdi;
   const RutinlerData({
@@ -874,6 +901,7 @@ class RutinlerData extends DataClass implements Insertable<RutinlerData> {
     required this.alarmAcikMi,
     required this.alarmSaati,
     required this.alarmDakikasi,
+    required this.alarmSaatleri,
     this.alarmMuzikYolu,
     this.alarmMuzikAdi,
   });
@@ -890,6 +918,7 @@ class RutinlerData extends DataClass implements Insertable<RutinlerData> {
     map['alarm_acik_mi'] = Variable<bool>(alarmAcikMi);
     map['alarm_saati'] = Variable<int>(alarmSaati);
     map['alarm_dakikasi'] = Variable<int>(alarmDakikasi);
+    map['alarm_saatleri'] = Variable<String>(alarmSaatleri);
     if (!nullToAbsent || alarmMuzikYolu != null) {
       map['alarm_muzik_yolu'] = Variable<String>(alarmMuzikYolu);
     }
@@ -911,6 +940,7 @@ class RutinlerData extends DataClass implements Insertable<RutinlerData> {
       alarmAcikMi: Value(alarmAcikMi),
       alarmSaati: Value(alarmSaati),
       alarmDakikasi: Value(alarmDakikasi),
+      alarmSaatleri: Value(alarmSaatleri),
       alarmMuzikYolu: alarmMuzikYolu == null && nullToAbsent
           ? const Value.absent()
           : Value(alarmMuzikYolu),
@@ -934,6 +964,7 @@ class RutinlerData extends DataClass implements Insertable<RutinlerData> {
       alarmAcikMi: serializer.fromJson<bool>(json['alarmAcikMi']),
       alarmSaati: serializer.fromJson<int>(json['alarmSaati']),
       alarmDakikasi: serializer.fromJson<int>(json['alarmDakikasi']),
+      alarmSaatleri: serializer.fromJson<String>(json['alarmSaatleri']),
       alarmMuzikYolu: serializer.fromJson<String?>(json['alarmMuzikYolu']),
       alarmMuzikAdi: serializer.fromJson<String?>(json['alarmMuzikAdi']),
     );
@@ -950,6 +981,7 @@ class RutinlerData extends DataClass implements Insertable<RutinlerData> {
       'alarmAcikMi': serializer.toJson<bool>(alarmAcikMi),
       'alarmSaati': serializer.toJson<int>(alarmSaati),
       'alarmDakikasi': serializer.toJson<int>(alarmDakikasi),
+      'alarmSaatleri': serializer.toJson<String>(alarmSaatleri),
       'alarmMuzikYolu': serializer.toJson<String?>(alarmMuzikYolu),
       'alarmMuzikAdi': serializer.toJson<String?>(alarmMuzikAdi),
     };
@@ -964,6 +996,7 @@ class RutinlerData extends DataClass implements Insertable<RutinlerData> {
     bool? alarmAcikMi,
     int? alarmSaati,
     int? alarmDakikasi,
+    String? alarmSaatleri,
     Value<String?> alarmMuzikYolu = const Value.absent(),
     Value<String?> alarmMuzikAdi = const Value.absent(),
   }) => RutinlerData(
@@ -975,6 +1008,7 @@ class RutinlerData extends DataClass implements Insertable<RutinlerData> {
     alarmAcikMi: alarmAcikMi ?? this.alarmAcikMi,
     alarmSaati: alarmSaati ?? this.alarmSaati,
     alarmDakikasi: alarmDakikasi ?? this.alarmDakikasi,
+    alarmSaatleri: alarmSaatleri ?? this.alarmSaatleri,
     alarmMuzikYolu: alarmMuzikYolu.present
         ? alarmMuzikYolu.value
         : this.alarmMuzikYolu,
@@ -1002,6 +1036,9 @@ class RutinlerData extends DataClass implements Insertable<RutinlerData> {
       alarmDakikasi: data.alarmDakikasi.present
           ? data.alarmDakikasi.value
           : this.alarmDakikasi,
+      alarmSaatleri: data.alarmSaatleri.present
+          ? data.alarmSaatleri.value
+          : this.alarmSaatleri,
       alarmMuzikYolu: data.alarmMuzikYolu.present
           ? data.alarmMuzikYolu.value
           : this.alarmMuzikYolu,
@@ -1022,6 +1059,7 @@ class RutinlerData extends DataClass implements Insertable<RutinlerData> {
           ..write('alarmAcikMi: $alarmAcikMi, ')
           ..write('alarmSaati: $alarmSaati, ')
           ..write('alarmDakikasi: $alarmDakikasi, ')
+          ..write('alarmSaatleri: $alarmSaatleri, ')
           ..write('alarmMuzikYolu: $alarmMuzikYolu, ')
           ..write('alarmMuzikAdi: $alarmMuzikAdi')
           ..write(')'))
@@ -1038,6 +1076,7 @@ class RutinlerData extends DataClass implements Insertable<RutinlerData> {
     alarmAcikMi,
     alarmSaati,
     alarmDakikasi,
+    alarmSaatleri,
     alarmMuzikYolu,
     alarmMuzikAdi,
   );
@@ -1053,6 +1092,7 @@ class RutinlerData extends DataClass implements Insertable<RutinlerData> {
           other.alarmAcikMi == this.alarmAcikMi &&
           other.alarmSaati == this.alarmSaati &&
           other.alarmDakikasi == this.alarmDakikasi &&
+          other.alarmSaatleri == this.alarmSaatleri &&
           other.alarmMuzikYolu == this.alarmMuzikYolu &&
           other.alarmMuzikAdi == this.alarmMuzikAdi);
 }
@@ -1066,6 +1106,7 @@ class RutinlerCompanion extends UpdateCompanion<RutinlerData> {
   final Value<bool> alarmAcikMi;
   final Value<int> alarmSaati;
   final Value<int> alarmDakikasi;
+  final Value<String> alarmSaatleri;
   final Value<String?> alarmMuzikYolu;
   final Value<String?> alarmMuzikAdi;
   const RutinlerCompanion({
@@ -1077,6 +1118,7 @@ class RutinlerCompanion extends UpdateCompanion<RutinlerData> {
     this.alarmAcikMi = const Value.absent(),
     this.alarmSaati = const Value.absent(),
     this.alarmDakikasi = const Value.absent(),
+    this.alarmSaatleri = const Value.absent(),
     this.alarmMuzikYolu = const Value.absent(),
     this.alarmMuzikAdi = const Value.absent(),
   });
@@ -1089,6 +1131,7 @@ class RutinlerCompanion extends UpdateCompanion<RutinlerData> {
     this.alarmAcikMi = const Value.absent(),
     this.alarmSaati = const Value.absent(),
     this.alarmDakikasi = const Value.absent(),
+    this.alarmSaatleri = const Value.absent(),
     this.alarmMuzikYolu = const Value.absent(),
     this.alarmMuzikAdi = const Value.absent(),
   }) : ad = Value(ad);
@@ -1101,6 +1144,7 @@ class RutinlerCompanion extends UpdateCompanion<RutinlerData> {
     Expression<bool>? alarmAcikMi,
     Expression<int>? alarmSaati,
     Expression<int>? alarmDakikasi,
+    Expression<String>? alarmSaatleri,
     Expression<String>? alarmMuzikYolu,
     Expression<String>? alarmMuzikAdi,
   }) {
@@ -1113,6 +1157,7 @@ class RutinlerCompanion extends UpdateCompanion<RutinlerData> {
       if (alarmAcikMi != null) 'alarm_acik_mi': alarmAcikMi,
       if (alarmSaati != null) 'alarm_saati': alarmSaati,
       if (alarmDakikasi != null) 'alarm_dakikasi': alarmDakikasi,
+      if (alarmSaatleri != null) 'alarm_saatleri': alarmSaatleri,
       if (alarmMuzikYolu != null) 'alarm_muzik_yolu': alarmMuzikYolu,
       if (alarmMuzikAdi != null) 'alarm_muzik_adi': alarmMuzikAdi,
     });
@@ -1127,6 +1172,7 @@ class RutinlerCompanion extends UpdateCompanion<RutinlerData> {
     Value<bool>? alarmAcikMi,
     Value<int>? alarmSaati,
     Value<int>? alarmDakikasi,
+    Value<String>? alarmSaatleri,
     Value<String?>? alarmMuzikYolu,
     Value<String?>? alarmMuzikAdi,
   }) {
@@ -1139,6 +1185,7 @@ class RutinlerCompanion extends UpdateCompanion<RutinlerData> {
       alarmAcikMi: alarmAcikMi ?? this.alarmAcikMi,
       alarmSaati: alarmSaati ?? this.alarmSaati,
       alarmDakikasi: alarmDakikasi ?? this.alarmDakikasi,
+      alarmSaatleri: alarmSaatleri ?? this.alarmSaatleri,
       alarmMuzikYolu: alarmMuzikYolu ?? this.alarmMuzikYolu,
       alarmMuzikAdi: alarmMuzikAdi ?? this.alarmMuzikAdi,
     );
@@ -1171,6 +1218,9 @@ class RutinlerCompanion extends UpdateCompanion<RutinlerData> {
     if (alarmDakikasi.present) {
       map['alarm_dakikasi'] = Variable<int>(alarmDakikasi.value);
     }
+    if (alarmSaatleri.present) {
+      map['alarm_saatleri'] = Variable<String>(alarmSaatleri.value);
+    }
     if (alarmMuzikYolu.present) {
       map['alarm_muzik_yolu'] = Variable<String>(alarmMuzikYolu.value);
     }
@@ -1191,6 +1241,7 @@ class RutinlerCompanion extends UpdateCompanion<RutinlerData> {
           ..write('alarmAcikMi: $alarmAcikMi, ')
           ..write('alarmSaati: $alarmSaati, ')
           ..write('alarmDakikasi: $alarmDakikasi, ')
+          ..write('alarmSaatleri: $alarmSaatleri, ')
           ..write('alarmMuzikYolu: $alarmMuzikYolu, ')
           ..write('alarmMuzikAdi: $alarmMuzikAdi')
           ..write(')'))
@@ -3221,6 +3272,7 @@ typedef $$RutinlerTableCreateCompanionBuilder = RutinlerCompanion Function({
   Value<bool> alarmAcikMi,
   Value<int> alarmSaati,
   Value<int> alarmDakikasi,
+  Value<String> alarmSaatleri,
   Value<String?> alarmMuzikYolu,
   Value<String?> alarmMuzikAdi,
 });
@@ -3233,6 +3285,7 @@ typedef $$RutinlerTableUpdateCompanionBuilder = RutinlerCompanion Function({
   Value<bool> alarmAcikMi,
   Value<int> alarmSaati,
   Value<int> alarmDakikasi,
+  Value<String> alarmSaatleri,
   Value<String?> alarmMuzikYolu,
   Value<String?> alarmMuzikAdi,
 });
@@ -3360,6 +3413,11 @@ class $$RutinlerTableFilterComposer
 
   ColumnFilters<int> get alarmDakikasi => $composableBuilder(
     column: $table.alarmDakikasi,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get alarmSaatleri => $composableBuilder(
+    column: $table.alarmSaatleri,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3498,6 +3556,11 @@ class $$RutinlerTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get alarmSaatleri => $composableBuilder(
+    column: $table.alarmSaatleri,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get alarmMuzikYolu => $composableBuilder(
     column: $table.alarmMuzikYolu,
     builder: (column) => ColumnOrderings(column),
@@ -3549,6 +3612,11 @@ class $$RutinlerTableAnnotationComposer
 
   GeneratedColumn<int> get alarmDakikasi => $composableBuilder(
     column: $table.alarmDakikasi,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get alarmSaatleri => $composableBuilder(
+    column: $table.alarmSaatleri,
     builder: (column) => column,
   );
 
@@ -3681,6 +3749,7 @@ class $$RutinlerTableTableManager
                 Value<bool> alarmAcikMi = const Value.absent(),
                 Value<int> alarmSaati = const Value.absent(),
                 Value<int> alarmDakikasi = const Value.absent(),
+                Value<String> alarmSaatleri = const Value.absent(),
                 Value<String?> alarmMuzikYolu = const Value.absent(),
                 Value<String?> alarmMuzikAdi = const Value.absent(),
               }) => RutinlerCompanion(
@@ -3692,6 +3761,7 @@ class $$RutinlerTableTableManager
                 alarmAcikMi: alarmAcikMi,
                 alarmSaati: alarmSaati,
                 alarmDakikasi: alarmDakikasi,
+                alarmSaatleri: alarmSaatleri,
                 alarmMuzikYolu: alarmMuzikYolu,
                 alarmMuzikAdi: alarmMuzikAdi,
               ),
@@ -3705,6 +3775,7 @@ class $$RutinlerTableTableManager
                 Value<bool> alarmAcikMi = const Value.absent(),
                 Value<int> alarmSaati = const Value.absent(),
                 Value<int> alarmDakikasi = const Value.absent(),
+                Value<String> alarmSaatleri = const Value.absent(),
                 Value<String?> alarmMuzikYolu = const Value.absent(),
                 Value<String?> alarmMuzikAdi = const Value.absent(),
               }) => RutinlerCompanion.insert(
@@ -3716,6 +3787,7 @@ class $$RutinlerTableTableManager
                 alarmAcikMi: alarmAcikMi,
                 alarmSaati: alarmSaati,
                 alarmDakikasi: alarmDakikasi,
+                alarmSaatleri: alarmSaatleri,
                 alarmMuzikYolu: alarmMuzikYolu,
                 alarmMuzikAdi: alarmMuzikAdi,
               ),
