@@ -3,6 +3,7 @@
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../cekirdek/hatalar/merkezi_kaydedici.dart';
 import '../alan/grup_kanit_modeli.dart';
 import '../alan/grup_mesaj_modeli.dart';
@@ -24,12 +25,25 @@ class FirestoreGrupServisi {
 
   /// Aktif kullanıcının kimliğini döner. Oturum açık değilse anonim giriş yapar.
   Future<String> mevcutKullaniciKimligiAl() async {
-    User? kullanici = _auth.currentUser;
-    if (kullanici == null) {
-      final kimlikSonucu = await _auth.signInAnonymously();
-      kullanici = kimlikSonucu.user;
+    try {
+      User? kullanici = _auth.currentUser;
+      if (kullanici == null) {
+        final kimlikSonucu = await _auth.signInAnonymously();
+        kullanici = kimlikSonucu.user;
+      }
+      if (kullanici != null) return kullanici.uid;
+    } catch (e) {
+      MerkeziKaydedici.bilgiYaz('FirebaseAuth anonim girişte hata, yerel UUID kullanılıyor: $e');
     }
-    return kullanici!.uid;
+
+    // Güvenli yerel kullanıcı kimliği yedeği (asla takılmaz veya çökmez)
+    final tercihler = await SharedPreferences.getInstance();
+    String? yerelId = tercihler.getString('yerel_toplu_kullanici_id');
+    if (yerelId == null) {
+      yerelId = 'kul_${DateTime.now().millisecondsSinceEpoch}_${Random().nextInt(9999)}';
+      await tercihler.setString('yerel_toplu_kullanici_id', yerelId);
+    }
+    return yerelId;
   }
 
   /// 6 karakterli rastgele benzersiz bir davet kodu üretir (Örn: "HL8924").
@@ -59,6 +73,7 @@ class FirestoreGrupServisi {
         aciklama: aciklama,
         davetKodu: davetKodu,
         olusturanKullaniciId: kullaniciId,
+        uyeIdleri: [kullaniciId],
         olusturmaTarihi: DateTime.now(),
         aktifMi: true,
       );
@@ -135,6 +150,11 @@ class FirestoreGrupServisi {
         );
         await uyeRef.set(yeniUye.haritayaDonustur());
 
+        // Ana grup belgesindeki üye listesine de ekle
+        await grupDoc.reference.update({
+          'uyeIdleri': FieldValue.arrayUnion([kullaniciId]),
+        });
+
         // Sohbete katılım duyurusu gönder
         await mesajGonder(
           grupId: grup.id,
@@ -155,22 +175,12 @@ class FirestoreGrupServisi {
   /// Kullanıcının üyesi olduğu tüm grupları canlı dinler.
   Stream<List<GrupModeli>> kullanicininGruplariniDinle(String kullaniciId) {
     return _firestore
-        .collectionGroup('uyeler')
-        .where('kullaniciId', isEqualTo: kullaniciId)
+        .collection('gruplar')
+        .where('uyeIdleri', arrayContains: kullaniciId)
         .snapshots()
-        .asyncMap((snapshot) async {
-      List<GrupModeli> gruplar = [];
-      for (var doc in snapshot.docs) {
-        final grupRef = doc.reference.parent.parent;
-        if (grupRef != null) {
-          final grupSnap = await grupRef.get();
-          if (grupSnap.exists && grupSnap.data() != null) {
-            gruplar.add(GrupModeli.haritadanUret(grupSnap.data()!, grupSnap.id));
-          }
-        }
-      }
-      return gruplar;
-    });
+        .map((snapshot) => snapshot.docs
+            .map((doc) => GrupModeli.haritadanUret(doc.data(), doc.id))
+            .toList());
   }
 
   /// Gruba ait rutinleri canlı akış olarak getirir.

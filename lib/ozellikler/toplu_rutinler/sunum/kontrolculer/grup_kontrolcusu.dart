@@ -23,8 +23,8 @@ final kullaniciGruplariSaglayici = StreamProvider<List<GrupModeli>>((ref) {
 
   return kullaniciIdAsync.when(
     data: (id) => servis.kullanicininGruplariniDinle(id),
-    loading: () => const Stream.empty(),
-    error: (_, _) => const Stream.empty(),
+    loading: () => Stream.value(<GrupModeli>[]),
+    error: (_, _) => Stream.value(<GrupModeli>[]),
   );
 });
 

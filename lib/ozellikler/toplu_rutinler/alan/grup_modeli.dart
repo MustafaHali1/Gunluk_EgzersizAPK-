@@ -7,6 +7,7 @@ class GrupModeli {
   final String aciklama;
   final String davetKodu;
   final String olusturanKullaniciId;
+  final List<String> uyeIdleri;
   final DateTime olusturmaTarihi;
   final bool aktifMi;
 
@@ -16,6 +17,7 @@ class GrupModeli {
     required this.aciklama,
     required this.davetKodu,
     required this.olusturanKullaniciId,
+    this.uyeIdleri = const [],
     required this.olusturmaTarihi,
     this.aktifMi = true,
   });
@@ -28,6 +30,10 @@ class GrupModeli {
       aciklama: harita['aciklama'] as String? ?? '',
       davetKodu: harita['davetKodu'] as String? ?? '',
       olusturanKullaniciId: harita['olusturanKullaniciId'] as String? ?? '',
+      uyeIdleri: (harita['uyeIdleri'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
       olusturmaTarihi: harita['olusturmaTarihi'] != null
           ? DateTime.tryParse(harita['olusturmaTarihi'].toString()) ?? DateTime.now()
           : DateTime.now(),
@@ -42,6 +48,7 @@ class GrupModeli {
       'aciklama': aciklama,
       'davetKodu': davetKodu,
       'olusturanKullaniciId': olusturanKullaniciId,
+      'uyeIdleri': uyeIdleri,
       'olusturmaTarihi': olusturmaTarihi.toIso8601String(),
       'aktifMi': aktifMi,
     };
@@ -51,6 +58,7 @@ class GrupModeli {
     String? ad,
     String? aciklama,
     String? davetKodu,
+    List<String>? uyeIdleri,
     bool? aktifMi,
   }) {
     return GrupModeli(
@@ -59,6 +67,7 @@ class GrupModeli {
       aciklama: aciklama ?? this.aciklama,
       davetKodu: davetKodu ?? this.davetKodu,
       olusturanKullaniciId: olusturanKullaniciId,
+      uyeIdleri: uyeIdleri ?? this.uyeIdleri,
       olusturmaTarihi: olusturmaTarihi,
       aktifMi: aktifMi ?? this.aktifMi,
     );
