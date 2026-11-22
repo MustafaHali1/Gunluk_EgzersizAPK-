@@ -46,6 +46,7 @@ app.*.map.json
 **/local.properties
 .env
 *.env
+lib/cekirdek/sabitler/gizli_anahtarlar.dart
 
 # Widget Preview related
 .widget_preview/
