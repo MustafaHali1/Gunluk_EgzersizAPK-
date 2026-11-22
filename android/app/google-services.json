@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1091016111233",
+    "project_id": "gunluk-rutin-b1daf",
+    "storage_bucket": "gunluk-rutin-b1daf.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1091016111233:android:794918e96bbe7731328980",
+        "android_client_info": {
+          "package_name": "com.mustafahali.gunlukegzersiz"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBIuOr9FkWzF1dB6_E3RkDh2SdjzhYNDak"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

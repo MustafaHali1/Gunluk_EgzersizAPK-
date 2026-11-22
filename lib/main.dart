@@ -7,12 +7,27 @@ import 'cekirdek/ayarlar/uygulama_tercihleri_servisi.dart';
 import 'cekirdek/hatalar/merkezi_kaydedici.dart';
 import 'cekirdek/sabitler/uygulama_sabitleri.dart';
 import 'cekirdek/tema/uygulama_temasi.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'cekirdek/yonlendirme/uygulama_rotasi.dart';
+import 'firebase_options.dart';
 import 'ozellikler/ayarlar/sunum/ayarlar_kontrolcusu.dart';
 import 'ozellikler/tanitim/sunum/tanitim_kontrolcusu.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    MerkeziKaydedici.bilgiYaz('Firebase altyapısı başarıyla başlatıldı.');
+  } catch (hata, yiginIzi) {
+    MerkeziKaydedici.hataYaz(
+      'Firebase başlatılırken hata oluştu',
+      hata: hata,
+      yiginIzi: yiginIzi,
+    );
+  }
 
   FlutterError.onError = (FlutterErrorDetails detaylar) {
     MerkeziKaydedici.hataYaz(
