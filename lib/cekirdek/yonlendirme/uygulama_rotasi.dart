@@ -11,6 +11,7 @@ import '../../ozellikler/rutinler/sunum/rutin_detay_ekrani.dart';
 import '../../ozellikler/rutinler/sunum/rutinler_ekrani.dart';
 import '../../ozellikler/tanitim/sunum/tanitim_ekrani.dart';
 import '../../ozellikler/tanitim/sunum/tanitim_kontrolcusu.dart';
+import '../../ozellikler/toplu_rutinler/sunum/ekranlar/toplu_rutinler_ana_ekrani.dart';
 import '../sabitler/uygulama_sabitleri.dart';
 import 'ana_iskelet_ekrani.dart';
 
@@ -80,6 +81,14 @@ final uygulamaRotasiSaglayici = Provider<GoRouter>((ref) {
               GoRoute(
                 path: UygulamaSabitleri.rotaRutinler,
                 builder: (context, durum) => const RutinlerEkrani(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: UygulamaSabitleri.rotaTopluRutinler,
+                builder: (context, durum) => const TopluRutinlerAnaEkrani(),
               ),
             ],
           ),

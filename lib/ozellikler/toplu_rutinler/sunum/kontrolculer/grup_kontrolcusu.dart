@@ -24,12 +24,22 @@ final kullaniciGruplariSaglayici = StreamProvider<List<GrupModeli>>((ref) {
   return kullaniciIdAsync.when(
     data: (id) => servis.kullanicininGruplariniDinle(id),
     loading: () => const Stream.empty(),
-    error: (_, __) => const Stream.empty(),
+    error: (_, _) => const Stream.empty(),
   );
 });
 
-/// Ekranda seçili olan aktif grup sağlayıcısı
-final seciliGrupSaglayici = StateProvider<GrupModeli?>((ref) => null);
+/// Ekranda seçili olan aktif grubu tutan Notifier
+class SeciliGrupKontrolcusu extends Notifier<GrupModeli?> {
+  @override
+  GrupModeli? build() => null;
+
+  void sec(GrupModeli? grup) => state = grup;
+}
+
+final seciliGrupSaglayici =
+    NotifierProvider<SeciliGrupKontrolcusu, GrupModeli?>(
+  SeciliGrupKontrolcusu.new,
+);
 
 /// Seçili grubun rutinlerini canlı dinleyen sağlayıcı
 final seciliGrupRutinleriSaglayici = StreamProvider<List<GrupRutinModeli>>((ref) {
@@ -59,7 +69,7 @@ class GrupKontrolcusu {
       aciklama: aciklama,
       kurucuAdi: kurucuAdi,
     );
-    _ref.read(seciliGrupSaglayici.notifier).state = yeniGrup;
+    _ref.read(seciliGrupSaglayici.notifier).sec(yeniGrup);
     return yeniGrup;
   }
 
@@ -72,7 +82,7 @@ class GrupKontrolcusu {
       davetKodu: kod,
       kullaniciAdi: kullaniciAdi,
     );
-    _ref.read(seciliGrupSaglayici.notifier).state = grup;
+    _ref.read(seciliGrupSaglayici.notifier).sec(grup);
     return grup;
   }
 
@@ -99,7 +109,7 @@ class GrupKontrolcusu {
 
   /// Aktif seçili grubu günceller.
   void grubuSec(GrupModeli grup) {
-    _ref.read(seciliGrupSaglayici.notifier).state = grup;
+    _ref.read(seciliGrupSaglayici.notifier).sec(grup);
   }
 }
 

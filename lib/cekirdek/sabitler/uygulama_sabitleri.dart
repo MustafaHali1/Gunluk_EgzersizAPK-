@@ -18,11 +18,13 @@ class UygulamaSabitleri {
   static const String rotaGecmis = '/gecmis';
   static const String rotaRapor = '/rapor';
   static const String rotaAyarlar = '/ayarlar';
+  static const String rotaTopluRutinler = '/toplu-rutinler';
 
   // Sekme başlıkları
   static const String sekmeBugun = 'Bugün';
   static const String sekmeEgzersizler = 'Görevler';
   static const String sekmeRutinler = 'Rutinlerim';
+  static const String sekmeTopluRutinler = 'Gruplar';
   static const String sekmeGecmis = 'Geçmiş';
   static const String sekmeRapor = 'Rapor';
   static const String sekmeAyarlar = 'Ayarlar';

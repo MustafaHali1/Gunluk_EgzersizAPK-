@@ -3,7 +3,7 @@
 import 'dart:math';
 import 'package:camera/camera.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../cekirdek/hatalar/merkezi_kaydedici.dart';
+import '../../../../cekirdek/hatalar/merkezi_kaydedici.dart';
 import '../../alan/grup_kanit_modeli.dart';
 import '../../alan/grup_rutin_modeli.dart';
 import '../../veri/firestore_grup_servisi.dart';
@@ -63,16 +63,21 @@ const List<String> _dinamikPozHavuzu = [
   '☝️ İşaret parmağını yukarı kaldır',
 ];
 
-/// Kamera ve AI doğrulama sürecini yöneten kontrolcü sınıfı.
-class KanitKameraKontrolcusu extends StateNotifier<KanitKameraDurumu> {
-  final Ref _ref;
+/// Kamera ve AI doğrulama sürecini yöneten Riverpod Notifier kontrolcü sınıfı.
+class KanitKameraKontrolcusu extends Notifier<KanitKameraDurumu> {
   CameraController? kameraKontrolcusu;
   final YapayZekaDogrulamaServisi _aiServisi = YapayZekaDogrulamaServisi();
   final SupabaseDepolamaServisi _depolamaServisi = SupabaseDepolamaServisi();
 
-  KanitKameraKontrolcusu(this._ref) : super(const KanitKameraDurumu());
+  @override
+  KanitKameraDurumu build() {
+    ref.onDispose(() {
+      kameraKontrolcusu?.dispose();
+    });
+    return const KanitKameraDurumu();
+  }
 
-  FirestoreGrupServisi get _grupServisi => _ref.read(firestoreGrupServisiSaglayici);
+  FirestoreGrupServisi get _grupServisi => ref.read(firestoreGrupServisiSaglayici);
 
   /// Kamerayı ve rastgele dinamik pozu başlatır.
   Future<void> kameraVePozBaslat() async {
@@ -204,15 +209,9 @@ class KanitKameraKontrolcusu extends StateNotifier<KanitKameraDurumu> {
   void tekrarDene() {
     kameraVePozBaslat();
   }
-
-  @override
-  void dispose() {
-    kameraKontrolcusu?.dispose();
-    super.dispose();
-  }
 }
 
 final kanitKameraKontrolcusuSaglayici =
-    StateNotifierProvider.autoDispose<KanitKameraKontrolcusu, KanitKameraDurumu>(
-  (ref) => KanitKameraKontrolcusu(ref),
+    NotifierProvider.autoDispose<KanitKameraKontrolcusu, KanitKameraDurumu>(
+  KanitKameraKontrolcusu.new,
 );

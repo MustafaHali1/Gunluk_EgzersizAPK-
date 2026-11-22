@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
@@ -72,6 +72,8 @@
 	<true/>
 	<key>NSUserNotificationsUsageDescription</key>
 	<string>Rutin saatleriniz geldiğinde alarm ve hatırlatma bildirimi göndermek için bildirim izni gereklidir.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Rutinlerinizi tamamladığınızı kanıtlamak ve yapay zeka ile doğrulamak için kamera izni gereklidir.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>fetch</string>

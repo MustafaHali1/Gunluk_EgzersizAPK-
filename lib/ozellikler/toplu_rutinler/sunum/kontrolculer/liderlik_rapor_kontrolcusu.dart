@@ -2,7 +2,6 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../alan/grup_uyesi_modeli.dart';
-import '../../veri/firestore_grup_servisi.dart';
 import 'grup_kontrolcusu.dart';
 
 /// Belirli bir grubun üyelerini toplam puana göre azalan sıralamayla dinler.

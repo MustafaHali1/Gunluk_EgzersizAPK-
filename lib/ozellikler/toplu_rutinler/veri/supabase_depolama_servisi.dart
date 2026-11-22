@@ -15,7 +15,7 @@ class SupabaseDepolamaServisi {
     try {
       await Supabase.initialize(
         url: GizliAnahtarlar.supabaseUrl,
-        anonKey: GizliAnahtarlar.supabaseAnonKey,
+        publishableKey: GizliAnahtarlar.supabaseAnonKey,
       );
       _baslatildi = true;
       MerkeziKaydedici.bilgiYaz('Supabase Depolama Servisi başarıyla bağlandı.');

@@ -39,6 +39,11 @@ class AnaIskeletEkrani extends StatelessWidget {
             label: UygulamaSabitleri.sekmeRutinler,
           ),
           NavigationDestination(
+            icon: Icon(Icons.groups_outlined),
+            selectedIcon: Icon(Icons.groups),
+            label: UygulamaSabitleri.sekmeTopluRutinler,
+          ),
+          NavigationDestination(
             icon: Icon(Icons.table_chart_outlined),
             selectedIcon: Icon(Icons.table_chart),
             label: UygulamaSabitleri.sekmeRapor,
