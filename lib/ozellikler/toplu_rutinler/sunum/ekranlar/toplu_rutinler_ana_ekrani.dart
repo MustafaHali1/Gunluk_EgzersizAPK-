@@ -1,17 +1,18 @@
 // lib/ozellikler/toplu_rutinler/sunum/ekranlar/toplu_rutinler_ana_ekrani.dart
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../alan/grup_modeli.dart';
-import '../../alan/grup_rutin_modeli.dart';
+import '../../alan/rutin_hareketi_modeli.dart';
+import '../bilesenler/kullanici_adi_secme_dialogu.dart';
+import '../bilesenler/rutin_akordiyon_karti.dart';
+import '../bilesenler/rutin_olusturma_formu.dart';
 import '../kontrolculer/grup_kontrolcusu.dart';
-import 'grup_liderlik_ekrani.dart';
-import 'grup_sohbet_ekrani.dart';
+import '../kontrolculer/kullanici_profil_kontrolcusu.dart';
 import 'kanit_kamera_ekrani.dart';
+import 'rutin_detay_merkezi_ekrani.dart';
 
-/// Toplu rutinler ana yönetim ve gün içi esnek tamamlama ekranı.
-/// İnce Ekran kuralına uygundur; tüm veri ve durum yönetimini GrupKontrolcusu sağlar.
+/// Toplu rutinler ana vitrin ekranı.
+/// Thin UI prensibine uygundur; tüm durum ve veri kontrolcüler tarafından sağlanır.
 class TopluRutinlerAnaEkrani extends ConsumerStatefulWidget {
   const TopluRutinlerAnaEkrani({super.key});
 
@@ -20,435 +21,309 @@ class TopluRutinlerAnaEkrani extends ConsumerStatefulWidget {
 }
 
 class _TopluRutinlerAnaEkraniState extends ConsumerState<TopluRutinlerAnaEkrani> {
-  final String _kullaniciAdi = 'Mustafa';
+  bool _dialogKontrolEdildi = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_dialogKontrolEdildi) {
+      _dialogKontrolEdildi = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _profilKontrolEt();
+      });
+    }
+  }
+
+  void _profilKontrolEt() {
+    final profilAsync = ref.read(aktifKullaniciProfiliSaglayici);
+    profilAsync.whenData((profil) {
+      if (profil == null) {
+        KullaniciAdiSecmeDialogu.goster(context, zorunluMu: true);
+      }
+    });
+  }
+
+  void _kodaGoreKatilDialogu() {
+    final kodDenetleyici = TextEditingController();
+    bool yukleniyor = false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(Icons.key, color: Colors.teal),
+              SizedBox(width: 8),
+              Text('Koda Göre Rutine Katıl'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Arkadaşının paylaştığı 6 haneli davet kodunu gir:'),
+              const SizedBox(height: 12),
+              TextField(
+                controller: kodDenetleyici,
+                textCapitalization: TextCapitalization.characters,
+                maxLength: 6,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: 4),
+                decoration: InputDecoration(
+                  hintText: 'SNAV26',
+                  counterText: '',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Vazgeç'),
+            ),
+            ElevatedButton(
+              onPressed: yukleniyor
+                  ? null
+                  : () async {
+                      final kod = kodDenetleyici.text.trim();
+                      if (kod.length < 6) return;
+                      setDState(() => yukleniyor = true);
+
+                      final rutin = await ref.read(topluRutinKontrolcusuSaglayici).kodaGoreKatil(kod);
+                      if (context.mounted) {
+                        Navigator.pop(ctx);
+                        if (rutin != null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Tebrikler! "${rutin.baslik}" rutinine katıldın 🎉'),
+                              backgroundColor: Colors.teal.shade700,
+                            ),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Davet kodu bulunamadı veya geçersiz.')),
+                          );
+                        }
+                      }
+                    },
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.teal, foregroundColor: Colors.white),
+              child: yukleniyor
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Text('Katıl'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _rutinOlusturModal() {
+    RutinOlusturmaFormu.goster(
+      context,
+      onKaydet: ({
+        required String baslik,
+        required String aciklama,
+        required String kategori,
+        required List<RutinHareketiModeli> hareketler,
+      }) async {
+        await ref.read(topluRutinKontrolcusuSaglayici).rutinKur(
+              baslik: baslik,
+              aciklama: aciklama,
+              kategori: kategori,
+              hareketler: hareketler,
+            );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('"$baslik" toplu rutini oluşturuldu! 🚀'),
+              backgroundColor: Colors.teal.shade700,
+            ),
+          );
+        }
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final gruplarAsync = ref.watch(kullaniciGruplariSaglayici);
-    final seciliGrup = ref.watch(seciliGrupSaglayici);
-    final rutinlerAsync = ref.watch(seciliGrupRutinleriSaglayici);
-    final tema = Theme.of(context);
+    final profilAsync = ref.watch(aktifKullaniciProfiliSaglayici);
+    final rutinlerAsync = ref.watch(kullaniciRutinleriSaglayici);
+    final uid = ref.watch(mevcutKullaniciIdSaglayici).value ?? '';
+
+    final profil = profilAsync.value;
+    final kullaniciAdi = profil?.kullaniciAdi ?? 'Kullanıcı';
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Toplu Rutinler'),
         actions: [
-          if (seciliGrup != null) ...[
-            IconButton(
-              icon: const Icon(Icons.share),
-              tooltip: 'Davet Kodunu Kopyala',
-              onPressed: () {
-                Clipboard.setData(ClipboardData(text: seciliGrup.davetKodu));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Davet kodu kopyalandı: ${seciliGrup.davetKodu}')),
-                );
-              },
-            ),
-            IconButton(
-              icon: const Icon(Icons.leaderboard),
-              tooltip: 'Sıralama ve Rapor',
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => GrupLiderlikEkrani(grup: seciliGrup),
-                  ),
-                );
-              },
-            ),
-            IconButton(
-              icon: const Icon(Icons.chat_bubble_outline),
-              tooltip: 'Grup Sohbeti',
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => GrupSohbetEkrani(
-                      grup: seciliGrup,
-                      kullaniciAdi: _kullaniciAdi,
+          // Kullanıcı Adı ve Profil Rozeti
+          InkWell(
+            onTap: () => KullaniciAdiSecmeDialogu.goster(context, zorunluMu: false, mevcutAd: kullaniciAdi),
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 12,
+                    backgroundColor: Colors.teal.shade100,
+                    child: Text(
+                      kullaniciAdi.isNotEmpty ? kullaniciAdi[0].toUpperCase() : 'U',
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.teal),
                     ),
                   ),
-                );
-              },
-            ),
-          ],
-        ],
-      ),
-      body: gruplarAsync.when(
-        data: (gruplar) {
-          if (gruplar.isEmpty) {
-            return _grupBulunamadiGorunumu(context);
-          }
-
-          final aktifGrup = seciliGrup ?? gruplar.first;
-          if (seciliGrup == null) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              ref.read(grupKontrolcusuSaglayici).grubuSec(aktifGrup);
-            });
-          }
-
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              // 1. Grup Seçici & Değiştirici Kart
-              _grupSeciciKarti(context, gruplar, aktifGrup),
-
-              const SizedBox(height: 16),
-
-              // 2. Rutin Listesi Başlığı
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
+                  const SizedBox(width: 6),
                   Text(
-                    '📌 Grubun Günlük Rutinleri',
-                    style: tema.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                  ),
-                  TextButton.icon(
-                    icon: const Icon(Icons.add, size: 18),
-                    label: const Text('Rutin Ekle'),
-                    onPressed: () => _rutinEkleDiyalogu(context, aktifGrup.id),
+                    '@$kullaniciAdi',
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
                   ),
                 ],
               ),
+            ),
+          ),
+        ],
+      ),
+      body: rutinlerAsync.when(
+        data: (rutinler) {
+          if (rutinler.isEmpty) {
+            return _bosDurumEkrani();
+          }
 
-              const SizedBox(height: 8),
-
-              // 3. Rutin Kartları (Saat Kısıtsız - Anında "Yaptım" Butonu)
-              rutinlerAsync.when(
-                data: (rutinler) {
-                  if (rutinler.isEmpty) {
-                    return const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(32),
-                        child: Text('Bu grupta henüz bir rutin tanımlanmamış. "Rutin Ekle" butonuna basarak ilk rutini oluşturabilirsiniz!'),
+          return RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(kullaniciRutinleriSaglayici);
+            },
+            child: ListView.builder(
+              padding: const EdgeInsets.only(top: 8, bottom: 90),
+              itemCount: rutinler.length,
+              itemBuilder: (context, index) {
+                final rutin = rutinler[index];
+                return RutinAkordiyonKarti(
+                  rutin: rutin,
+                  mevcutKullaniciId: uid,
+                  onKanitlaTiklandi: (hareket) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => KanitKameraEkrani(
+                          rutin: rutin,
+                          hareket: hareket,
+                        ),
                       ),
                     );
-                  }
-
-                  return Column(
-                    children: rutinler
-                        .map((rutin) => _rutinKarti(context, rutin))
-                        .toList(),
-                  );
-                },
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (hata, _) => Text('Rutinler yüklenemedi: $hata'),
-              ),
-            ],
+                  },
+                  onHizliTikTiklandi: (hareket) {
+                    ref.read(topluRutinKontrolcusuSaglayici).hareketTamamla(
+                          rutinId: rutin.id,
+                          hareketId: hareket.id,
+                          puan: hareket.puan,
+                        );
+                  },
+                  onDetayaGitTiklandi: () {
+                    ref.read(seciliTopluRutinSaglayici.notifier).sec(rutin);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => RutinDetayMerkeziEkrani(rutin: rutin),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (hata, _) => Center(child: Text('Gruplar yüklenemedi: $hata')),
+        error: (e, _) => Center(child: Text('Yükleme hatası: $e')),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        icon: const Icon(Icons.group_add),
-        label: const Text('Grup İşlemleri'),
-        onPressed: () => _grupIslemleriSayfasi(context),
-      ),
-    );
-  }
-
-  Widget _grupSeciciKarti(BuildContext context, List<GrupModeli> gruplar, GrupModeli aktifGrup) {
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.groups, color: Colors.indigo, size: 28),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<GrupModeli>(
-                      value: aktifGrup,
-                      isExpanded: true,
-                      items: gruplar
-                          .map((g) => DropdownMenuItem(
-                                value: g,
-                                child: Text(g.ad, style: const TextStyle(fontWeight: FontWeight.bold)),
-                              ))
-                          .toList(),
-                      onChanged: (yeni) {
-                        if (yeni != null) {
-                          ref.read(grupKontrolcusuSaglayici).grubuSec(yeni);
-                        }
-                      },
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text(
-              aktifGrup.aciklama,
-              style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
-            ),
-          ],
-        ),
+      floatingActionButton: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FloatingActionButton.extended(
+            heroTag: 'kodla_katil',
+            onPressed: _kodaGoreKatilDialogu,
+            icon: const Icon(Icons.key),
+            label: const Text('Koda Göre Katıl'),
+            backgroundColor: Colors.teal.shade700,
+            foregroundColor: Colors.white,
+          ),
+          const SizedBox(width: 12),
+          FloatingActionButton.extended(
+            heroTag: 'yeni_rutin',
+            onPressed: _rutinOlusturModal,
+            icon: const Icon(Icons.add),
+            label: const Text('Yeni Rutin'),
+            backgroundColor: Colors.teal,
+            foregroundColor: Colors.white,
+          ),
+        ],
       ),
     );
   }
 
-  Widget _rutinKarti(BuildContext context, GrupRutinModeli rutin) {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 6),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Row(
-          children: [
-            CircleAvatar(
-              backgroundColor: Colors.indigo.withValues(alpha: 0.15),
-              child: const Icon(Icons.check_circle_outline, color: Colors.indigo),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    rutin.baslik,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                  ),
-                  if (rutin.aciklama.isNotEmpty)
-                    Text(
-                      rutin.aciklama,
-                      style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                    ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '🏆 +${rutin.puanDegeri} Puan',
-                    style: const TextStyle(fontSize: 11, color: Colors.green, fontWeight: FontWeight.w600),
-                  ),
-                ],
-              ),
-            ),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              ),
-              icon: const Icon(Icons.camera_alt, size: 16),
-              label: const Text('Yaptım'),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => KanitKameraEkrani(
-                      rutin: rutin,
-                      kullaniciAdi: _kullaniciAdi,
-                    ),
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _grupBulunamadiGorunumu(BuildContext context) {
+  Widget _bosDurumEkrani() {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.people_outline, size: 80, color: Colors.grey),
-            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.teal.shade50,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.groups_3_outlined, size: 64, color: Colors.teal),
+            ),
+            const SizedBox(height: 20),
             const Text(
-              'Henüz bir gruba dahil değilsiniz',
+              'Henüz Bir Toplu Rutinin Yok!',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
-            const Text(
-              'Ailenizle veya arkadaşlarınızla ortak rutinler yapmak için yeni bir grup oluşturun veya 6 haneli kod ile katılın.',
+            Text(
+              'Ailen veya arkadaşlarınla birlikte hedeflere koşmak için yeni bir rutin kurabilir veya paylaşılan 6 haneli kodla bir rutine katılabilirsin.',
+              style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey),
             ),
             const SizedBox(height: 24),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.add),
-                  label: const Text('Grup Kur'),
-                  onPressed: () => _grupKurDiyalogu(context),
+                OutlinedButton.icon(
+                  onPressed: _kodaGoreKatilDialogu,
+                  icon: const Icon(Icons.key),
+                  label: const Text('Koda Göre Katıl'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.teal,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  ),
                 ),
                 const SizedBox(width: 12),
-                OutlinedButton.icon(
-                  icon: const Icon(Icons.login),
-                  label: const Text('Koda Göre Katıl'),
-                  onPressed: () => _kodaGoreKatilDiyalogu(context),
+                ElevatedButton.icon(
+                  onPressed: _rutinOlusturModal,
+                  icon: const Icon(Icons.add),
+                  label: const Text('Yeni Rutin Kur'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.teal,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  ),
                 ),
               ],
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  void _grupIslemleriSayfasi(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.add_circle, color: Colors.indigo),
-              title: const Text('Yeni Grup Kur'),
-              onTap: () {
-                Navigator.pop(ctx);
-                _grupKurDiyalogu(context);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.vpn_key, color: Colors.green),
-              title: const Text('Davet Koduyla Katıl'),
-              onTap: () {
-                Navigator.pop(ctx);
-                _kodaGoreKatilDiyalogu(context);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _grupKurDiyalogu(BuildContext context) {
-    final adKontrolcusu = TextEditingController();
-    final aciklamaKontrolcusu = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Yeni Grup Kur'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: adKontrolcusu,
-              decoration: const InputDecoration(labelText: 'Grup Adı (Örn: Hali Ailesi)'),
-            ),
-            TextField(
-              controller: aciklamaKontrolcusu,
-              decoration: const InputDecoration(labelText: 'Açıklama (Örn: Sağlıklı Yaşam Grubu)'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('İptal')),
-          ElevatedButton(
-            onPressed: () async {
-              if (adKontrolcusu.text.trim().isEmpty) return;
-              Navigator.pop(ctx);
-              await ref.read(grupKontrolcusuSaglayici).grupOlustur(
-                    ad: adKontrolcusu.text.trim(),
-                    aciklama: aciklamaKontrolcusu.text.trim(),
-                    kurucuAdi: _kullaniciAdi,
-                  );
-            },
-            child: const Text('Oluştur'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _kodaGoreKatilDiyalogu(BuildContext context) {
-    final kodKontrolcusu = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Davet Koduyla Katıl'),
-        content: TextField(
-          controller: kodKontrolcusu,
-          textCapitalization: TextCapitalization.characters,
-          decoration: const InputDecoration(
-            labelText: '6 Haneli Davet Kodu (Örn: HL8924)',
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('İptal')),
-          ElevatedButton(
-            onPressed: () async {
-              if (kodKontrolcusu.text.trim().isEmpty) return;
-              Navigator.pop(ctx);
-              try {
-                await ref.read(grupKontrolcusuSaglayici).davetKoduylaKatil(
-                      kod: kodKontrolcusu.text.trim(),
-                      kullaniciAdi: _kullaniciAdi,
-                    );
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Gruba başarıyla katıldınız!')),
-                  );
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Hata: $e'), backgroundColor: Colors.red),
-                  );
-                }
-              }
-            },
-            child: const Text('Katıl'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _rutinEkleDiyalogu(BuildContext context, String grupId) {
-    final baslikKontrolcusu = TextEditingController();
-    final aciklamaKontrolcusu = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Gruba Rutin Ekle'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: baslikKontrolcusu,
-              decoration: const InputDecoration(labelText: 'Rutin Adı (Örn: Diş Fırçalama)'),
-            ),
-            TextField(
-              controller: aciklamaKontrolcusu,
-              decoration: const InputDecoration(labelText: 'Açıklama (Örn: Sabah ve akşam 2 dk)'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('İptal')),
-          ElevatedButton(
-            onPressed: () async {
-              if (baslikKontrolcusu.text.trim().isEmpty) return;
-              Navigator.pop(ctx);
-              await ref.read(grupKontrolcusuSaglayici).grubaRutinEkle(
-                    grupId: grupId,
-                    baslik: baslikKontrolcusu.text.trim(),
-                    aciklama: aciklamaKontrolcusu.text.trim(),
-                  );
-            },
-            child: const Text('Ekle'),
-          ),
-        ],
       ),
     );
   }

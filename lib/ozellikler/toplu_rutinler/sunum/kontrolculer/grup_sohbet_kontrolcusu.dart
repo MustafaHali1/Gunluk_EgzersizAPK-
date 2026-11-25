@@ -3,16 +3,22 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../alan/grup_mesaj_modeli.dart';
 import '../../veri/firestore_grup_servisi.dart';
-import 'grup_kontrolcusu.dart';
+import 'kullanici_profil_kontrolcusu.dart';
 
-/// Belirli bir grubun canlı mesaj akışını sağlayan StreamProvider
-final grupMesajlariSaglayici =
-    StreamProvider.family<List<GrupMesajModeli>, String>((ref, grupId) {
+/// Belirli bir rutinin canlı mesaj akışını sağlayan StreamProvider (Offline Persistence açık)
+final rutinMesajlariSaglayici =
+    StreamProvider.family<List<GrupMesajModeli>, String>((ref, rutinId) {
   final servis = ref.watch(firestoreGrupServisiSaglayici);
-  return servis.grupMesajlariniDinle(grupId);
+  return servis.mesajlariDinle(rutinId);
 });
 
-/// Grup sohbet işlemlerini (mesaj atma, emoji tepkisi verme) yöneten sınıf.
+final grupMesajlariSaglayici = rutinMesajlariSaglayici; // Geriye uyumluluk
+
+final grupSohbetKontrolcusuSaglayici = Provider<GrupSohbetKontrolcusu>((ref) {
+  return GrupSohbetKontrolcusu(ref);
+});
+
+/// Sohbet işlemlerini (mesaj atma, mesaj sabitleme, emoji tepkisi verme) yöneten kontrolcü sınıfı.
 class GrupSohbetKontrolcusu {
   final Ref _ref;
 
@@ -20,40 +26,59 @@ class GrupSohbetKontrolcusu {
 
   FirestoreGrupServisi get _servis => _ref.read(firestoreGrupServisiSaglayici);
 
-  /// Sohbete yeni metin mesajı gönderir.
+  /// Sohbete yeni bir metin mesajı gönderir.
   Future<void> mesajGonder({
-    required String grupId,
+    String? rutinId,
+    String? grupId,
     required String metin,
-    required String gonderenAdi,
+    String? gonderenAdi,
+    String? gonderenId,
+    String? tur,
   }) async {
-    if (metin.trim().isEmpty) return;
+    final hedefId = (rutinId != null && rutinId.isNotEmpty) ? rutinId : (grupId ?? '');
+    final temizMetin = metin.trim();
+    if (temizMetin.isEmpty || hedefId.isEmpty) return;
 
-    final kullaniciId = await _servis.mevcutKullaniciKimligiAl();
+    final profil = _ref.read(aktifKullaniciProfiliSaglayici).value;
+    final ad = gonderenAdi ?? profil?.kullaniciAdi ?? 'Kullanıcı';
+
     await _servis.mesajGonder(
-      grupId: grupId,
-      metin: metin.trim(),
-      gonderenId: kullaniciId,
-      gonderenAdi: gonderenAdi,
-      tur: 'metin',
+      rutinId: hedefId,
+      metin: temizMetin,
+      gonderenAdi: ad,
     );
   }
 
-  /// Mesaja veya kanıt kartına emoji tepkisi (🔥, 👏, 💪) bırakır.
+  /// Mesaja emoji tepkisi verir.
   Future<void> tepkiVer({
     required String grupId,
     required String mesajId,
     required String emoji,
   }) async {
-    final kullaniciId = await _servis.mevcutKullaniciKimligiAl();
+    final uid = await _servis.mevcutKullaniciKimligiAl();
     await _servis.mesajaTepkiVer(
       grupId: grupId,
       mesajId: mesajId,
       emoji: emoji,
-      kullaniciId: kullaniciId,
+      kullaniciId: uid,
     );
   }
-}
 
-final grupSohbetKontrolcusuSaglayici = Provider<GrupSohbetKontrolcusu>((ref) {
-  return GrupSohbetKontrolcusu(ref);
-});
+  /// Önemli bir mesajı sohbetin tepesine sabitler (Pin 📌).
+  Future<void> mesajSabitle({
+    required String rutinId,
+    required GrupMesajModeli mesaj,
+  }) async {
+    await _servis.mesajSabitle(
+      rutinId: rutinId,
+      mesajId: mesaj.id,
+      metin: mesaj.metin,
+      gonderenAdi: mesaj.gonderenAdi,
+    );
+  }
+
+  /// Sabitlenmiş mesajı kaldırır (Unpin).
+  Future<void> mesajSabitlemeKaldir(String rutinId) async {
+    await _servis.mesajSabitlemeKaldir(rutinId);
+  }
+}

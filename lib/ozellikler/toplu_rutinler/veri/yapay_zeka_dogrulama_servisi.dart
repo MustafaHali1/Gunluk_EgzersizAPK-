@@ -13,6 +13,7 @@ class YapayZekaDogrulamaSonucu {
   final bool jestTespitEdildiMi;
   final double guvenSkoru;
   final String aciklama;
+  final bool sosyalFallbackMi; // Ağ veya API hatasında kullanıcıyı kilitlemeyen güven modu
 
   const YapayZekaDogrulamaSonucu({
     required this.onaylandiMi,
@@ -20,7 +21,19 @@ class YapayZekaDogrulamaSonucu {
     required this.jestTespitEdildiMi,
     required this.guvenSkoru,
     required this.aciklama,
+    this.sosyalFallbackMi = false,
   });
+
+  factory YapayZekaDogrulamaSonucu.sosyalFallback(String aciklama) {
+    return YapayZekaDogrulamaSonucu(
+      onaylandiMi: true,
+      eylemTespitEdildiMi: true,
+      jestTespitEdildiMi: true,
+      guvenSkoru: 0.8,
+      aciklama: aciklama,
+      sosyalFallbackMi: true,
+    );
+  }
 
   factory YapayZekaDogrulamaSonucu.varsayilanBasarisiz(String hataMesaji) {
     return YapayZekaDogrulamaSonucu(
@@ -29,22 +42,27 @@ class YapayZekaDogrulamaSonucu {
       jestTespitEdildiMi: false,
       guvenSkoru: 0.0,
       aciklama: hataMesaji,
+      sosyalFallbackMi: false,
     );
   }
 }
 
-/// Gemini Multimodal Vision API kullanarak hem eylemi hem de anlık dinamik jesti doğrulayan servis.
+/// Gemini Flash Multimodal API kullanarak nesneleri ve jestleri şimşek hızında doğrulayan servis.
 class YapayZekaDogrulamaServisi {
-  /// Fotoğraf baytlarını ve beklenen rutin bilgilerini Gemini Vision API'ye gönderip denetler.
+  /// Fotoğraf baytlarını ve görev/nesne/jest bilgilerini Gemini Flash'a gönderip inceler.
   Future<YapayZekaDogrulamaSonucu> fotografiDenetle({
     required Uint8List fotoBaytlari,
     required String rutinBasligi,
-    required String istenenJest,
+    required String gorevBasligi,
+    String? beklenenNesne,
+    String? istenenJest,
+    bool kurtarmaJestiMi = false,
   }) async {
     final apiAnahtari = GizliAnahtarlar.geminiApiKey;
     if (apiAnahtari.isEmpty || apiAnahtari.contains('BURAYA')) {
-      return YapayZekaDogrulamaSonucu.varsayilanBasarisiz(
-        'Gemini API anahtarı tanımlanmamış.',
+      // API anahtarı girilmemişse kullanıcıyı engelleme, sosyal onaya devret
+      return YapayZekaDogrulamaSonucu.sosyalFallback(
+        'Gemini API anahtarı tanımlanmamış, kanıt grubun denetimine bırakılarak onaylandı ✅',
       );
     }
 
@@ -55,20 +73,26 @@ class YapayZekaDogrulamaServisi {
     final resimBase64 = base64Encode(fotoBaytlari);
 
     final komutIstemi = '''
-Sen bir alışkanlık, sağlık ve spor takip uygulamasının yapay zeka denetçisisin.
-Kullanıcının gönderdiği fotoğrafı çok dikkatli bir şekilde incele.
+Sen motive edici, kullanıcı dostu bir sağlık ve spor denetçisisin.
+Kullanıcının kanıt fotoğrafını incele.
 
-İki ana kriteri kontrol et:
-1. Eylem: Fotoğrafta "$rutinBasligi" eylemi veya eylemle ilgili nesneler (örneğin diş fırçası, spor duruşu, su bardağı vb.) görünüyor mu?
-2. Dinamik Jest/Poz: Kullanıcı fotoğrafta anlık olarak istenen şu el/vücut jestini yapmış mı: "$istenenJest"?
+Görev Bilgisi:
+- Rutin: "$rutinBasligi"
+- Yapılan Hareket/Görev: "$gorevBasligi"
+${beklenenNesne != null && !kurtarmaJestiMi ? '- Beklenen Nesne/Bağlam: "$beklenenNesne"' : ''}
+${istenenJest != null ? '- İstenen Canlı Poz/Jest: "$istenenJest"' : ''}
+${kurtarmaJestiMi ? '- Not: Kullanıcı nesne yanında olmadığı için canlı jest ile tamamlama seçeneğini kullandı.' : ''}
 
-Cevabını YALNIZCA geçerli bir JSON nesnesi olarak ver. Markdown bloğu veya ek yazı ekleme. Format şu şekilde olmalıdır:
+Kural ve Tolerans:
+1. Kullanıcıyı haksız yere reddetme. Amacımız stüdyo fotoğrafı çekmek değil, günlük motivasyondur.
+2. Fotoğraf tamamen boş bir duvar, tavan, siyah ekran veya belirgin bir aldatmaca DEĞİLSE; fotoğrafta ilgili nesne (fırça, bardak, kitap vb.) veya spor çabası/jesti görünüyorsa ONAYLA.
+
+Cevabını YALNIZCA geçerli bir JSON olarak ver. Markdown etiketi ekleme.
+Format:
 {
-  "eylemTespitEdildiMi": true,
-  "jestTespitEdildiMi": true,
   "onaylandiMi": true,
   "guvenSkoru": 0.95,
-  "aciklama": "Diş fırçası ve istenen 2 parmak zafer işareti başarıyla tespit edildi."
+  "aciklama": "Harika! Görev başarıyla doğrulandı."
 }
 ''';
 
@@ -93,50 +117,42 @@ Cevabını YALNIZCA geçerli bir JSON nesnesi olarak ver. Markdown bloğu veya e
     });
 
     try {
-      final yanit = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: istekGovdesi,
-      );
+      final yanit = await http
+          .post(
+            url,
+            headers: {'Content-Type': 'application/json'},
+            body: istekGovdesi,
+          )
+          .timeout(const Duration(seconds: 4)); // 4 saniye içinde dönmezse fallback
 
       if (yanit.statusCode == 200) {
-        final cozulenYanit = jsonDecode(yanit.body);
-        final adaylar = cozulenYanit['candidates'] as List?;
-        if (adaylar != null && adaylar.isNotEmpty) {
-          final metin = adaylar[0]['content']['parts'][0]['text'] as String? ?? '';
-          final jsonSonuc = jsonDecode(metin) as Map<String, dynamic>;
-
-          final eylemVarMi = jsonSonuc['eylemTespitEdildiMi'] as bool? ?? false;
-          final jestVarMi = jsonSonuc['jestTespitEdildiMi'] as bool? ?? false;
-          final onaylandiMi = jsonSonuc['onaylandiMi'] as bool? ?? (eylemVarMi && jestVarMi);
-          final guvenSkoru = (jsonSonuc['guvenSkoru'] as num?)?.toDouble() ?? 1.0;
-          final aciklama = jsonSonuc['aciklama'] as String? ?? 'Analiz tamamlandı.';
+        final cozulmus = jsonDecode(yanit.body);
+        final adayMetin = cozulmus['candidates']?[0]?['content']?['parts']?[0]?['text'] as String?;
+        if (adayMetin != null) {
+          final jsonSonuc = jsonDecode(adayMetin);
+          final bool onaylandi = jsonSonuc['onaylandiMi'] as bool? ?? true;
+          final double guven = (jsonSonuc['guvenSkoru'] as num?)?.toDouble() ?? 0.9;
+          final String aciklama = jsonSonuc['aciklama'] as String? ?? 'Görev doğrulandı.';
 
           return YapayZekaDogrulamaSonucu(
-            onaylandiMi: onaylandiMi,
-            eylemTespitEdildiMi: eylemVarMi,
-            jestTespitEdildiMi: jestVarMi,
-            guvenSkoru: guvenSkoru,
+            onaylandiMi: onaylandi,
+            eylemTespitEdildiMi: onaylandi,
+            jestTespitEdildiMi: onaylandi,
+            guvenSkoru: guven,
             aciklama: aciklama,
           );
         }
       }
 
-      MerkeziKaydedici.hataYaz(
-        'Gemini API Hatası: ${yanit.statusCode}',
-        hata: yanit.body,
-      );
-      return YapayZekaDogrulamaSonucu.varsayilanBasarisiz(
-        'Yapay zeka analizi yapılamadı (Hata Kodu: ${yanit.statusCode}).',
+      // 200 dışı kodlarda veya ayrıştırma hatasında çökme, sosyal güven moduna devret
+      return YapayZekaDogrulamaSonucu.sosyalFallback(
+        'Yapay zeka ağı meşgul, kanıt grubun denetimine bırakılarak onaylandı ✅',
       );
     } catch (hata, yiginIzi) {
-      MerkeziKaydedici.hataYaz(
-        'Yapay zeka servisi çağrılırken hata oluştu',
-        hata: hata,
-        yiginIzi: yiginIzi,
-      );
-      return YapayZekaDogrulamaSonucu.varsayilanBasarisiz(
-        'Yapay zeka servisine bağlanırken bir sorun oluştu.',
+      MerkeziKaydedici.hataYaz('Gemini Flash doğrulama çağrısında hata, fallback devreye girdi', hata: hata, yiginIzi: yiginIzi);
+      // Ağ hatasında kullanıcıyı asla kilitleme
+      return YapayZekaDogrulamaSonucu.sosyalFallback(
+        'Bağlantı zayıf, kanıt grubun denetimine bırakılarak onaylandı ✅',
       );
     }
   }
