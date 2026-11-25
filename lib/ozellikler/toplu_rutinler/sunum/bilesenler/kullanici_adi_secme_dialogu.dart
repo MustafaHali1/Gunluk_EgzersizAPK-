@@ -59,7 +59,7 @@ class _KullaniciAdiSecmeDialoguState extends ConsumerState<KullaniciAdiSecmeDial
       _hataMesaji = null;
     });
 
-    final basarili = await ref
+    final (basarili, hata) = await ref
         .read(aktifKullaniciProfiliSaglayici.notifier)
         .kullaniciAdiBelirle(ad);
 
@@ -74,7 +74,7 @@ class _KullaniciAdiSecmeDialoguState extends ConsumerState<KullaniciAdiSecmeDial
           ),
         );
       } else {
-        setState(() => _hataMesaji = 'Bu kullanıcı adı dolu veya geçersiz.');
+        setState(() => _hataMesaji = hata ?? 'Bu kullanıcı adı belirlenemedi.');
       }
     }
   }

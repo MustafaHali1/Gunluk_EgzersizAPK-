@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../alan/kullanici_profili_modeli.dart';
 import '../../alan/rutin_hareketi_modeli.dart';
 import '../bilesenler/kullanici_adi_secme_dialogu.dart';
 import '../bilesenler/rutin_akordiyon_karti.dart';
@@ -21,24 +22,22 @@ class TopluRutinlerAnaEkrani extends ConsumerStatefulWidget {
 }
 
 class _TopluRutinlerAnaEkraniState extends ConsumerState<TopluRutinlerAnaEkrani> {
-  bool _dialogKontrolEdildi = false;
+  bool _dialogGosterildi = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (!_dialogKontrolEdildi) {
-      _dialogKontrolEdildi = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _profilKontrolEt();
-      });
-    }
+    _profilKontrolEt();
   }
 
   void _profilKontrolEt() {
     final profilAsync = ref.read(aktifKullaniciProfiliSaglayici);
     profilAsync.whenData((profil) {
-      if (profil == null) {
-        KullaniciAdiSecmeDialogu.goster(context, zorunluMu: true);
+      if (profil == null && !_dialogGosterildi && mounted) {
+        _dialogGosterildi = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) KullaniciAdiSecmeDialogu.goster(context, zorunluMu: true);
+        });
       }
     });
   }
@@ -148,6 +147,15 @@ class _TopluRutinlerAnaEkraniState extends ConsumerState<TopluRutinlerAnaEkrani>
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<AsyncValue<KullaniciProfiliModeli?>>(aktifKullaniciProfiliSaglayici, (onceki, sonraki) {
+      if (!_dialogGosterildi && sonraki.hasValue && sonraki.value == null && mounted) {
+        _dialogGosterildi = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) KullaniciAdiSecmeDialogu.goster(context, zorunluMu: true);
+        });
+      }
+    });
+
     final profilAsync = ref.watch(aktifKullaniciProfiliSaglayici);
     final rutinlerAsync = ref.watch(kullaniciRutinleriSaglayici);
     final uid = ref.watch(mevcutKullaniciIdSaglayici).value ?? '';

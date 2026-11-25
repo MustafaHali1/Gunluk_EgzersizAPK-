@@ -1,0 +1,20 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Kullanıcı profilleri
+    match /kullanicilar/{kullaniciId} {
+      allow read: if true;
+      allow write: if request.auth != null || true; // Anonim veya yerel kullanıcı profili
+    }
+
+    // Toplu Rutinler ve alt koleksiyonları (mesajlar, uyeler, kanitlar)
+    match /toplu_rutinler/{rutinId} {
+      allow read: if true;
+      allow write: if request.auth != null || true;
+
+      match /{altKoleksiyon=**} {
+        allow read, write: if true;
+      }
+    }
+  }
+}

@@ -19,21 +19,31 @@ class KullaniciProfilKontrolcusu extends AsyncNotifier<KullaniciProfiliModeli?> 
   }
 
   /// Yeni bir kullanıcı adı belirler ve kaydeder.
-  Future<bool> kullaniciAdiBelirle(String yeniAd) async {
+  Future<(bool basarili, String? hataMesaji)> kullaniciAdiBelirle(String yeniAd) async {
+    final temizAd = yeniAd.trim().replaceAll('@', '');
+    if (temizAd.length < 3) {
+      return (false, 'Kullanıcı adı en az 3 karakter olmalıdır.');
+    }
+
+    final gecerliMi = RegExp(r'^[a-zA-Z0-9_çÇğĞıİöÖşŞüÜ]+$').hasMatch(temizAd);
+    if (!gecerliMi) {
+      return (false, 'Kullanıcı adında boşluk veya özel karakter olamaz.');
+    }
+
     state = const AsyncValue.loading();
     try {
-      final musaitMi = await _servis.kullaniciAdiMusaitMi(yeniAd);
+      final musaitMi = await _servis.kullaniciAdiMusaitMi(temizAd);
       if (!musaitMi) {
-        state = AsyncValue.error('Bu kullanıcı adı maalesef dolu, başka bir ad deneyin.', StackTrace.current);
-        return false;
+        state = AsyncValue.data(state.value);
+        return (false, 'Bu kullanıcı adı (@$temizAd) zaten başka biri tarafından alınmış.');
       }
 
-      final yeniProfil = await _servis.profilKaydetVeyaGuncelle(yeniAd);
+      final yeniProfil = await _servis.profilKaydetVeyaGuncelle(temizAd);
       state = AsyncValue.data(yeniProfil);
-      return true;
+      return (true, null);
     } catch (e, stack) {
       state = AsyncValue.error(e, stack);
-      return false;
+      return (false, 'Hata oluştu: $e');
     }
   }
 
