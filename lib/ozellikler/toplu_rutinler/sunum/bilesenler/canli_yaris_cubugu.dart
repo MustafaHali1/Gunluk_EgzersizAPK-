@@ -1,9 +1,11 @@
 // lib/ozellikler/toplu_rutinler/sunum/bilesenler/canli_yaris_cubugu.dart
 
 import 'package:flutter/material.dart';
+import '../../../../cekirdek/tema/uygulama_renkleri.dart';
 import '../kontrolculer/rutin_yaris_kontrolcusu.dart';
 
 /// Rutin detayında ve sohbetin en tepesinde sabit kalan canlı yarış panosu.
+/// Renkler doğrudan UygulamaRenkleri sınıfından çağrılır.
 class CanliYarisCubugu extends StatelessWidget {
   final Map<String, dynamic>? yarisVerisi;
   final VoidCallback onYarisBaslatTiklandi;
@@ -16,30 +18,35 @@ class CanliYarisCubugu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final kupaAltin = UygulamaRenkleri.kupa(context);
+    final kartZemin = UygulamaRenkleri.kartZemini(context);
+    final metinBirincil = UygulamaRenkleri.metinBirincil(context);
+    final kenarlik = UygulamaRenkleri.kenarlik(context);
+
     if (yarisVerisi == null) {
       return Container(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: Colors.amber.shade50,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.amber.shade200),
+          color: kartZemin,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: kenarlik),
         ),
         child: Row(
           children: [
             const Text('🏆', style: TextStyle(fontSize: 20)),
             const SizedBox(width: 10),
-            const Expanded(
+            Expanded(
               child: Text(
                 'Şu an aktif bir yarış yok. Arkadaşlarına meydan oku!',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: metinBirincil),
               ),
             ),
             ElevatedButton(
               onPressed: onYarisBaslatTiklandi,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.amber.shade800,
-                foregroundColor: Colors.white,
+                backgroundColor: kupaAltin,
+                foregroundColor: Colors.black87,
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -59,12 +66,15 @@ class CanliYarisCubugu extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Colors.amber.shade700, Colors.orange.shade800],
+          colors: [
+            kupaAltin,
+            kupaAltin.withValues(alpha: 0.85),
+          ],
         ),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            color: Colors.orange.withValues(alpha: 0.3),
+            color: kupaAltin.withValues(alpha: 0.25),
             blurRadius: 6,
             offset: const Offset(0, 3),
           ),
@@ -89,8 +99,8 @@ class CanliYarisCubugu extends StatelessWidget {
                 ),
                 Text(
                   kalanSure,
-                  style: TextStyle(
-                    color: Colors.amber.shade100,
+                  style: const TextStyle(
+                    color: Colors.white70,
                     fontSize: 11,
                     fontWeight: FontWeight.w500,
                   ),

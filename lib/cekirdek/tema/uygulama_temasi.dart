@@ -1,55 +1,77 @@
 // lib/cekirdek/tema/uygulama_temasi.dart
 
 import 'package:flutter/material.dart';
+import 'uygulama_renkleri.dart';
 
-// Açık ve koyu tema yapılandırmalarını sağlayan sınıf.
+/// Açık ve koyu tema yapılandırmalarını sağlayan sınıf.
 class UygulamaTemasi {
   UygulamaTemasi._();
 
-  static const Color anaRenk = Color(0xFF0D9488);
-  static const Color ikincilRenk = Color(0xFF0284C7);
-
   static ThemeData get acikTema {
-    final renkSemasi = ColorScheme.fromSeed(
-      seedColor: anaRenk,
-      secondary: ikincilRenk,
-      brightness: Brightness.light,
+    final renkSemasi = ColorScheme.light(
+      primary: UygulamaRenkleri.acikBirincil,
+      secondary: UygulamaRenkleri.acikIkincil,
+      surface: UygulamaRenkleri.acikKart,
+      error: UygulamaRenkleri.tehlike,
+      onPrimary: Colors.white,
+      onSecondary: Colors.white,
+      onSurface: UygulamaRenkleri.acikMetinBirincil,
     );
+
     return ThemeData(
       useMaterial3: true,
+      brightness: Brightness.light,
       colorScheme: renkSemasi,
-      appBarTheme: AppBarTheme(
+      scaffoldBackgroundColor: UygulamaRenkleri.acikArkaPlan,
+      appBarTheme: const AppBarTheme(
         centerTitle: true,
-        backgroundColor: renkSemasi.surface,
-        foregroundColor: renkSemasi.onSurface,
+        backgroundColor: UygulamaRenkleri.acikBirincil,
+        foregroundColor: Colors.white,
         elevation: 0,
       ),
       cardTheme: CardThemeData(
+        color: UygulamaRenkleri.acikKart,
         elevation: 1,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: UygulamaRenkleri.acikKenarlik, width: 1),
+        ),
       ),
+      dividerColor: UygulamaRenkleri.acikKenarlik,
     );
   }
 
   static ThemeData get koyuTema {
-    final renkSemasi = ColorScheme.fromSeed(
-      seedColor: anaRenk,
-      secondary: ikincilRenk,
-      brightness: Brightness.dark,
+    final renkSemasi = ColorScheme.dark(
+      primary: UygulamaRenkleri.koyuBirincil,
+      secondary: UygulamaRenkleri.koyuIkincil,
+      surface: UygulamaRenkleri.koyuKart,
+      error: UygulamaRenkleri.tehlikeKoyu,
+      onPrimary: Colors.black,
+      onSecondary: Colors.black,
+      onSurface: UygulamaRenkleri.koyuMetinBirincil,
     );
+
     return ThemeData(
       useMaterial3: true,
+      brightness: Brightness.dark,
       colorScheme: renkSemasi,
-      appBarTheme: AppBarTheme(
+      scaffoldBackgroundColor: UygulamaRenkleri.koyuArkaPlan,
+      appBarTheme: const AppBarTheme(
         centerTitle: true,
-        backgroundColor: renkSemasi.surface,
-        foregroundColor: renkSemasi.onSurface,
+        backgroundColor: UygulamaRenkleri.koyuKart,
+        foregroundColor: UygulamaRenkleri.koyuMetinBirincil,
         elevation: 0,
       ),
       cardTheme: CardThemeData(
-        elevation: 1,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        color: UygulamaRenkleri.koyuKart,
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: UygulamaRenkleri.koyuKenarlik, width: 1),
+        ),
       ),
+      dividerColor: UygulamaRenkleri.koyuKenarlik,
     );
   }
 }

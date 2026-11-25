@@ -2,9 +2,11 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../cekirdek/tema/uygulama_renkleri.dart';
 import '../kontrolculer/kullanici_profil_kontrolcusu.dart';
 
 /// İlk açılışta veya profil düzenlerken benzersiz @username belirleten şık modal pencere.
+/// Renkler doğrudan UygulamaRenkleri sınıfından çağrılır.
 class KullaniciAdiSecmeDialogu extends ConsumerStatefulWidget {
   final bool zorunluMu;
   final String? mevcutAd;
@@ -70,7 +72,7 @@ class _KullaniciAdiSecmeDialoguState extends ConsumerState<KullaniciAdiSecmeDial
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Harika! Kullanıcı adın @$ad olarak belirlendi 🎉'),
-            backgroundColor: Colors.teal.shade700,
+            backgroundColor: UygulamaRenkleri.basariRengi(context),
           ),
         );
       } else {
@@ -81,25 +83,31 @@ class _KullaniciAdiSecmeDialoguState extends ConsumerState<KullaniciAdiSecmeDial
 
   @override
   Widget build(BuildContext context) {
-    final tema = Theme.of(context);
+    final birincil = UygulamaRenkleri.birincil(context);
+    final kartZemin = UygulamaRenkleri.kartZemini(context);
+    final arkaPlan = UygulamaRenkleri.arkaPlan(context);
+    final metinBirincil = UygulamaRenkleri.metinBirincil(context);
+    final metinIkincil = UygulamaRenkleri.metinIkincil(context);
+    final kenarlik = UygulamaRenkleri.kenarlik(context);
 
     return AlertDialog(
+      backgroundColor: kartZemin,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       title: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.teal.shade50,
+              color: birincil.withValues(alpha: 0.12),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.person_pin, color: Colors.teal, size: 28),
+            child: Icon(Icons.person_pin, color: birincil, size: 28),
           ),
           const SizedBox(width: 12),
-          const Expanded(
+          Expanded(
             child: Text(
               'Kullanıcı Adı Seç',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: metinBirincil),
             ),
           ),
         ],
@@ -110,21 +118,31 @@ class _KullaniciAdiSecmeDialoguState extends ConsumerState<KullaniciAdiSecmeDial
         children: [
           Text(
             'Toplu rutinlerde, sohbette ve liderlik sıralamasında arkadaşlarına nasıl görünmek istersin?',
-            style: tema.textTheme.bodyMedium?.copyWith(color: Colors.grey.shade700),
+            style: TextStyle(color: metinIkincil, fontSize: 13),
           ),
           const SizedBox(height: 16),
           TextField(
             controller: _denetleyici,
             autofocus: true,
+            style: TextStyle(color: metinBirincil),
             decoration: InputDecoration(
               prefixText: '@',
-              prefixStyle: const TextStyle(fontWeight: FontWeight.bold, color: Colors.teal),
+              prefixStyle: TextStyle(fontWeight: FontWeight.bold, color: birincil),
               labelText: 'Kullanıcı Adı',
+              labelStyle: TextStyle(color: metinIkincil),
               hintText: 'örn: zeynep, mustafa',
+              hintStyle: TextStyle(color: metinIkincil.withValues(alpha: 0.7)),
               errorText: _hataMesaji,
               filled: true,
-              fillColor: Colors.grey.shade50,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              fillColor: arkaPlan,
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: kenarlik),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: birincil, width: 2),
+              ),
             ),
             onSubmitted: (_) => _kaydet(),
           ),
@@ -134,12 +152,12 @@ class _KullaniciAdiSecmeDialoguState extends ConsumerState<KullaniciAdiSecmeDial
         if (!widget.zorunluMu)
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Vazgeç'),
+            child: Text('Vazgeç', style: TextStyle(color: metinIkincil)),
           ),
         ElevatedButton(
           onPressed: _yukleniyor ? null : _kaydet,
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.teal,
+            backgroundColor: birincil,
             foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),

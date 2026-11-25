@@ -1,38 +1,48 @@
 // lib/ozellikler/toplu_rutinler/sunum/bilesenler/sabitlenmis_mesaj_seridi.dart
 
 import 'package:flutter/material.dart';
+import '../../../../cekirdek/tema/uygulama_renkleri.dart';
 
 /// Sohbette başa sabitlenen mesajı gösteren ve tıklandığında o mesaja kaydıran şerit.
+/// Renkler doğrudan UygulamaRenkleri sınıfından çağrılır.
 class SabitlenmisMesajSeridi extends StatelessWidget {
-  final Map<String, dynamic> sabitlenmisMesaj;
-  final VoidCallback onTiklandi;
-  final VoidCallback? onSabitlemeKaldir;
+  final Map<String, dynamic>? sabitlenmisMesaj;
+  final VoidCallback? onTiklandi;
+  final VoidCallback? onKaldirTiklandi;
 
   const SabitlenmisMesajSeridi({
     super.key,
     required this.sabitlenmisMesaj,
-    required this.onTiklandi,
-    this.onSabitlemeKaldir,
+    this.onTiklandi,
+    this.onKaldirTiklandi,
   });
 
   @override
   Widget build(BuildContext context) {
-    final gonderen = sabitlenmisMesaj['gonderenKullaniciAdi'] as String? ?? 'Yönetici';
-    final metin = sabitlenmisMesaj['metin'] as String? ?? '';
+    if (sabitlenmisMesaj == null) return const SizedBox.shrink();
+
+    final gonderen = sabitlenmisMesaj!['gonderenKullaniciAdi'] as String? ?? 'Yönetici';
+    final metin = sabitlenmisMesaj!['metin'] as String? ?? '';
+
+    final birincil = UygulamaRenkleri.birincil(context);
+    final kartZemin = UygulamaRenkleri.kartZemini(context);
+    final metinBirincil = UygulamaRenkleri.metinBirincil(context);
+    final metinIkincil = UygulamaRenkleri.metinIkincil(context);
+    final kenarlik = UygulamaRenkleri.kenarlik(context);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.teal.shade50,
+        color: kartZemin,
         border: Border(
-          bottom: BorderSide(color: Colors.teal.shade200, width: 1),
+          bottom: BorderSide(color: kenarlik, width: 1),
         ),
       ),
       child: InkWell(
         onTap: onTiklandi,
         child: Row(
           children: [
-            const Icon(Icons.push_pin, size: 18, color: Colors.teal),
+            Icon(Icons.push_pin, size: 18, color: birincil),
             const SizedBox(width: 8),
             Expanded(
               child: Column(
@@ -44,22 +54,22 @@ class SabitlenmisMesajSeridi extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
-                      color: Colors.teal.shade900,
+                      color: birincil,
                     ),
                   ),
                   Text(
                     metin,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 12, color: Colors.black87),
+                    style: TextStyle(fontSize: 12, color: metinBirincil),
                   ),
                 ],
               ),
             ),
-            if (onSabitlemeKaldir != null)
+            if (onKaldirTiklandi != null)
               IconButton(
-                icon: const Icon(Icons.close, size: 16, color: Colors.grey),
-                onPressed: onSabitlemeKaldir,
+                icon: Icon(Icons.close, size: 16, color: metinIkincil),
+                onPressed: onKaldirTiklandi,
                 tooltip: 'Sabitlemeyi Kaldır',
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),

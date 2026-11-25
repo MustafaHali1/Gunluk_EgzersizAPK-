@@ -3,7 +3,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../cekirdek/tema/uygulama_renkleri.dart';
 import '../../alan/toplu_rutin_modeli.dart';
+import '../../veri/rutin_bildirim_ayarlari_servisi.dart';
+import '../bilesenler/bildirim_sessize_alma_dialogu.dart';
 import '../kontrolculer/grup_kontrolcusu.dart';
 
 /// WhatsApp "Grup Bilgisi" tarzı rutin yönetimi, üye listesi ve yetki ayarları ekranı.
@@ -22,12 +25,26 @@ class RutinAyarlariEkrani extends ConsumerStatefulWidget {
 class _RutinAyarlariEkraniState extends ConsumerState<RutinAyarlariEkrani> {
   late bool _yalnizcaYoneticiHareket;
   late bool _yalnizcaYoneticiDuzenleme;
+  String _sessizDurumu = 'Kontrol ediliyor...';
+  bool _suAnSessizde = false;
 
   @override
   void initState() {
     super.initState();
     _yalnizcaYoneticiHareket = widget.rutin.yalnizcaYoneticiHareketEkleyebilir;
     _yalnizcaYoneticiDuzenleme = widget.rutin.yalnizcaYoneticiDuzenleyebilir;
+    _sessizDurumunuYukle();
+  }
+
+  Future<void> _sessizDurumunuYukle() async {
+    final servis = ref.read(rutinBildirimAyarlariServisiSaglayici);
+    final (sessizde, aciklama) = await servis.sessizDurumunuGetir(widget.rutin.id);
+    if (mounted) {
+      setState(() {
+        _suAnSessizde = sessizde;
+        _sessizDurumu = aciklama;
+      });
+    }
   }
 
   void _izinleriKaydet() {
@@ -56,7 +73,10 @@ class _RutinAyarlariEkraniState extends ConsumerState<RutinAyarlariEkrani> {
               Navigator.pop(context); // Detay ekranını kapatıp vitrine dön
               await ref.read(topluRutinKontrolcusuSaglayici).rutindenAyril(widget.rutin.id);
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: UygulamaRenkleri.tehlikeRengi(context),
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Ayrıl'),
           ),
         ],
@@ -69,6 +89,12 @@ class _RutinAyarlariEkraniState extends ConsumerState<RutinAyarlariEkrani> {
     final uyelerAsync = ref.watch(rutinUyeleriSaglayici(widget.rutin.id));
     final uid = ref.watch(mevcutKullaniciIdSaglayici).value ?? '';
     final yoneticiMi = widget.rutin.yoneticiIdleri.contains(uid);
+
+    final birincil = UygulamaRenkleri.birincil(context);
+    final tehlike = UygulamaRenkleri.tehlikeRengi(context);
+    final metinBirincil = UygulamaRenkleri.metinBirincil(context);
+    final metinIkincil = UygulamaRenkleri.metinIkincil(context);
+    final kartZemin = UygulamaRenkleri.kartZemini(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -87,13 +113,13 @@ class _RutinAyarlariEkraniState extends ConsumerState<RutinAyarlariEkrani> {
           // ÜST BAŞLIK ALANI
           Container(
             padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-            color: Colors.teal.shade50,
+            color: kartZemin,
             alignment: Alignment.center,
             child: Column(
               children: [
                 CircleAvatar(
                   radius: 36,
-                  backgroundColor: Colors.teal,
+                  backgroundColor: birincil,
                   child: Text(
                     widget.rutin.baslik.isNotEmpty ? widget.rutin.baslik[0].toUpperCase() : 'R',
                     style: const TextStyle(fontSize: 32, color: Colors.white, fontWeight: FontWeight.bold),
@@ -102,11 +128,11 @@ class _RutinAyarlariEkraniState extends ConsumerState<RutinAyarlariEkrani> {
                 const SizedBox(height: 12),
                 Text(
                   widget.rutin.baslik,
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: metinBirincil),
                 ),
                 Text(
                   'Toplu Rutin • ${widget.rutin.uyeIdleri.length} Katılımcı',
-                  style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
+                  style: TextStyle(color: metinIkincil, fontSize: 13),
                 ),
                 const SizedBox(height: 12),
                 OutlinedButton.icon(
@@ -150,13 +176,32 @@ class _RutinAyarlariEkraniState extends ConsumerState<RutinAyarlariEkrani> {
 
           // SOHBETİ SESSİZE AL
           ListTile(
-            leading: const Icon(Icons.notifications_off_outlined),
-            title: const Text('Bildirimleri Sessize Al'),
-            subtitle: const Text('Sohbet mesajlarını sessize al'),
+            leading: Icon(
+              _suAnSessizde ? Icons.notifications_off : Icons.notifications_none,
+              color: _suAnSessizde ? UygulamaRenkleri.tehlikeRengi(context) : UygulamaRenkleri.birincil(context),
+            ),
+            title: Text(
+              'Bildirimleri Sessize Al',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: UygulamaRenkleri.metinBirincil(context),
+              ),
+            ),
+            subtitle: Text(
+              _sessizDurumu,
+              style: TextStyle(
+                fontSize: 12,
+                color: _suAnSessizde ? UygulamaRenkleri.tehlikeRengi(context) : UygulamaRenkleri.metinIkincil(context),
+              ),
+            ),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Sohbet bildirimleri 8 saat sessize alındı 🔕')),
+              BildirimSessizeAlmaDialogu.goster(
+                context,
+                rutinId: widget.rutin.id,
+                suAnSessizde: _suAnSessizde,
+                servis: ref.read(rutinBildirimAyarlariServisiSaglayici),
+                onGuncellendi: _sessizDurumunuYukle,
               );
             },
           ),
@@ -168,7 +213,7 @@ class _RutinAyarlariEkraniState extends ConsumerState<RutinAyarlariEkrani> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Text(
               'Katılımcılar (${widget.rutin.uyeIdleri.length})',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.teal),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: birincil),
             ),
           ),
 
@@ -184,19 +229,23 @@ class _RutinAyarlariEkraniState extends ConsumerState<RutinAyarlariEkrani> {
 
                   return ListTile(
                     leading: CircleAvatar(
-                      backgroundColor: Colors.teal.shade100,
+                      backgroundColor: birincil.withValues(alpha: 0.15),
                       child: Text(
                         uye.gorunenAd.isNotEmpty ? uye.gorunenAd[0].toUpperCase() : 'U',
-                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.teal),
+                        style: TextStyle(fontWeight: FontWeight.bold, color: birincil),
                       ),
                     ),
-                    title: Text('@${uye.gorunenAd}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text('${uye.toplamPuan} Puan • 🔥 ${uye.mevcutSeri} Gün'),
+                    title: Text('@${uye.gorunenAd}', style: TextStyle(fontWeight: FontWeight.bold, color: metinBirincil)),
+                    subtitle: Text('${uye.toplamPuan} Puan • 🔥 ${uye.mevcutSeri} Gün', style: TextStyle(color: metinIkincil)),
                     trailing: buUyeYoneticiMi
-                        ? const Chip(label: Text('Yönetici', style: TextStyle(fontSize: 10, color: Colors.teal)))
+                        ? Chip(
+                            backgroundColor: birincil.withValues(alpha: 0.1),
+                            side: BorderSide(color: birincil.withValues(alpha: 0.3)),
+                            label: Text('Yönetici', style: TextStyle(fontSize: 10, color: birincil)),
+                          )
                         : (yoneticiMi && uye.kullaniciId != uid)
                             ? IconButton(
-                                icon: const Icon(Icons.remove_circle_outline, color: Colors.red),
+                                icon: Icon(Icons.remove_circle_outline, color: tehlike),
                                 tooltip: 'Üyeyi Çıkar',
                                 onPressed: () {
                                   ref.read(topluRutinKontrolcusuSaglayici).uyeCikar(widget.rutin.id, uye.kullaniciId);
@@ -221,8 +270,8 @@ class _RutinAyarlariEkraniState extends ConsumerState<RutinAyarlariEkrani> {
               icon: const Icon(Icons.exit_to_app),
               label: const Text('Rutinden Ayrıl'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red.shade50,
-                foregroundColor: Colors.red,
+                backgroundColor: tehlike.withValues(alpha: 0.1),
+                foregroundColor: tehlike,
                 elevation: 0,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
