@@ -1,9 +1,11 @@
 // lib/ozellikler/toplu_rutinler/sunum/bilesenler/rutin_olusturma_formu.dart
 
 import 'package:flutter/material.dart';
+import '../../../../cekirdek/tema/uygulama_renkleri.dart';
 import '../../alan/rutin_hareketi_modeli.dart';
 
 /// Yeni bir toplu rutin oluşturma veya hazır şablon seçme modal penceresi.
+/// Renkler doğrudan UygulamaRenkleri sınıfından çağrılır (Açık ve Koyu Mod Tam Uyumlu).
 class RutinOlusturmaFormu extends StatefulWidget {
   final Future<void> Function({
     required String baslik,
@@ -46,12 +48,20 @@ class _RutinOlusturmaFormuState extends State<RutinOlusturmaFormu> {
 
   final List<RutinHareketiModeli> _hareketler = [];
 
+  @override
+  void dispose() {
+    _baslikDenetleyici.dispose();
+    _aciklamaDenetleyici.dispose();
+    super.dispose();
+  }
+
   // Hazır Şablonlar
   void _sablonYukle(String sablonAdi) {
     setState(() {
       _hareketler.clear();
       if (sablonAdi == 'aile_sabah') {
         _baslikDenetleyici.text = '🌟 Aile Sabah Başlangıcı';
+        _aciklamaDenetleyici.text = 'Her sabah güne zinde başlamak için 4 temel adım.';
         _secilenKategori = 'Sabah';
         _hareketler.addAll([
           const RutinHareketiModeli(
@@ -91,6 +101,7 @@ class _RutinOlusturmaFormuState extends State<RutinOlusturmaFormu> {
         ]);
       } else if (sablonAdi == 'fitness_10dk') {
         _baslikDenetleyici.text = '🔥 10 Dk Evde Fitness';
+        _aciklamaDenetleyici.text = 'Ekipmansız hızlı yağ yakımı ve kuvvet antrenmanı.';
         _secilenKategori = 'Fitness';
         _hareketler.addAll([
           const RutinHareketiModeli(
@@ -128,6 +139,7 @@ class _RutinOlusturmaFormuState extends State<RutinOlusturmaFormu> {
         ]);
       } else if (sablonAdi == 'omurga') {
         _baslikDenetleyici.text = '🦴 Masa Başı Omurga Kurtarma';
+        _aciklamaDenetleyici.text = 'Boyun, sırt ve bel ağrılarını önleyen günlük mobilite.';
         _secilenKategori = 'Esneme';
         _hareketler.addAll([
           const RutinHareketiModeli(
@@ -166,40 +178,57 @@ class _RutinOlusturmaFormuState extends State<RutinOlusturmaFormu> {
     bool nesneGerekli = false;
     final nesneController = TextEditingController();
 
+    final birincil = UygulamaRenkleri.birincil(context);
+    final birincilMetin = UygulamaRenkleri.birincilUzeriMetin(context);
+    final kartZemin = UygulamaRenkleri.kartZemini(context);
+    final metinBirincil = UygulamaRenkleri.metinBirincil(context);
+    final metinIkincil = UygulamaRenkleri.metinIkincil(context);
+
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDState) => AlertDialog(
-          title: const Text('Yeni Egzersiz / Görev Ekle'),
+          backgroundColor: kartZemin,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text(
+            'Yeni Egzersiz / Görev Ekle',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: metinBirincil),
+          ),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextField(
                   controller: baslikController,
+                  style: TextStyle(color: metinBirincil),
                   decoration: const InputDecoration(labelText: 'Hareket Adı (örn: 20 Squat)'),
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
                   initialValue: tur,
+                  dropdownColor: kartZemin,
+                  style: TextStyle(color: metinBirincil, fontSize: 14),
                   decoration: const InputDecoration(labelText: 'Ölçüm Türü'),
-                  items: const [
-                    DropdownMenuItem(value: 'kontrol', child: Text('☑️ Kontrol / Tamamlandı')),
-                    DropdownMenuItem(value: 'sureli', child: Text('⏱️ Süre Bazlı (Saniye)')),
-                    DropdownMenuItem(value: 'tekrarli', child: Text('🔢 Tekrar Bazlı')),
+                  items: [
+                    DropdownMenuItem(value: 'kontrol', child: Text('☑️ Kontrol / Tamamlandı', style: TextStyle(color: metinBirincil))),
+                    DropdownMenuItem(value: 'sureli', child: Text('⏱️ Süre Bazlı (Saniye)', style: TextStyle(color: metinBirincil))),
+                    DropdownMenuItem(value: 'tekrarli', child: Text('🔢 Tekrar Bazlı', style: TextStyle(color: metinBirincil))),
                   ],
                   onChanged: (v) => setDState(() => tur = v ?? 'kontrol'),
                 ),
                 const SizedBox(height: 12),
                 SwitchListTile(
-                  title: const Text('Doğal Nesne Var mı?'),
-                  subtitle: const Text('Diş fırçası, su bardağı, kitap vb.'),
+                  contentPadding: EdgeInsets.zero,
+                  activeThumbColor: birincil,
+                  title: Text('Doğal Nesne Var mı?', style: TextStyle(color: metinBirincil, fontSize: 14)),
+                  subtitle: Text('Diş fırçası, su bardağı, kitap vb.', style: TextStyle(color: metinIkincil, fontSize: 12)),
                   value: nesneGerekli,
                   onChanged: (v) => setDState(() => nesneGerekli = v),
                 ),
                 if (nesneGerekli)
                   TextField(
                     controller: nesneController,
+                    style: TextStyle(color: metinBirincil),
                     decoration: const InputDecoration(
                       labelText: 'Beklenen Nesne Adı (örn: Diş Fırçası)',
                     ),
@@ -210,7 +239,7 @@ class _RutinOlusturmaFormuState extends State<RutinOlusturmaFormu> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Vazgeç'),
+              child: Text('Vazgeç', style: TextStyle(color: metinIkincil)),
             ),
             ElevatedButton(
               onPressed: () {
@@ -230,7 +259,12 @@ class _RutinOlusturmaFormuState extends State<RutinOlusturmaFormu> {
                 });
                 Navigator.pop(ctx);
               },
-              child: const Text('Ekle'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: birincil,
+                foregroundColor: birincilMetin,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: const Text('Ekle', style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -275,64 +309,83 @@ class _RutinOlusturmaFormuState extends State<RutinOlusturmaFormu> {
 
   @override
   Widget build(BuildContext context) {
+    final birincil = UygulamaRenkleri.birincil(context);
+    final birincilMetin = UygulamaRenkleri.birincilUzeriMetin(context);
+    final kartZemin = UygulamaRenkleri.kartZemini(context);
+    final yukseltilmis = UygulamaRenkleri.yukseltilmisZemin(context);
+    final kenarlik = UygulamaRenkleri.kenarlik(context);
+    final metinBirincil = UygulamaRenkleri.metinBirincil(context);
+    final metinIkincil = UygulamaRenkleri.metinIkincil(context);
+    final tehlike = UygulamaRenkleri.tehlikeRengi(context);
+
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      decoration: BoxDecoration(
+        color: kartZemin,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        border: Border(top: BorderSide(color: kenarlik, width: 1)),
       ),
       padding: EdgeInsets.only(
         left: 20,
         right: 20,
-        top: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+        top: 12,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
       ),
       child: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Tutamaç Çizgisi
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: kenarlik,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
+                Text(
                   'Yeni Toplu Rutin Kur',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 19,
+                    fontWeight: FontWeight.bold,
+                    color: metinBirincil,
+                  ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close),
+                  icon: Icon(Icons.close, color: metinIkincil),
                   onPressed: () => Navigator.pop(context),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
 
             // HIZLI ŞABLON SEÇİM BUTONLARI
-            const Text(
-              'Hızlı Şablonlar (1-Dokunuşla Ekle):',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            Text(
+              'Hızlı Şablonlar (1-Dokunuşla Doldur):',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+                color: metinIkincil,
+              ),
             ),
             const SizedBox(height: 8),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  ActionChip(
-                    avatar: const Text('🌟'),
-                    label: const Text('Aile Sabahı'),
-                    onPressed: () => _sablonYukle('aile_sabah'),
-                  ),
+                  _sablonCipi('🌟', 'Aile Sabahı', 'aile_sabah', yukseltilmis, kenarlik, metinBirincil),
                   const SizedBox(width: 8),
-                  ActionChip(
-                    avatar: const Text('🔥'),
-                    label: const Text('10 Dk Fitness'),
-                    onPressed: () => _sablonYukle('fitness_10dk'),
-                  ),
+                  _sablonCipi('🔥', '10 Dk Fitness', 'fitness_10dk', yukseltilmis, kenarlik, metinBirincil),
                   const SizedBox(width: 8),
-                  ActionChip(
-                    avatar: const Text('🦴'),
-                    label: const Text('Omurga Kurtarma'),
-                    onPressed: () => _sablonYukle('omurga'),
-                  ),
+                  _sablonCipi('🦴', 'Omurga Kurtarma', 'omurga', yukseltilmis, kenarlik, metinBirincil),
                 ],
               ),
             ),
@@ -341,10 +394,26 @@ class _RutinOlusturmaFormuState extends State<RutinOlusturmaFormu> {
             // RUTİN BAŞLIĞI
             TextField(
               controller: _baslikDenetleyici,
+              style: TextStyle(color: metinBirincil, fontWeight: FontWeight.w500),
               decoration: InputDecoration(
                 labelText: 'Rutin Başlığı',
                 hintText: 'örn: Sabah Canlanma, 30 Gün Şınav',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                filled: true,
+                fillColor: yukseltilmis,
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // RUTİN AÇIKLAMASI
+            TextField(
+              controller: _aciklamaDenetleyici,
+              style: TextStyle(color: metinBirincil, fontSize: 13),
+              maxLines: 2,
+              decoration: InputDecoration(
+                labelText: 'Açıklama (İsteğe Bağlı)',
+                hintText: 'örn: Her gün 21:00\'e kadar kanıtlarımızı atıyoruz.',
+                filled: true,
+                fillColor: yukseltilmis,
               ),
             ),
             const SizedBox(height: 12),
@@ -352,17 +421,20 @@ class _RutinOlusturmaFormuState extends State<RutinOlusturmaFormu> {
             // KATEGORİ SEÇİMİ
             DropdownButtonFormField<String>(
               initialValue: _secilenKategori,
+              dropdownColor: kartZemin,
+              style: TextStyle(color: metinBirincil, fontSize: 14, fontWeight: FontWeight.w500),
               decoration: InputDecoration(
                 labelText: 'Kategori / Tema',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                filled: true,
+                fillColor: yukseltilmis,
               ),
-              items: const [
-                DropdownMenuItem(value: 'Sabah', child: Text('🌅 Sabah')),
-                DropdownMenuItem(value: 'Fitness', child: Text('💪 Fitness')),
-                DropdownMenuItem(value: 'Esneme', child: Text('🧘 Esneme / Yoga')),
-                DropdownMenuItem(value: 'Gece', child: Text('🌙 Gece')),
-                DropdownMenuItem(value: 'Saglik', child: Text('🥗 Sağlık')),
-                DropdownMenuItem(value: 'Zihin', child: Text('🧠 Zihin')),
+              items: [
+                DropdownMenuItem(value: 'Sabah', child: Text('🌅 Sabah', style: TextStyle(color: metinBirincil))),
+                DropdownMenuItem(value: 'Fitness', child: Text('💪 Fitness', style: TextStyle(color: metinBirincil))),
+                DropdownMenuItem(value: 'Esneme', child: Text('🧘 Esneme / Yoga', style: TextStyle(color: metinBirincil))),
+                DropdownMenuItem(value: 'Gece', child: Text('🌙 Gece', style: TextStyle(color: metinBirincil))),
+                DropdownMenuItem(value: 'Saglik', child: Text('🥗 Sağlık', style: TextStyle(color: metinBirincil))),
+                DropdownMenuItem(value: 'Zihin', child: Text('🧠 Zihin', style: TextStyle(color: metinBirincil))),
               ],
               onChanged: (v) => setState(() => _secilenKategori = v ?? 'Sabah'),
             ),
@@ -374,12 +446,12 @@ class _RutinOlusturmaFormuState extends State<RutinOlusturmaFormu> {
               children: [
                 Text(
                   'İçindeki Görevler (${_hareketler.length}):',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: metinBirincil),
                 ),
                 TextButton.icon(
                   onPressed: _yeniHareketEkleDialogu,
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Görev Ekle'),
+                  icon: Icon(Icons.add_circle_outline, size: 18, color: birincil),
+                  label: Text('Görev Ekle', style: TextStyle(color: birincil, fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
@@ -387,68 +459,119 @@ class _RutinOlusturmaFormuState extends State<RutinOlusturmaFormu> {
             if (_hareketler.isEmpty)
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.shade200),
+                  color: yukseltilmis,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: kenarlik),
                 ),
                 alignment: Alignment.center,
-                child: const Text('Yukarıdan bir hazır şablon seçin veya "Görev Ekle"ye basın.'),
+                child: Text(
+                  'Yukarıdan bir hazır şablon seçin veya "+ Görev Ekle"ye basın.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: metinIkincil, fontSize: 13),
+                ),
               )
             else
-              ReorderableListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: _hareketler.length,
-                onReorderItem: (oldIndex, newIndex) {
-                  setState(() {
-                    final item = _hareketler.removeAt(oldIndex);
-                    _hareketler.insert(newIndex, item);
-                  });
-                },
-                itemBuilder: (context, index) {
-                  final h = _hareketler[index];
-                  return ListTile(
-                    key: ValueKey(h.id),
-                    leading: CircleAvatar(
-                      backgroundColor: Colors.teal.shade50,
-                      child: Text('${index + 1}', style: const TextStyle(color: Colors.teal)),
-                    ),
-                    title: Text(h.baslik, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                    subtitle: Text(
-                      '${h.puan} Puan ${h.nesneGerektirirMi ? '• 📦 ${h.beklenenNesneAdi}' : ''}',
-                      style: const TextStyle(fontSize: 11),
-                    ),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete_outline, color: Colors.red),
-                      onPressed: () => setState(() => _hareketler.removeAt(index)),
-                    ),
-                  );
-                },
+              Container(
+                decoration: BoxDecoration(
+                  color: yukseltilmis,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: kenarlik),
+                ),
+                child: ReorderableListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _hareketler.length,
+                  onReorderItem: (oldIndex, newIndex) {
+                    setState(() {
+                      final item = _hareketler.removeAt(oldIndex);
+                      _hareketler.insert(newIndex, item);
+                    });
+                  },
+                  itemBuilder: (context, index) {
+                    final h = _hareketler[index];
+                    return ListTile(
+                      key: ValueKey(h.id),
+                      leading: CircleAvatar(
+                        radius: 15,
+                        backgroundColor: birincil.withValues(alpha: 0.16),
+                        child: Text(
+                          '${index + 1}',
+                          style: TextStyle(color: birincil, fontWeight: FontWeight.bold, fontSize: 12),
+                        ),
+                      ),
+                      title: Text(
+                        h.baslik,
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: metinBirincil),
+                      ),
+                      subtitle: Text(
+                        '${h.puan} Puan ${h.nesneGerektirirMi ? '• 📦 ${h.beklenenNesneAdi}' : ''}',
+                        style: TextStyle(fontSize: 11, color: metinIkincil),
+                      ),
+                      trailing: IconButton(
+                        icon: Icon(Icons.delete_outline, color: tehlike, size: 20),
+                        onPressed: () => setState(() => _hareketler.removeAt(index)),
+                      ),
+                    );
+                  },
+                ),
               ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 22),
 
             // KAYDET BUTONU
             SizedBox(
               width: double.infinity,
-              height: 48,
+              height: 50,
               child: ElevatedButton(
                 onPressed: _yukleniyor ? null : _kaydet,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.teal,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  backgroundColor: birincil,
+                  foregroundColor: birincilMetin,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
                 child: _yukleniyor
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text('Rutini Kur ve Başlat 🚀', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    ? SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(color: birincilMetin, strokeWidth: 2.5),
+                      )
+                    : const Text(
+                        'Rutini Kur ve Başlat 🚀',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _sablonCipi(
+    String emoji,
+    String etiket,
+    String anahtar,
+    Color zemin,
+    Color kenarlik,
+    Color metinRengi,
+  ) {
+    return ActionChip(
+      backgroundColor: zemin,
+      side: BorderSide(color: kenarlik),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      avatar: Text(emoji, style: const TextStyle(fontSize: 14)),
+      label: Text(
+        etiket,
+        style: TextStyle(
+          color: metinRengi,
+          fontWeight: FontWeight.w600,
+          fontSize: 12,
+        ),
+      ),
+      onPressed: () => _sablonYukle(anahtar),
     );
   }
 }

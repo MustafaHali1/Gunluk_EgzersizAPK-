@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../cekirdek/tema/uygulama_renkleri.dart';
 import '../../alan/kullanici_profili_modeli.dart';
 import '../../alan/rutin_hareketi_modeli.dart';
 import '../bilesenler/kullanici_adi_secme_dialogu.dart';
@@ -13,7 +14,8 @@ import 'kanit_kamera_ekrani.dart';
 import 'rutin_detay_merkezi_ekrani.dart';
 
 /// Toplu rutinler ana vitrin ekranı.
-/// Thin UI prensibine uygundur; tüm durum ve veri kontrolcüler tarafından sağlanır.
+/// Thin UI prensibine uygundur; tüm durum ve veri kontrolcüler tarafından sağlanır,
+/// renkler UygulamaRenkleri sınıfından çağrılır.
 class TopluRutinlerAnaEkrani extends ConsumerStatefulWidget {
   const TopluRutinlerAnaEkrani({super.key});
 
@@ -46,29 +48,48 @@ class _TopluRutinlerAnaEkraniState extends ConsumerState<TopluRutinlerAnaEkrani>
     final kodDenetleyici = TextEditingController();
     bool yukleniyor = false;
 
+    final birincil = UygulamaRenkleri.birincil(context);
+    final birincilMetin = UygulamaRenkleri.birincilUzeriMetin(context);
+    final kartZemin = UygulamaRenkleri.kartZemini(context);
+    final metinBirincil = UygulamaRenkleri.metinBirincil(context);
+    final metinIkincil = UygulamaRenkleri.metinIkincil(context);
+    final basari = UygulamaRenkleri.basariRengi(context);
+
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Row(
+          backgroundColor: kartZemin,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
             children: [
-              Icon(Icons.key, color: Colors.teal),
-              SizedBox(width: 8),
-              Text('Koda Göre Rutine Katıl'),
+              Icon(Icons.key, color: birincil),
+              const SizedBox(width: 8),
+              Text(
+                'Koda Göre Rutine Katıl',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: metinBirincil),
+              ),
             ],
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('Arkadaşının paylaştığı 6 haneli davet kodunu gir:'),
+              Text(
+                'Arkadaşının paylaştığı 6 haneli davet kodunu gir:',
+                style: TextStyle(color: metinIkincil, fontSize: 13),
+              ),
               const SizedBox(height: 12),
               TextField(
                 controller: kodDenetleyici,
                 textCapitalization: TextCapitalization.characters,
                 maxLength: 6,
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: 4),
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 4,
+                  color: metinBirincil,
+                ),
                 decoration: InputDecoration(
                   hintText: 'SNAV26',
                   counterText: '',
@@ -80,7 +101,7 @@ class _TopluRutinlerAnaEkraniState extends ConsumerState<TopluRutinlerAnaEkrani>
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Vazgeç'),
+              child: Text('Vazgeç', style: TextStyle(color: metinIkincil)),
             ),
             ElevatedButton(
               onPressed: yukleniyor
@@ -97,7 +118,7 @@ class _TopluRutinlerAnaEkraniState extends ConsumerState<TopluRutinlerAnaEkrani>
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text('Tebrikler! "${rutin.baslik}" rutinine katıldın 🎉'),
-                              backgroundColor: Colors.teal.shade700,
+                              backgroundColor: basari,
                             ),
                           );
                         } else {
@@ -107,10 +128,18 @@ class _TopluRutinlerAnaEkraniState extends ConsumerState<TopluRutinlerAnaEkrani>
                         }
                       }
                     },
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.teal, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: birincil,
+                foregroundColor: birincilMetin,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
               child: yukleniyor
-                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Text('Katıl'),
+                  ? SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: birincilMetin),
+                    )
+                  : const Text('Katıl', style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -119,6 +148,8 @@ class _TopluRutinlerAnaEkraniState extends ConsumerState<TopluRutinlerAnaEkrani>
   }
 
   void _rutinOlusturModal() {
+    final basari = UygulamaRenkleri.basariRengi(context);
+
     RutinOlusturmaFormu.goster(
       context,
       onKaydet: ({
@@ -137,7 +168,7 @@ class _TopluRutinlerAnaEkraniState extends ConsumerState<TopluRutinlerAnaEkrani>
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('"$baslik" toplu rutini oluşturuldu! 🚀'),
-              backgroundColor: Colors.teal.shade700,
+              backgroundColor: basari,
             ),
           );
         }
@@ -163,9 +194,20 @@ class _TopluRutinlerAnaEkraniState extends ConsumerState<TopluRutinlerAnaEkrani>
     final profil = profilAsync.value;
     final kullaniciAdi = profil?.kullaniciAdi ?? 'Kullanıcı';
 
+    final birincil = UygulamaRenkleri.birincil(context);
+    final birincilMetin = UygulamaRenkleri.birincilUzeriMetin(context);
+    final kartZemin = UygulamaRenkleri.kartZemini(context);
+    final yukseltilmis = UygulamaRenkleri.yukseltilmisZemin(context);
+    final kenarlik = UygulamaRenkleri.kenarlik(context);
+    final metinBirincil = UygulamaRenkleri.metinBirincil(context);
+    final metinIkincil = UygulamaRenkleri.metinIkincil(context);
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Toplu Rutinler'),
+        title: Text(
+          'Toplu Rutinler',
+          style: TextStyle(fontWeight: FontWeight.bold, color: metinBirincil),
+        ),
         actions: [
           // Kullanıcı Adı ve Profil Rozeti
           InkWell(
@@ -173,25 +215,26 @@ class _TopluRutinlerAnaEkraniState extends ConsumerState<TopluRutinlerAnaEkrani>
             borderRadius: BorderRadius.circular(20),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+              margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
               decoration: BoxDecoration(
-                color: Colors.white24,
+                color: yukseltilmis,
                 borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: kenarlik),
               ),
               child: Row(
                 children: [
                   CircleAvatar(
                     radius: 12,
-                    backgroundColor: Colors.teal.shade100,
+                    backgroundColor: birincil.withValues(alpha: 0.18),
                     child: Text(
                       kullaniciAdi.isNotEmpty ? kullaniciAdi[0].toUpperCase() : 'U',
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.teal),
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: birincil),
                     ),
                   ),
                   const SizedBox(width: 6),
                   Text(
                     '@$kullaniciAdi',
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: metinBirincil),
                   ),
                 ],
               ),
@@ -202,10 +245,16 @@ class _TopluRutinlerAnaEkraniState extends ConsumerState<TopluRutinlerAnaEkrani>
       body: rutinlerAsync.when(
         data: (rutinler) {
           if (rutinler.isEmpty) {
-            return _bosDurumEkrani();
+            return _bosDurumEkrani(
+              birincil: birincil,
+              birincilMetin: birincilMetin,
+              metinBirincil: metinBirincil,
+              metinIkincil: metinIkincil,
+            );
           }
 
           return RefreshIndicator(
+            color: birincil,
             onRefresh: () async {
               ref.invalidate(kullaniciRutinleriSaglayici);
             },
@@ -249,8 +298,8 @@ class _TopluRutinlerAnaEkraniState extends ConsumerState<TopluRutinlerAnaEkrani>
             ),
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Yükleme hatası: $e')),
+        loading: () => Center(child: CircularProgressIndicator(color: birincil)),
+        error: (e, _) => Center(child: Text('Yükleme hatası: $e', style: TextStyle(color: metinIkincil))),
       ),
       floatingActionButton: Row(
         mainAxisSize: MainAxisSize.min,
@@ -258,26 +307,42 @@ class _TopluRutinlerAnaEkraniState extends ConsumerState<TopluRutinlerAnaEkrani>
           FloatingActionButton.extended(
             heroTag: 'kodla_katil',
             onPressed: _kodaGoreKatilDialogu,
-            icon: const Icon(Icons.key),
-            label: const Text('Koda Göre Katıl'),
-            backgroundColor: Colors.teal.shade700,
-            foregroundColor: Colors.white,
+            icon: Icon(Icons.key, color: birincil, size: 18),
+            label: Text(
+              'Koda Göre Katıl',
+              style: TextStyle(color: metinBirincil, fontWeight: FontWeight.bold, fontSize: 13),
+            ),
+            backgroundColor: kartZemin,
+            elevation: 2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+              side: BorderSide(color: kenarlik, width: 1.2),
+            ),
           ),
           const SizedBox(width: 12),
           FloatingActionButton.extended(
             heroTag: 'yeni_rutin',
             onPressed: _rutinOlusturModal,
-            icon: const Icon(Icons.add),
-            label: const Text('Yeni Rutin'),
-            backgroundColor: Colors.teal,
-            foregroundColor: Colors.white,
+            icon: Icon(Icons.add, color: birincilMetin),
+            label: Text(
+              'Yeni Rutin',
+              style: TextStyle(color: birincilMetin, fontWeight: FontWeight.bold, fontSize: 13),
+            ),
+            backgroundColor: birincil,
+            elevation: 2,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           ),
         ],
       ),
     );
   }
 
-  Widget _bosDurumEkrani() {
+  Widget _bosDurumEkrani({
+    required Color birincil,
+    required Color birincilMetin,
+    required Color metinBirincil,
+    required Color metinIkincil,
+  }) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -285,23 +350,23 @@ class _TopluRutinlerAnaEkraniState extends ConsumerState<TopluRutinlerAnaEkrani>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(22),
               decoration: BoxDecoration(
-                color: Colors.teal.shade50,
+                color: birincil.withValues(alpha: 0.14),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.groups_3_outlined, size: 64, color: Colors.teal),
+              child: Icon(Icons.groups_3_outlined, size: 64, color: birincil),
             ),
             const SizedBox(height: 20),
-            const Text(
+            Text(
               'Henüz Bir Toplu Rutinin Yok!',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: metinBirincil),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
               'Ailen veya arkadaşlarınla birlikte hedeflere koşmak için yeni bir rutin kurabilir veya paylaşılan 6 haneli kodla bir rutine katılabilirsin.',
-              style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+              style: TextStyle(fontSize: 13, color: metinIkincil),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
@@ -313,8 +378,10 @@ class _TopluRutinlerAnaEkraniState extends ConsumerState<TopluRutinlerAnaEkrani>
                   icon: const Icon(Icons.key),
                   label: const Text('Koda Göre Katıl'),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.teal,
+                    foregroundColor: birincil,
+                    side: BorderSide(color: birincil),
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -323,9 +390,10 @@ class _TopluRutinlerAnaEkraniState extends ConsumerState<TopluRutinlerAnaEkrani>
                   icon: const Icon(Icons.add),
                   label: const Text('Yeni Rutin Kur'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.teal,
-                    foregroundColor: Colors.white,
+                    backgroundColor: birincil,
+                    foregroundColor: birincilMetin,
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
               ],

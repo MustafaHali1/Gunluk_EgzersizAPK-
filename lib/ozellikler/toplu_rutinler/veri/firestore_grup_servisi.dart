@@ -1,5 +1,6 @@
 // lib/ozellikler/toplu_rutinler/veri/firestore_grup_servisi.dart
 
+import 'dart:convert';
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -23,6 +24,7 @@ final firestoreGrupServisiSaglayici = Provider<FirestoreGrupServisi>((ref) {
 class FirestoreGrupServisi {
   final FirebaseFirestore _firestore;
   final FirebaseAuth _auth;
+  final Map<String, TopluRutinModeli> _yerelGuncelHarita = {};
 
   FirestoreGrupServisi({
     FirebaseFirestore? firestore,
@@ -73,12 +75,14 @@ class FirestoreGrupServisi {
         .where('uyeIdleri', arrayContains: kullaniciId)
         .snapshots(includeMetadataChanges: true)
         .map((snapshot) {
-      return snapshot.docs
-          .map((doc) => TopluRutinModeli.haritadan(doc.data(), doc.id))
-          .toList();
+      return snapshot.docs.map((doc) {
+        final yerel = _yerelGuncelHarita[doc.id];
+        if (yerel != null) return yerel;
+        return TopluRutinModeli.haritadan(doc.data(), doc.id);
+      }).toList();
     }).handleError((hata, yiginIzi) {
       MerkeziKaydedici.hataYaz('Kullanıcı rutinleri dinlenirken hata', hata: hata, yiginIzi: yiginIzi);
-      return <TopluRutinModeli>[];
+      return _yerelGuncelHarita.values.toList();
     });
   }
 
@@ -427,9 +431,42 @@ class FirestoreGrupServisi {
 
   Stream<List<GrupUyesiModeli>> grupUyeleriniDinle(String grupId) => uyeleriDinle(grupId);
 
-  /// Rutin bilgilerini ve izinlerini günceller.
+  /// Rutin bilgilerini, hareketlerini ve izinlerini hem yerel önbellekte hem Firestore'da günceller.
   Future<void> rutinGuncelle(TopluRutinModeli rutin) async {
-    await _firestore.collection('toplu_rutinler').doc(rutin.id).update(rutin.haritaya());
+    _yerelGuncelHarita[rutin.id] = rutin;
+    try {
+      final tercihler = await SharedPreferences.getInstance();
+      await tercihler.setString('rutin_onbellek_${rutin.id}', jsonEncode(rutin.haritaya()));
+    } catch (e) {
+      MerkeziKaydedici.bilgiYaz('Yerel rutin önbellek yazma uyarısı: $e');
+    }
+
+    try {
+      await _firestore
+          .collection('toplu_rutinler')
+          .doc(rutin.id)
+          .set(rutin.haritaya(), SetOptions(merge: true));
+    } catch (e, yiginIzi) {
+      MerkeziKaydedici.hataYaz('Firestore rutin güncelleme uyarısı (yerel kayıt korundu)', hata: e, yiginIzi: yiginIzi);
+    }
+  }
+
+  /// Yerel önbellekten güncel rutini getirir (varsa).
+  Future<TopluRutinModeli?> yerelRutinOnbellegiGetir(String rutinId) async {
+    if (_yerelGuncelHarita.containsKey(rutinId)) {
+      return _yerelGuncelHarita[rutinId];
+    }
+    try {
+      final tercihler = await SharedPreferences.getInstance();
+      final jsonStr = tercihler.getString('rutin_onbellek_$rutinId');
+      if (jsonStr != null) {
+        final harita = jsonDecode(jsonStr) as Map<String, dynamic>;
+        final rutin = TopluRutinModeli.haritadan(harita, rutinId);
+        _yerelGuncelHarita[rutinId] = rutin;
+        return rutin;
+      }
+    } catch (_) {}
+    return null;
   }
 
   /// Bir üyeyi rutinden çıkarır (Yönetici yetkisi).

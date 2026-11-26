@@ -41,9 +41,7 @@ class SeciliRutinKontrolcusu extends Notifier<TopluRutinModeli?> {
   void sec(TopluRutinModeli? rutin) => state = rutin;
 
   void guncelle(TopluRutinModeli rutin) {
-    if (state?.id == rutin.id) {
-      state = rutin;
-    }
+    state = rutin;
   }
 }
 
@@ -129,8 +127,9 @@ class TopluRutinKontrolcusu {
 
   /// Rutin bilgilerini ve izinlerini günceller.
   Future<void> rutinGuncelle(TopluRutinModeli guncelRutin) async {
-    await _servis.rutinGuncelle(guncelRutin);
     _ref.read(seciliTopluRutinSaglayici.notifier).guncelle(guncelRutin);
+    await _servis.rutinGuncelle(guncelRutin);
+    _ref.invalidate(kullaniciRutinleriSaglayici);
   }
 
   /// Bir üyeyi çıkarır.

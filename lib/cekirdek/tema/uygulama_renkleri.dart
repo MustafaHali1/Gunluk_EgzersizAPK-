@@ -2,32 +2,35 @@
 
 import 'package:flutter/material.dart';
 
-/// Tüm uygulamadaki Açık ve Koyu mod renk standartlarını yöneten merkezi sınıf.
+/// Tüm uygulamadaki Açık (Editorial Crisp) ve Koyu (Obsidian Titanium) mod renk
+/// standartlarını yöneten merkezi tasarım sistemi sınıfı.
 /// Ekranlar ve bileşenler doğrudan renk kodu yazmaz; bu sınıfı çağırır.
 class UygulamaRenkleri {
   UygulamaRenkleri._();
 
   // ==========================================
-  // SABİT RENK DEĞERLERİ (AÇIK MOD)
+  // SABİT RENK DEĞERLERİ: AÇIK MOD (Editorial Crisp)
   // ==========================================
-  static const Color acikBirincil = Color(0xFF0D9488); // Zümrüt Yeşili (Teal 600)
-  static const Color acikIkincil = Color(0xFF0284C7); // Kobalt / Gök Mavisi (Sky 600)
-  static const Color acikArkaPlan = Color(0xFFF8FAFC); // Slate 50 (Yumuşak beyaz)
-  static const Color acikKart = Color(0xFFFFFFFF); // Saf Beyaz
-  static const Color acikKenarlik = Color(0xFFE2E8F0); // Slate 200
-  static const Color acikMetinBirincil = Color(0xFF0F172A); // Slate 900
+  static const Color acikBirincil = Color(0xFF059669); // Prestijli Derin Zümrüt (Emerald 600)
+  static const Color acikIkincil = Color(0xFF0284C7); // Kobalt Mavi (Sky 600)
+  static const Color acikArkaPlan = Color(0xFFF8FAFC); // Slate 50 (Ferah nefes alan zemin)
+  static const Color acikKart = Color(0xFFFFFFFF); // Saf Beyaz Yüzey
+  static const Color acikYukseltilmis = Color(0xFFF1F5F9); // Slate 100 (Input içi / ikincil yüzey)
+  static const Color acikKenarlik = Color(0xFFE2E8F0); // Slate 200 (İnce zarif ayrım)
+  static const Color acikMetinBirincil = Color(0xFF0F172A); // Slate 900 (Yüksek okunabilirlik)
   static const Color acikMetinIkincil = Color(0xFF64748B); // Slate 500
 
   // ==========================================
-  // SABİT RENK DEĞERLERİ (KOYU MOD - GECE MAVİSİ)
+  // SABİT RENK DEĞERLERİ: KOYU MOD (Obsidian Titanium)
   // ==========================================
-  static const Color koyuBirincil = Color(0xFF14B8A6); // Açık Zümrüt (Teal 500)
-  static const Color koyuIkincil = Color(0xFF38BDF8); // Parlak Gökyüzü (Sky 400)
-  static const Color koyuArkaPlan = Color(0xFF0F172A); // Slate 900 (Koyu Kömür / Derin Gece)
-  static const Color koyuKart = Color(0xFF1E293B); // Slate 800 (Katman derinliği)
-  static const Color koyuKenarlik = Color(0xFF334155); // Slate 700
-  static const Color koyuMetinBirincil = Color(0xFFF8FAFC); // Slate 50
-  static const Color koyuMetinIkincil = Color(0xFF94A3B8); // Slate 400
+  static const Color koyuBirincil = Color(0xFF00DC82); // Enerjik Neon Zümrüt (Karanlıkta parlar)
+  static const Color koyuIkincil = Color(0xFF38BDF8); // Elektrik Gökyüzü (Sky 400)
+  static const Color koyuArkaPlan = Color(0xFF0B0F17); // Derin Obsidiyen Gece
+  static const Color koyuKart = Color(0xFF161B26); // Titanyum Koyu Katman (Kart & BottomSheet)
+  static const Color koyuYukseltilmis = Color(0xFF1F2633); // Yükseltilmiş iç yüzey (Input & Chip)
+  static const Color koyuKenarlik = Color(0xFF262E3D); // İnce Titanyum Sınır Çizgisi
+  static const Color koyuMetinBirincil = Color(0xFFF8FAFC); // Kristal Beyaz
+  static const Color koyuMetinIkincil = Color(0xFF94A3B8); // Yumuşak Arduvaz Gri
 
   // ==========================================
   // SEMANTİK / DURUM RENKLERİ (HER İKİ MOD İÇİN)
@@ -42,15 +45,15 @@ class UygulamaRenkleri {
   // ==========================================
   // SOHBET BALONLARI
   // ==========================================
-  static const Color acikBenimBalon = Color(0xFFCCFBF1); // Teal 100
-  static const Color acikBenimBalonMetin = Color(0xFF115E59); // Teal 800
+  static const Color acikBenimBalon = Color(0xFFD1FAE5); // Emerald 100
+  static const Color acikBenimBalonMetin = Color(0xFF064E3B); // Emerald 900
   static const Color acikBaskasiBalon = Color(0xFFFFFFFF); // Beyaz
   static const Color acikBaskasiBalonMetin = Color(0xFF0F172A); // Slate 900
 
-  static const Color koyuBenimBalon = Color(0xFF134E4A); // Teal 900
-  static const Color koyuBenimBalonMetin = Color(0xFFCCFBF1); // Teal 100
-  static const Color koyuBaskasiBalon = Color(0xFF1E293B); // Slate 800
-  static const Color koyuBaskasiBalonMetin = Color(0xFFF8FAFC); // Slate 50
+  static const Color koyuBenimBalon = Color(0xFF064E3B); // Derin Zümrüt Balon
+  static const Color koyuBenimBalonMetin = Color(0xFFECFDF5); // Kristal Nane Beyazı
+  static const Color koyuBaskasiBalon = Color(0xFF161B26); // Titanyum Kart
+  static const Color koyuBaskasiBalonMetin = Color(0xFFF8FAFC); // Kristal Beyaz
 
   // ==========================================
   // BAĞLAMSAL (CONTEXT-AWARE) DİNAMİK GETTERLAR
@@ -61,6 +64,9 @@ class UygulamaRenkleri {
   static Color birincil(BuildContext context) =>
       koyuMu(context) ? koyuBirincil : acikBirincil;
 
+  static Color birincilUzeriMetin(BuildContext context) =>
+      koyuMu(context) ? const Color(0xFF042F1E) : Colors.white;
+
   static Color ikincil(BuildContext context) =>
       koyuMu(context) ? koyuIkincil : acikIkincil;
 
@@ -69,6 +75,9 @@ class UygulamaRenkleri {
 
   static Color kartZemini(BuildContext context) =>
       koyuMu(context) ? koyuKart : acikKart;
+
+  static Color yukseltilmisZemin(BuildContext context) =>
+      koyuMu(context) ? koyuYukseltilmis : acikYukseltilmis;
 
   static Color kenarlik(BuildContext context) =>
       koyuMu(context) ? koyuKenarlik : acikKenarlik;

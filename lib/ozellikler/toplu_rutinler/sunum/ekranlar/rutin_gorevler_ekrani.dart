@@ -32,11 +32,115 @@ class RutinGorevlerEkrani extends ConsumerWidget {
     );
   }
 
+  void _yeniGorevEkleDialogu(BuildContext context, WidgetRef ref) {
+    final baslikController = TextEditingController();
+    String tur = 'kontrol';
+    int puan = 15;
+    bool nesneGerekli = false;
+    final nesneController = TextEditingController();
+
+    final birincil = UygulamaRenkleri.birincil(context);
+    final birincilMetin = UygulamaRenkleri.birincilUzeriMetin(context);
+    final kartZemin = UygulamaRenkleri.kartZemini(context);
+    final metinBirincil = UygulamaRenkleri.metinBirincil(context);
+    final metinIkincil = UygulamaRenkleri.metinIkincil(context);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDState) => AlertDialog(
+          backgroundColor: kartZemin,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text(
+            'Rutine Yeni Görev Ekle',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: metinBirincil),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: baslikController,
+                  style: TextStyle(color: metinBirincil),
+                  decoration: const InputDecoration(labelText: 'Görev Adı (örn: 20 Şınav)'),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: tur,
+                  dropdownColor: kartZemin,
+                  style: TextStyle(color: metinBirincil, fontSize: 14),
+                  decoration: const InputDecoration(labelText: 'Ölçüm Türü'),
+                  items: [
+                    DropdownMenuItem(value: 'kontrol', child: Text('☑️ Kontrol / Tamamlandı', style: TextStyle(color: metinBirincil))),
+                    DropdownMenuItem(value: 'sureli', child: Text('⏱️ Süre Bazlı (Saniye)', style: TextStyle(color: metinBirincil))),
+                    DropdownMenuItem(value: 'tekrarli', child: Text('🔢 Tekrar Bazlı', style: TextStyle(color: metinBirincil))),
+                  ],
+                  onChanged: (v) => setDState(() => tur = v ?? 'kontrol'),
+                ),
+                const SizedBox(height: 12),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  activeThumbColor: birincil,
+                  title: Text('Doğal Nesne Var mı?', style: TextStyle(color: metinBirincil, fontSize: 14)),
+                  subtitle: Text('Kitap, su bardağı, dambıl vb.', style: TextStyle(color: metinIkincil, fontSize: 12)),
+                  value: nesneGerekli,
+                  onChanged: (v) => setDState(() => nesneGerekli = v),
+                ),
+                if (nesneGerekli)
+                  TextField(
+                    controller: nesneController,
+                    style: TextStyle(color: metinBirincil),
+                    decoration: const InputDecoration(
+                      labelText: 'Beklenen Nesne Adı (örn: Kitap)',
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text('Vazgeç', style: TextStyle(color: metinIkincil)),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final ad = baslikController.text.trim();
+                if (ad.isEmpty) return;
+
+                Navigator.pop(ctx);
+                final yeniHareket = RutinHareketiModeli(
+                  id: 'h_${DateTime.now().millisecondsSinceEpoch}',
+                  baslik: ad,
+                  tur: tur,
+                  puan: puan,
+                  nesneGerektirirMi: nesneGerekli,
+                  beklenenNesneAdi: nesneGerekli ? nesneController.text.trim() : null,
+                  siraIndeksi: rutin.hareketler.length,
+                );
+
+                final guncelHareketler = [...rutin.hareketler, yeniHareket];
+                final guncelRutin = rutin.kopyala(hareketler: guncelHareketler);
+                await ref.read(topluRutinKontrolcusuSaglayici).rutinGuncelle(guncelRutin);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: birincil,
+                foregroundColor: birincilMetin,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: const Text('Ekle', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _yarisBaslatDialogu(BuildContext context, WidgetRef ref) {
     final baslikController = TextEditingController(text: '10 Günlük Meydan Okuma');
     int gun = 10;
 
     final birincil = UygulamaRenkleri.birincil(context);
+    final birincilMetin = UygulamaRenkleri.birincilUzeriMetin(context);
     final kartZemin = UygulamaRenkleri.kartZemini(context);
     final metinBirincil = UygulamaRenkleri.metinBirincil(context);
     final metinIkincil = UygulamaRenkleri.metinIkincil(context);
@@ -61,17 +165,20 @@ class RutinGorevlerEkrani extends ConsumerWidget {
           children: [
             TextField(
               controller: baslikController,
+              style: TextStyle(color: metinBirincil),
               decoration: const InputDecoration(labelText: 'Yarış Başlığı'),
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<int>(
               initialValue: gun,
+              dropdownColor: kartZemin,
+              style: TextStyle(color: metinBirincil),
               decoration: const InputDecoration(labelText: 'Yarış Süresi'),
-              items: const [
-                DropdownMenuItem(value: 7, child: Text('7 Günlük Sprint')),
-                DropdownMenuItem(value: 10, child: Text('10 Günlük Yarış (Önerilen)')),
-                DropdownMenuItem(value: 14, child: Text('14 Günlük Lig')),
-                DropdownMenuItem(value: 30, child: Text('30 Günlük Maraton')),
+              items: [
+                DropdownMenuItem(value: 7, child: Text('7 Günlük Sprint', style: TextStyle(color: metinBirincil))),
+                DropdownMenuItem(value: 10, child: Text('10 Günlük Yarış (Önerilen)', style: TextStyle(color: metinBirincil))),
+                DropdownMenuItem(value: 14, child: Text('14 Günlük Lig', style: TextStyle(color: metinBirincil))),
+                DropdownMenuItem(value: 30, child: Text('30 Günlük Maraton', style: TextStyle(color: metinBirincil))),
               ],
               onChanged: (v) => gun = v ?? 10,
             ),
@@ -94,10 +201,10 @@ class RutinGorevlerEkrani extends ConsumerWidget {
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: birincil,
-              foregroundColor: Colors.white,
+              foregroundColor: birincilMetin,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
-            child: const Text('Başlat 🚀'),
+            child: const Text('Başlat 🚀', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -108,8 +215,13 @@ class RutinGorevlerEkrani extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final uid = ref.watch(mevcutKullaniciIdSaglayici).value ?? '';
     final hareketler = rutin.hareketler;
+    final yoneticiMi = rutin.yoneticiIdleri.contains(uid) ||
+        rutin.kurucuKullaniciId == uid ||
+        rutin.uyeIdleri.length <= 1;
+    final gorevEkleyebilirMi = !rutin.yalnizcaYoneticiHareketEkleyebilir || yoneticiMi;
 
     final birincil = UygulamaRenkleri.birincil(context);
+    final birincilMetin = UygulamaRenkleri.birincilUzeriMetin(context);
     final kartZemin = UygulamaRenkleri.kartZemini(context);
     final metinBirincil = UygulamaRenkleri.metinBirincil(context);
     final metinIkincil = UygulamaRenkleri.metinIkincil(context);
@@ -139,14 +251,15 @@ class RutinGorevlerEkrani extends ConsumerWidget {
                   color: metinBirincil,
                 ),
               ),
-              Text(
-                'Seri: 🔥 ${rutin.mevcutSeriGun} Gün',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
-                  color: birincil,
+              if (gorevEkleyebilirMi)
+                TextButton.icon(
+                  onPressed: () => _yeniGorevEkleDialogu(context, ref),
+                  icon: Icon(Icons.add_circle_outline, size: 17, color: birincil),
+                  label: Text(
+                    'Görev Ekle',
+                    style: TextStyle(color: birincil, fontWeight: FontWeight.bold, fontSize: 12.5),
+                  ),
                 ),
-              ),
             ],
           ),
         ),
@@ -173,7 +286,7 @@ class RutinGorevlerEkrani extends ConsumerWidget {
                 leading: CircleAvatar(
                   backgroundColor: yapildiMi
                       ? basari.withValues(alpha: 0.15)
-                      : birincil.withValues(alpha: 0.12),
+                      : birincil.withValues(alpha: 0.14),
                   child: yapildiMi
                       ? Icon(Icons.check, color: basari)
                       : Icon(
@@ -202,7 +315,7 @@ class RutinGorevlerEkrani extends ConsumerWidget {
                           style: TextStyle(color: basari, fontSize: 11, fontWeight: FontWeight.bold),
                         ),
                         backgroundColor: basari.withValues(alpha: 0.12),
-                        side: BorderSide(color: basari.withValues(alpha: 0.2)),
+                        side: BorderSide(color: basari.withValues(alpha: 0.25)),
                       )
                     : ElevatedButton.icon(
                         onPressed: () => _kameraAc(context, hareket),
@@ -210,7 +323,7 @@ class RutinGorevlerEkrani extends ConsumerWidget {
                         label: const Text('Kanıtla'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: birincil,
-                          foregroundColor: Colors.white,
+                          foregroundColor: birincilMetin,
                           elevation: 0,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
